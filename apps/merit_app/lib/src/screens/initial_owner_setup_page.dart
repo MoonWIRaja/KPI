@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../widgets/merit_brand.dart';
+
 class InitialOwnerSetupPage extends StatefulWidget {
   const InitialOwnerSetupPage({required this.email, required this.onComplete, super.key});
 
@@ -74,8 +76,8 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Icon(Icons.admin_panel_settings_outlined, size: 34, color: Color(0xFF245CEB)),
-                        const SizedBox(height: 18),
+                        const MeritBrand(),
+                        const SizedBox(height: 24),
                         Text('Sediakan akaun Admin (Owner)', style: Theme.of(context).textTheme.headlineMedium),
                         const SizedBox(height: 8),
                         const Text(

@@ -44,8 +44,8 @@ Navigation is generated from permissions, but hiding a screen is not an authoriz
 ### Login and owner setup
 
 - The Flutter client signs in through Supabase Auth; public signup stays disabled.
-- A one-time first-login Owner wizard is shown only to an authenticated, email-confirmed user whose email matches the private operator-configured bootstrap address. The user sets a display name and new password, then enrolls TOTP.
-- The operator creates the first Auth user in the Supabase Dashboard and configures the one-time allowlisted email in SQL; the app never creates arbitrary users or accepts a client-provided Owner role.
+- Before an Owner exists, the first visit opens a branded first-run setup screen. Only the exact operator-approved, email-confirmed Owner account can sign in and continue to the one-time profile/password wizard; after the database atomically claims Owner, first-run stays closed permanently and standard sign-in appears. Owner then enrolls TOTP.
+- The operator creates the first Auth user in the Supabase Dashboard and configures the one-time allowlisted email in SQL. A public status function exposes only a boolean setup-complete state; the app never creates arbitrary users or accepts a client-provided Owner role.
 - Login has accessible labels, generic failure messages and a password reveal control.
 - Invitation/reset email availability depends on configured production delivery.
 - Do not display a PC LAN/IP setup workflow in the hosted web v1.

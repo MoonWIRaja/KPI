@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'screens/first_run_setup_page.dart';
 import 'screens/home_shell.dart';
 import 'screens/initial_owner_setup_page.dart';
 import 'screens/login_page.dart';
@@ -102,7 +103,7 @@ class _AuthGateState extends State<_AuthGate> {
       stream: _authChanges,
       builder: (context, snapshot) {
         final session = snapshot.data?.session ?? client.auth.currentSession;
-        if (session == null) return const LoginPage();
+        if (session == null) return const _FirstRunGate();
         if (_recoveringPassword || snapshot.data?.event == AuthChangeEvent.passwordRecovery) {
           return const PasswordSetupPage(isRecovery: true);
         }
@@ -110,6 +111,40 @@ class _AuthGateState extends State<_AuthGate> {
       },
     );
   }
+}
+
+class _FirstRunGate extends StatefulWidget {
+  const _FirstRunGate();
+
+  @override
+  State<_FirstRunGate> createState() => _FirstRunGateState();
+}
+
+class _FirstRunGateState extends State<_FirstRunGate> {
+  String _state = 'loading';
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  Future<void> _resolve() async {
+    try {
+      final setupComplete = await Supabase.instance.client.rpc('is_initial_owner_setup_complete') as bool;
+      if (mounted) setState(() => _state = setupComplete ? 'login' : 'first-run');
+    } catch (_) {
+      // Keep established accounts usable while the one-time setup migration is pending.
+      if (mounted) setState(() => _state = 'login');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => switch (_state) {
+        'first-run' => const FirstRunSetupPage(),
+        'login' => const LoginPage(),
+        _ => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      };
 }
 
 class _AuthenticatedAccountGate extends StatefulWidget {

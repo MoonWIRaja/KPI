@@ -14,7 +14,7 @@ supabase link --project-ref YOUR_PROJECT_REF
 supabase migration list --remote
 ```
 
-Migration asas ialah `20261103010000_initial_schema.sql`; wizard Owner berada dalam migration forward `20261103015100_owner_bootstrap_wizard.sql`. **Jangan teruskan push jika migration asas sudah applied tetapi schema itu bukan versi aplikasi semasa.** Migration applied tidak dijalankan semula. Semak schema remote; jika ia schema lama, sediakan migration pembaikan forward yang disemak dahulu. Jika projek mengandungi schema/data lain, hentikan dan buat pelan migrasi khusus—jangan reset projek.
+Migration asas ialah `20261103010000_initial_schema.sql`; claim Owner sekali sahaja berada dalam `20261103015100_owner_bootstrap_wizard.sql`, dan status first-run untuk app berada dalam `20261103022000_initial_owner_setup_status.sql`. **Jangan teruskan push jika migration asas sudah applied tetapi schema itu bukan versi aplikasi semasa.** Migration applied tidak dijalankan semula. Semak schema remote; jika ia schema lama, sediakan migration pembaikan forward yang disemak dahulu. Jika projek mengandungi schema/data lain, hentikan dan buat pelan migrasi khusus—jangan reset projek.
 
 Jika projek kosong atau belum ada migration ini, lihat perubahan yang akan dihantar:
 
@@ -44,7 +44,7 @@ SMTP ialah sambungan keluar daripada Supabase Auth. PC bos tidak memerlukan publ
 
 ## 3. Sediakan wizard Owner pertama
 
-Selepas migration setup wizard berjaya digunakan, matikan public sign-up dan buat satu akaun Auth melalui Dashboard sebagai operator. Gunakan e-mel Owner yang disahkan, tetapkan kata laluan sementara, dan jangan invite pengguna lain dahulu.
+Selepas semua migration setup berjaya digunakan, matikan public sign-up dan buat satu akaun Auth melalui Dashboard sebagai operator. Gunakan e-mel Owner yang disahkan, tetapkan kata laluan sementara, dan jangan invite pengguna lain dahulu. Apabila laman dibuka kali pertama, app memaparkan skrin Sediakan sistem anda; Owner log masuk di situ, kemudian melengkapkan nama serta kata laluan baharu pada wizard.
 
 Di SQL Editor, benarkan satu alamat e-mel untuk tuntutan Owner pertama. Gantikan placeholder dan sahkan satu baris dikemas kini:
 
@@ -54,7 +54,7 @@ set expected_email = lower(trim('OWNER_EMAIL_HERE'))
 where id = true and claimed_at is null and claimed_user_id is null;
 ```
 
-Log masuk dengan akaun Auth tersebut. Wizard hanya boleh claim jika email tepat sepadan, telah disahkan dan belum ada Owner. Wizard menetapkan nama serta kata laluan baharu; selepas itu Owner perlu enroll TOTP. Tiada signup atau claim awam. Jemput CEO/staff hanya selepas invitation SMTP diuji.
+Claim hanya berjaya jika e-mel tepat sepadan, telah disahkan dan belum ada Owner. Database mengunci tuntutan dalam satu transaksi dan menandakan setup selesai; selepas itu halaman first-run tidak muncul lagi dan semua orang menggunakan log masuk biasa. Owner perlu enroll TOTP. Tiada signup atau claim awam. Jemput CEO/staff hanya selepas invitation SMTP diuji.
 
 ## 4. Deploy invitation function
 

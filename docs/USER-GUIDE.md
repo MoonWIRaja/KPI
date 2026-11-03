@@ -9,7 +9,7 @@ The same Flutter Web application is responsive for desktop and phone browsers. A
 3. Owner, CEO and users with elevated permissions must enroll and verify an authenticator TOTP code before using protected operations.
 4. Staff accounts open their own merit page by default. Ask the Owner if an expected page is unavailable.
 
-For the very first Owner only, the system operator creates a confirmed Auth user in Supabase and allowlists that exact email in the private setup row. After that user signs in, the one-time Owner wizard asks for a display name and new password, then requires TOTP. Public account creation stays disabled.
+On the first visit before an Owner exists, the app opens the Sediakan sistem anda screen instead of normal sign-in. The operator first creates a confirmed Auth user in Supabase and allowlists that exact email in the private setup row. The Owner signs in from the first-run screen, sets a display name and new password in the one-time wizard, then enrolls TOTP. The database locks the claim atomically. After setup completes, first-run is permanently hidden and normal sign-in is shown. Public account creation stays disabled.
 
 ## Owner and management workflows
 

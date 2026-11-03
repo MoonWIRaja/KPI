@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../widgets/merit_brand.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -86,19 +88,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 38,
-                            height: 38,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(color: const Color(0xFF172033), borderRadius: BorderRadius.circular(9)),
-                            child: const Text('M', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                          ),
-                          const SizedBox(width: 11),
-                          Text('Merit Tracker', style: Theme.of(context).textTheme.titleLarge),
-                        ],
-                      ),
+                      const MeritBrand(compact: true),
                       const SizedBox(height: 35),
                       Text('Log masuk', style: Theme.of(context).textTheme.headlineMedium),
                       const SizedBox(height: 8),

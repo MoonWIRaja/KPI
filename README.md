@@ -4,7 +4,7 @@ Invite-only staff merit tracking for internal use. The application is built with
 
 ## Implemented workflows
 
-- First Owner setup wizard restricted to one operator-approved, verified email; then Owner and CEO sign-in with required TOTP MFA for privileged access.
+- First visit opens the branded, one-time Owner setup path for one operator-approved, verified email; the claim locks permanently after completion, then Owner and CEO use required TOTP MFA for privileged access.
 - Staff directory, add/edit/archive/restore, individual starting scores and configurable default score/bounds.
 - Reason-required merit adjustments in 0.1 increments from 0.1 through 1.0; immutable history and compensating corrections.
 - CSV import with preview, validation, duplicate checks, limits and transactional commit.

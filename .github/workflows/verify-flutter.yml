@@ -1,0 +1,43 @@
+name: Verify Flutter Web
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        working-directory: apps/merit_app
+        run: flutter pub get
+
+      - name: Analyze Dart sources
+        working-directory: apps/merit_app
+        run: flutter analyze
+
+      - name: Compile Flutter Web with non-secret placeholder config
+        working-directory: apps/merit_app
+        run: >-
+          flutter build web --release
+          --base-href "/KPI/"
+          --dart-define=SUPABASE_URL=https://ci-placeholder.supabase.co
+          --dart-define=SUPABASE_PUBLISHABLE_KEY=ci-placeholder-public-key

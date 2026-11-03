@@ -155,47 +155,17 @@ class _LoginPageState extends State<LoginPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const MeritBrand(compact: false),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEEF3FF),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0xFFD6E3FF)),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.bolt_rounded, size: 13, color: Color(0xFF245CEB)),
-                      SizedBox(width: 3),
-                      Text(
-                        'OTP',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF245CEB),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            const Divider(height: 1, color: Color(0xFFEEF2F8)),
-            const SizedBox(height: 18),
+            const MeritBrand(compact: false),
+            const SizedBox(height: 28),
             Row(
               children: [
                 const Text(
-                  'Welcome back',
+                  'Sign in',
                   style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
-                    color: Color(0xFF141C2E),
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
+                    color: Color(0xFF0F172A),
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -204,22 +174,23 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             const Text(
-              'Sign in with your invited email to receive a 6-digit verification code.',
-              style: TextStyle(color: Color(0xFF667894), fontSize: 13, height: 1.35),
+              'Enter your work email to receive a 6-digit code.',
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 14, height: 1.4),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             TextFormField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email, AutofillHints.username],
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _sendOtp(),
+              style: const TextStyle(fontSize: 15, color: Color(0xFF0F172A)),
               decoration: const InputDecoration(
-                labelText: 'Work or invited email',
-                prefixIcon: Icon(Icons.mail_outline_rounded, size: 20, color: Color(0xFF245CEB)),
-                hintText: 'name@organization.com',
+                labelText: 'Email address',
+                hintText: 'name@company.com',
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               validator: (value) =>
                   value == null || !value.trim().contains('@') ? 'Enter a valid email.' : null,
@@ -227,41 +198,40 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: 16),
             if (_error != null) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: const Color(0xFFB42318).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 12.5)),
+                child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 13)),
               ),
               const SizedBox(height: 12),
             ],
             SizedBox(
               height: 48,
-              child: FilledButton.icon(
+              child: FilledButton(
                 onPressed: _busy ? null : _sendOtp,
-                icon: _busy
+                child: _busy
                     ? const ThinkingOrbsLoader(size: 18, label: 'Sending')
-                    : const Icon(Icons.arrow_forward_rounded, size: 18),
-                label: Text(
-                  _busy ? 'Sending code…' : 'Send 6-digit code',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
-                ),
+                    : const Text(
+                        'Continue',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Center(
-              child: TextButton.icon(
+              child: TextButton(
                 onPressed: _busy ? null : _openExistingCode,
                 style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF475569),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                icon: const Icon(Icons.pin_outlined, size: 15),
-                label: const Text(
-                  'Already have a 6-digit code?',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                child: const Text(
+                  'Have a code already?',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                 ),
               ),
             ),

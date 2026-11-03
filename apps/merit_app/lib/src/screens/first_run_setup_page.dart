@@ -156,69 +156,81 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const MeritBrand(compact: true),
-            const SizedBox(height: 22),
+            const MeritBrand(compact: false),
+            const SizedBox(height: 28),
             Row(
               children: [
-                Text('Owner Setup', style: Theme.of(context).textTheme.titleLarge),
+                const Text(
+                  'Owner setup',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
                 const SizedBox(width: 4),
                 const InfoTooltip(
                   message: 'Initial system setup. Only the designated bootstrap email configured in Supabase can claim the primary Owner account.',
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             const Text(
               'Enter owner email to receive a 6-digit code.',
-              style: TextStyle(color: Color(0xFF667894), fontSize: 13),
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 14, height: 1.4),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 24),
             TextFormField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email, AutofillHints.username],
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _sendSetupOtp(),
+              style: const TextStyle(fontSize: 15, color: Color(0xFF0F172A)),
               decoration: const InputDecoration(
                 labelText: 'Owner email',
-                prefixIcon: Icon(Icons.mail_outline_rounded, size: 20),
-                hintText: 'name@organization.com',
+                hintText: 'name@company.com',
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               validator: (value) =>
                   value == null || !value.trim().contains('@') ? 'Enter a valid email.' : null,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             if (_error != null) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: const Color(0xFFB42318).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 12.5)),
+                child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 13)),
               ),
               const SizedBox(height: 12),
             ],
-            FilledButton.icon(
-              onPressed: _busy ? null : _sendSetupOtp,
-              icon: _busy
-                  ? const ThinkingOrbsLoader(size: 18, label: 'Sending')
-                  : const Icon(Icons.arrow_forward_rounded, size: 18),
-              label: Text(
-                _busy ? 'Sending…' : 'Send setup code',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+            SizedBox(
+              height: 48,
+              child: FilledButton(
+                onPressed: _busy ? null : _sendSetupOtp,
+                child: _busy
+                    ? const ThinkingOrbsLoader(size: 18, label: 'Sending')
+                    : const Text(
+                        'Continue',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 14),
             Center(
               child: TextButton(
                 onPressed: _busy ? null : _openExistingCode,
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  foregroundColor: const Color(0xFF475569),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text('Already have a code?', style: TextStyle(fontSize: 12.5)),
+                child: const Text('Have a code already?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
               ),
             ),
           ],

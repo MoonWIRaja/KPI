@@ -19,7 +19,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _busy = false;
   bool _codeSent = false;
   String? _error;
-  String? _notice;
 
   @override
   void dispose() {
@@ -33,7 +32,6 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       _busy = true;
       _error = null;
-      _notice = null;
     });
 
     try {
@@ -45,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
         if (!allowed) {
           if (mounted) {
             setState(() {
-              _error = 'Access restricted: This email has not been invited. Please contact your organization administrator.';
+              _error = 'Email not invited. Contact your administrator.';
               _busy = false;
             });
           }
@@ -58,20 +56,15 @@ class _LoginPageState extends State<LoginPage> {
         shouldCreateUser: false,
       );
 
-      if (mounted) {
-        setState(() {
-          _codeSent = true;
-          _notice = 'A 6-digit verification code was sent to $email.';
-        });
-      }
+      if (mounted) setState(() => _codeSent = true);
     } on AuthException catch (e) {
       if (mounted) {
-        setState(() => _error = e.message.contains('Signups not allowed') || e.message.contains('not found')
-            ? 'Access restricted: This email is not registered or invited.'
-            : 'Unable to send code: ${e.message}');
+        setState(() => _error = e.message.toLowerCase().contains('rate limit')
+            ? 'Rate limit reached. Please wait 60s.'
+            : 'Email not invited or unavailable.');
       }
     } catch (_) {
-      if (mounted) setState(() => _error = 'Unable to send verification code. Please try again shortly.');
+      if (mounted) setState(() => _error = 'Connection error. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -99,13 +92,11 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
       return true;
-    } on AuthException catch (e) {
-      if (mounted) {
-        setState(() => _error = 'Invalid or expired verification code. (${e.message})');
-      }
+    } on AuthException {
+      if (mounted) setState(() => _error = 'Invalid or expired code.');
       return false;
     } catch (_) {
-      if (mounted) setState(() => _error = 'Verification failed. Please try again.');
+      if (mounted) setState(() => _error = 'Verification failed.');
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -116,22 +107,19 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       _codeSent = false;
       _error = null;
-      _notice = null;
     });
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
         body: GlassyCardFrame(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
+          child: SmoothStepSwitcher(
             child: _codeSent
                 ? GlassyOtpView(
                     key: const ValueKey('otp_view'),
                     email: _email.text.trim(),
                     busy: _busy,
                     error: _error,
-                    notice: _notice,
                     onVerify: _verifyOtp,
                     onResend: _sendOtp,
                     onChangeEmail: _resetEmail,
@@ -149,14 +137,22 @@ class _LoginPageState extends State<LoginPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const MeritBrand(compact: true),
-            const SizedBox(height: 28),
-            Text('Sign in', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 6),
-            const Text(
-              'Sign in with your invited email. We will send a one-time verification code (OTP).',
-              style: TextStyle(color: Color(0xFF667894)),
+            const SizedBox(height: 22),
+            Row(
+              children: [
+                Text('Sign in', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(width: 4),
+                const InfoTooltip(
+                  message: 'Invite-only access. Only pre-authorized staff and administrator emails will receive a one-time code.',
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 4),
+            const Text(
+              'Enter your invited email for a 6-digit code.',
+              style: TextStyle(color: Color(0xFF667894), fontSize: 13),
+            ),
+            const SizedBox(height: 18),
             TextFormField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
@@ -164,53 +160,33 @@ class _LoginPageState extends State<LoginPage> {
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _sendOtp(),
               decoration: const InputDecoration(
-                labelText: 'Invited email address',
-                prefixIcon: Icon(Icons.mail_outline),
-                hintText: 'e.g. name@organization.com',
+                labelText: 'Email address',
+                prefixIcon: Icon(Icons.mail_outline_rounded, size: 20),
+                hintText: 'name@organization.com',
               ),
               validator: (value) =>
-                  value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
+                  value == null || !value.trim().contains('@') ? 'Enter a valid email.' : null,
             ),
             const SizedBox(height: 14),
             if (_error != null) ...[
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                 decoration: BoxDecoration(
                   color: const Color(0xFFB42318).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (_notice != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16794B).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(_notice!, style: const TextStyle(color: Color(0xFF16794B))),
+                child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 12.5)),
               ),
               const SizedBox(height: 12),
             ],
             FilledButton.icon(
               onPressed: _busy ? null : _sendOtp,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 46),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
               icon: _busy
-                  ? const ThinkingOrbsLoader(size: 18, label: 'Sending code')
-                  : const Icon(Icons.send_rounded),
-              label: Text(_busy ? 'Sending code…' : 'Send sign-in code'),
-            ),
-            const SizedBox(height: 12),
-            const Center(
-              child: Text(
-                'Access is strictly invite-only.\nOnly pre-authorized staff emails will receive a code.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 11, color: Color(0xFF8896AB)),
+                  ? const ThinkingOrbsLoader(size: 18, label: 'Sending')
+                  : const Icon(Icons.arrow_forward_rounded, size: 18),
+              label: Text(
+                _busy ? 'Sending…' : 'Send sign-in code',
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
           ],

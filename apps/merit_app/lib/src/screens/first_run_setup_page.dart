@@ -19,7 +19,6 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
   bool _busy = false;
   bool _codeSent = false;
   String? _error;
-  String? _notice;
 
   @override
   void dispose() {
@@ -33,7 +32,6 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
     setState(() {
       _busy = true;
       _error = null;
-      _notice = null;
     });
 
     try {
@@ -45,7 +43,7 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
         if (!allowed) {
           if (mounted) {
             setState(() {
-              _error = 'This email is not authorized for initial Owner setup. Please verify the designated operator email.';
+              _error = 'Unauthorized owner email.';
               _busy = false;
             });
           }
@@ -58,16 +56,15 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
         shouldCreateUser: true,
       );
 
-      if (mounted) {
-        setState(() {
-          _codeSent = true;
-          _notice = 'A 6-digit setup verification code was sent to $email.';
-        });
-      }
+      if (mounted) setState(() => _codeSent = true);
     } on AuthException catch (e) {
-      if (mounted) setState(() => _error = 'Unable to send code: ${e.message}');
+      if (mounted) {
+        setState(() => _error = e.message.toLowerCase().contains('rate limit')
+            ? 'Rate limit reached. Enable Custom SMTP in Supabase Auth or wait 60s.'
+            : e.message);
+      }
     } catch (_) {
-      if (mounted) setState(() => _error = 'Unable to connect right now. Check the configuration and try again.');
+      if (mounted) setState(() => _error = 'Connection error. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -95,11 +92,11 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
         );
       }
       return true;
-    } on AuthException catch (e) {
-      if (mounted) setState(() => _error = 'Invalid or expired setup code. (${e.message})');
+    } on AuthException {
+      if (mounted) setState(() => _error = 'Invalid or expired code.');
       return false;
     } catch (_) {
-      if (mounted) setState(() => _error = 'Verification failed. Please try again.');
+      if (mounted) setState(() => _error = 'Verification failed.');
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -110,15 +107,13 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
     setState(() {
       _codeSent = false;
       _error = null;
-      _notice = null;
     });
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
         body: GlassyCardFrame(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
+          child: SmoothStepSwitcher(
             child: _codeSent
                 ? GlassyOtpView(
                     key: const ValueKey('setup_otp_view'),
@@ -126,7 +121,6 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
                     isInitialSetup: true,
                     busy: _busy,
                     error: _error,
-                    notice: _notice,
                     onVerify: _verifySetupOtp,
                     onResend: _sendSetupOtp,
                     onChangeEmail: _resetEmail,
@@ -144,14 +138,22 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const MeritBrand(compact: true),
-            const SizedBox(height: 26),
-            Text('Set up Merit Tracker', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 6),
-            const Text(
-              'Initial system configuration. Enter the designated owner email to receive a setup code.',
-              style: TextStyle(color: Color(0xFF667894)),
+            const SizedBox(height: 22),
+            Row(
+              children: [
+                Text('Owner Setup', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(width: 4),
+                const InfoTooltip(
+                  message: 'Initial system setup. Only the designated bootstrap email configured in Supabase can claim the primary Owner account.',
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 4),
+            const Text(
+              'Enter owner email to receive a 6-digit code.',
+              style: TextStyle(color: Color(0xFF667894), fontSize: 13),
+            ),
+            const SizedBox(height: 18),
             TextFormField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
@@ -159,53 +161,33 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _sendSetupOtp(),
               decoration: const InputDecoration(
-                labelText: 'Designated Owner Email',
-                prefixIcon: Icon(Icons.shield_outlined),
-                hintText: 'e.g. owner@organization.com',
+                labelText: 'Owner email',
+                prefixIcon: Icon(Icons.mail_outline_rounded, size: 20),
+                hintText: 'name@organization.com',
               ),
               validator: (value) =>
-                  value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
+                  value == null || !value.trim().contains('@') ? 'Enter a valid email.' : null,
             ),
             const SizedBox(height: 14),
             if (_error != null) ...[
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                 decoration: BoxDecoration(
                   color: const Color(0xFFB42318).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (_notice != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16794B).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(_notice!, style: const TextStyle(color: Color(0xFF16794B))),
+                child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 12.5)),
               ),
               const SizedBox(height: 12),
             ],
             FilledButton.icon(
               onPressed: _busy ? null : _sendSetupOtp,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 46),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
               icon: _busy
-                  ? const ThinkingOrbsLoader(size: 18, label: 'Sending setup code')
-                  : const Icon(Icons.send_rounded),
-              label: Text(_busy ? 'Sending code…' : 'Send setup code'),
-            ),
-            const SizedBox(height: 12),
-            const Center(
-              child: Text(
-                'First-run setup only allows the configured bootstrap email address.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 11, color: Color(0xFF8896AB)),
+                  ? const ThinkingOrbsLoader(size: 18, label: 'Sending')
+                  : const Icon(Icons.arrow_forward_rounded, size: 18),
+              label: Text(
+                _busy ? 'Sending…' : 'Send setup code',
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
           ],

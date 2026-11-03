@@ -24,9 +24,21 @@ class MeritTrackerApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: seed, surface: const Color(0xFFF7F9FC)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: seed,
+          primary: seed,
+          surface: const Color(0xFFF7F9FC),
+        ),
         scaffoldBackgroundColor: const Color(0xFFF7F9FC),
         appBarTheme: const AppBarTheme(backgroundColor: Color(0xFFF7F9FC), surfaceTintColor: Colors.transparent),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: seed,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(44, 44),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
         cardTheme: CardThemeData(
           color: Colors.white,
           surfaceTintColor: Colors.transparent,

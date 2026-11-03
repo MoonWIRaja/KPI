@@ -43,12 +43,12 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
     } on PostgrestException catch (error) {
       if (mounted) {
         _error = error.message.contains('not available')
-            ? 'This account is not authorized to become the first Owner. Check the bootstrap email and contact the operator.'
-            : 'Owner setup is not available on Supabase. Make sure the setup migration has been applied.';
+            ? 'Unauthorized owner email.'
+            : 'Setup migration not applied.';
         setState(() {});
       }
     } catch (_) {
-      if (mounted) setState(() => _error = 'Setup failed. Check the connection and try again.');
+      if (mounted) setState(() => _error = 'Setup failed. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -57,7 +57,6 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
         body: GlassyCardFrame(
-          maxWidth: 460,
           child: Form(
             key: _form,
             child: Column(
@@ -65,66 +64,80 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const MeritBrand(compact: true),
-                const SizedBox(height: 24),
-                Text('Set up administrator account (Owner)', style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 8),
-                const Text(
-                  'Your email has been verified via OTP. Enter your full name to claim and permanently lock the primary Owner account.',
-                  style: TextStyle(color: Color(0xFF667894)),
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Text('Owner Profile', style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(width: 4),
+                    const InfoTooltip(
+                      message: 'Claims and permanently locks the primary Owner account. Future logins use Email OTP.',
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 4),
+                const Text(
+                  'Enter your display name to finish setup.',
+                  style: TextStyle(color: Color(0xFF667894), fontSize: 13),
+                ),
+                const SizedBox(height: 14),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: const Color(0xFF16794B).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
                       const Icon(Icons.verified_outlined, size: 16, color: Color(0xFF16794B)),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: SelectableText(
+                        child: Text(
                           widget.email,
-                          style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF16794B)),
+                          style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF16794B), fontSize: 13),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _name,
                   textCapitalization: TextCapitalization.words,
                   inputFormatters: [LengthLimitingTextInputFormatter(160)],
                   onFieldSubmitted: (_) => _finishSetup(),
                   decoration: const InputDecoration(
-                    labelText: 'System owner full name',
+                    labelText: 'Full name',
                     hintText: 'e.g. Moon',
-                    prefixIcon: Icon(Icons.person_outline),
+                    prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
                   ),
                   validator: (value) => value == null || value.trim().isEmpty ? 'Enter your name.' : null,
                 ),
                 if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
+                  const SizedBox(height: 10),
+                  Text(_error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 12.5)),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: _busy ? null : _finishSetup,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 46),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
                   icon: _busy
-                      ? const ThinkingOrbsLoader(size: 18, label: 'Securing Owner account')
-                      : const Icon(Icons.verified_user_outlined),
-                  label: Text(_busy ? 'Securing Owner account…' : 'Complete Owner Setup'),
+                      ? const ThinkingOrbsLoader(size: 18, label: 'Saving')
+                      : const Icon(Icons.check_rounded, size: 18),
+                  label: Text(
+                    _busy ? 'Saving…' : 'Complete Setup',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: _busy ? null : () => Supabase.instance.client.auth.signOut(),
-                  child: const Text('Sign out'),
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton(
+                    onPressed: _busy ? null : () => Supabase.instance.client.auth.signOut(),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('Sign out', style: TextStyle(fontSize: 12.5)),
+                  ),
                 ),
               ],
             ),

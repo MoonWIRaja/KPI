@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/merit_repository.dart';
 import 'csv_import_dialog.dart';
-import 'mfa_gate.dart';
 import 'reports_page.dart';
 import 'audit_page.dart';
 import '../widgets/merit_brand.dart';
@@ -27,7 +26,6 @@ class _HomeShellState extends State<HomeShell> {
   int _defaultScore = 50;
   int _selectedPage = 0;
   bool _loading = true;
-  bool _mfaRequired = false;
   String? _loadError;
 
   bool get _isOwner => _profile?['role'] == 'owner';
@@ -58,17 +56,6 @@ class _HomeShellState extends State<HomeShell> {
       final profile = await _repository.loadProfile(user.id);
       _profile = profile;
       _permissions = _isOwner ? const {} : await _repository.loadPermissions(user.id);
-      final elevated = _permissions.any((permission) => !{'account.read.self', 'merit.read.self'}.contains(permission));
-      if (profile['role'] == 'owner' || profile['role'] == 'ceo' || elevated) {
-        final aal = Supabase.instance.client.auth.mfa.getAuthenticatorAssuranceLevel();
-        if (aal.currentLevel?.name != 'aal2') {
-          setState(() {
-            _mfaRequired = true;
-            _loading = false;
-          });
-          return;
-        }
-      }
       await _loadData();
     } on MeritRepositoryException catch (error) {
       _loadError = error.message;
@@ -102,11 +89,6 @@ class _HomeShellState extends State<HomeShell> {
       if (user == null) return;
       _profile = await _repository.loadProfile(user.id);
       _permissions = _isOwner ? const {} : await _repository.loadPermissions(user.id);
-      final elevated = _permissions.any((permission) => !{'account.read.self', 'merit.read.self'}.contains(permission));
-      if ((_profile?['role'] == 'owner' || _profile?['role'] == 'ceo' || elevated) && Supabase.instance.client.auth.mfa.getAuthenticatorAssuranceLevel().currentLevel?.name != 'aal2') {
-        _mfaRequired = true;
-        return;
-      }
       await _loadData();
     } catch (_) {
       _loadError = 'Data could not be loaded. Check your connection and try again.';
@@ -115,20 +97,6 @@ class _HomeShellState extends State<HomeShell> {
         if (_navItems.isNotEmpty) _selectedPage = _selectedPage.clamp(0, _navItems.length - 1).toInt();
         _loading = false;
       });
-    }
-  }
-
-  Future<void> _afterMfa() async {
-    setState(() {
-      _mfaRequired = false;
-      _loading = true;
-    });
-    try {
-      await _loadData();
-    } catch (_) {
-      _loadError = 'Verification succeeded, but data could not be loaded.';
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -150,7 +118,6 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    if (_mfaRequired) return MfaGate(onComplete: _afterMfa);
     if (_loading && _profile == null) return const _LoadingPage();
     if (_loadError != null && _profile == null) {
       return _FailurePage(message: _loadError!, onRetry: _loadProfile);

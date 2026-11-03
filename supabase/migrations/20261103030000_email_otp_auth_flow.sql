@@ -127,4 +127,33 @@ grant execute on function public.bootstrap_initial_owner(text) to authenticated;
 revoke execute on function public.can_claim_initial_owner() from public, anon;
 revoke execute on function public.bootstrap_initial_owner(text) from public, anon;
 
+-- Since authentication now uses Email OTP verification directly, TOTP (aal2) is not required.
+create or replace function public.has_permission(permission_key text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce((
+    select p.is_active and not p.must_set_password and case
+      when p.role = 'owner' then true
+      when p.role = 'ceo' and $1 not in ('users.manage', 'users.invite')
+        then exists (
+          select 1 from public.user_permissions up
+          where up.user_id = p.user_id and up.permission_key = $1
+        )
+      when p.role = 'staff' and $1 in ('account.read.self', 'merit.read.self') then true
+      when p.role = 'staff' and $1 not in ('users.manage', 'users.invite')
+        then exists (
+          select 1 from public.user_permissions up
+          where up.user_id = p.user_id and up.permission_key = $1
+        )
+      else false
+    end
+    from public.profiles p where p.user_id = auth.uid()
+  ), false);
+$$;
+
+
 

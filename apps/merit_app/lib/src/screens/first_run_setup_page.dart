@@ -19,11 +19,21 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
   bool _busy = false;
   bool _codeSent = false;
   String? _error;
+  String? _notice;
 
   @override
   void dispose() {
     _email.dispose();
     super.dispose();
+  }
+
+  void _openExistingCode() {
+    if (!_emailForm.currentState!.validate()) return;
+    setState(() {
+      _error = null;
+      _notice = null;
+      _codeSent = true;
+    });
   }
 
   Future<void> _sendSetupOtp() async {
@@ -32,6 +42,7 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
     setState(() {
       _busy = true;
       _error = null;
+      _notice = null;
     });
 
     try {
@@ -58,10 +69,14 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
 
       if (mounted) setState(() => _codeSent = true);
     } on AuthException catch (e) {
-      if (mounted) {
-        setState(() => _error = e.message.toLowerCase().contains('rate limit')
-            ? 'Rate limit reached. Enable Custom SMTP in Supabase Auth or wait 60s.'
-            : e.message);
+      if (!mounted) return;
+      if (e.message.toLowerCase().contains('rate limit') || e.statusCode == '429') {
+        setState(() {
+          _codeSent = true;
+          _notice = 'A code was recently sent. Enter it below or wait 60s to resend.';
+        });
+      } else {
+        setState(() => _error = e.message);
       }
     } catch (_) {
       if (mounted) setState(() => _error = 'Connection error. Please try again.');
@@ -107,6 +122,7 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
     setState(() {
       _codeSent = false;
       _error = null;
+      _notice = null;
     });
   }
 
@@ -121,6 +137,7 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
                     isInitialSetup: true,
                     busy: _busy,
                     error: _error,
+                    notice: _notice,
                     onVerify: _verifySetupOtp,
                     onResend: _sendSetupOtp,
                     onChangeEmail: _resetEmail,
@@ -188,6 +205,18 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
               label: Text(
                 _busy ? 'Sending…' : 'Send setup code',
                 style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: _busy ? null : _openExistingCode,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Already have a code?', style: TextStyle(fontSize: 12.5)),
               ),
             ),
           ],

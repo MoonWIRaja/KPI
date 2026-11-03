@@ -324,7 +324,7 @@ class _GlassyOtpViewState extends State<GlassyOtpView> with SingleTickerProvider
           ),
         const SizedBox(height: 18),
 
-        // Compact Error Alert
+        // Compact Error / Notice Alert
         if (widget.error != null && !_isVerified) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -335,6 +335,20 @@ class _GlassyOtpViewState extends State<GlassyOtpView> with SingleTickerProvider
             child: Text(
               widget.error!,
               style: const TextStyle(color: Color(0xFFB42318), fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (widget.notice != null && !_isVerified) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: _primaryColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              widget.notice!,
+              style: const TextStyle(color: _primaryColor, fontSize: 12.5),
             ),
           ),
           const SizedBox(height: 12),

@@ -19,11 +19,21 @@ class _LoginPageState extends State<LoginPage> {
   bool _busy = false;
   bool _codeSent = false;
   String? _error;
+  String? _notice;
 
   @override
   void dispose() {
     _email.dispose();
     super.dispose();
+  }
+
+  void _openExistingCode() {
+    if (!_emailFormKey.currentState!.validate()) return;
+    setState(() {
+      _error = null;
+      _notice = null;
+      _codeSent = true;
+    });
   }
 
   Future<void> _sendOtp() async {
@@ -32,6 +42,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       _busy = true;
       _error = null;
+      _notice = null;
     });
 
     try {
@@ -58,10 +69,14 @@ class _LoginPageState extends State<LoginPage> {
 
       if (mounted) setState(() => _codeSent = true);
     } on AuthException catch (e) {
-      if (mounted) {
-        setState(() => _error = e.message.toLowerCase().contains('rate limit')
-            ? 'Rate limit reached. Please wait 60s.'
-            : 'Email not invited or unavailable.');
+      if (!mounted) return;
+      if (e.message.toLowerCase().contains('rate limit') || e.statusCode == '429') {
+        setState(() {
+          _codeSent = true;
+          _notice = 'A code was recently sent. Enter it below or wait 60s to resend.';
+        });
+      } else {
+        setState(() => _error = 'Email not invited or unavailable.');
       }
     } catch (_) {
       if (mounted) setState(() => _error = 'Connection error. Please try again.');
@@ -107,6 +122,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       _codeSent = false;
       _error = null;
+      _notice = null;
     });
   }
 
@@ -120,6 +136,7 @@ class _LoginPageState extends State<LoginPage> {
                     email: _email.text.trim(),
                     busy: _busy,
                     error: _error,
+                    notice: _notice,
                     onVerify: _verifyOtp,
                     onResend: _sendOtp,
                     onChangeEmail: _resetEmail,
@@ -187,6 +204,18 @@ class _LoginPageState extends State<LoginPage> {
               label: Text(
                 _busy ? 'Sending…' : 'Send sign-in code',
                 style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: _busy ? null : _openExistingCode,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Already have a code?', style: TextStyle(fontSize: 12.5)),
               ),
             ),
           ],

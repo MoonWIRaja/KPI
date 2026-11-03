@@ -63,54 +63,254 @@ class SmoothStepSwitcher extends StatelessWidget {
   }
 }
 
-/// Formal, clean card frame with subtle elevation and entrance motion.
+/// Formal, artistic 3D spatial shell for authentication screens with ambient light,
+/// top workspace badge, main 3D card, and footer security/install bar.
 class GlassyCardFrame extends StatelessWidget {
-  const GlassyCardFrame({required this.child, this.maxWidth = 400, super.key});
+  const GlassyCardFrame({
+    required this.child,
+    this.maxWidth = 420,
+    this.onInstallTap,
+    super.key,
+  });
 
   final Widget child;
   final double maxWidth;
+  final VoidCallback? onInstallTap;
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final isMobile = width < 480;
+    final size = MediaQuery.sizeOf(context);
+    final isMobile = size.width < 480;
 
-    return Center(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(isMobile ? 16 : 24),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          child: Container(
-            padding: EdgeInsets.all(isMobile ? 22 : 28),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFFFFFFF), Color(0xFFFAFCFF)],
-              ),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFDCE5F2), width: 1.2),
-              boxShadow: [
-                const BoxShadow(
-                  color: Color(0xFFCBD6E6),
-                  blurRadius: 0,
-                  offset: Offset(0, 3.5),
-                ),
-                BoxShadow(
-                  color: const Color(0xFF141C2E).withValues(alpha: 0.06),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
-                ),
-                BoxShadow(
-                  color: const Color(0xFF245CEB).withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: child,
-          ),
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF7F9FC),
+        gradient: RadialGradient(
+          center: Alignment(0, -0.55),
+          radius: 1.15,
+          colors: [
+            Color(0xFFEAF1FF),
+            Color(0xFFF7F9FC),
+          ],
         ),
+      ),
+      child: Stack(
+        children: [
+          // Top-left soft 3D light orb
+          Positioned(
+            top: -90,
+            left: -70,
+            child: IgnorePointer(
+              child: Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF245CEB).withValues(alpha: 0.08),
+                      const Color(0xFF245CEB).withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Bottom-right soft 3D light orb
+          Positioned(
+            bottom: -100,
+            right: -60,
+            child: IgnorePointer(
+              child: Container(
+                width: 280,
+                height: 280,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF3B82F6).withValues(alpha: 0.07),
+                      const Color(0xFF3B82F6).withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 18 : 24,
+                  vertical: isMobile ? 20 : 28,
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: (constraints.maxHeight - (isMobile ? 40 : 56)).clamp(0.0, double.infinity),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Top Workspace Security Pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: const Color(0xFFDCE5F2)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF141C2E).withValues(alpha: 0.04),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.verified_user_rounded, size: 14, color: Color(0xFF245CEB)),
+                            SizedBox(width: 6),
+                            Text(
+                              'MESRC STAFF MERIT PORTAL',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.7,
+                                color: Color(0xFF245CEB),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Center 3D Tactile Card with Top Accent Bar
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: maxWidth),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0xFFFFFFFF), Color(0xFFFAFCFF)],
+                            ),
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: const Color(0xFFDCE5F2), width: 1.2),
+                            boxShadow: [
+                              const BoxShadow(
+                                color: Color(0xFFCBD6E6),
+                                blurRadius: 0,
+                                offset: Offset(0, 4),
+                              ),
+                              BoxShadow(
+                                color: const Color(0xFF141C2E).withValues(alpha: 0.07),
+                                blurRadius: 28,
+                                offset: const Offset(0, 12),
+                              ),
+                              BoxShadow(
+                                color: const Color(0xFF245CEB).withValues(alpha: 0.05),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(21),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Container(
+                                  height: 4,
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Color(0xFF245CEB),
+                                        Color(0xFF60A5FA),
+                                        Color(0xFF245CEB),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    isMobile ? 22 : 30,
+                                    isMobile ? 24 : 28,
+                                    isMobile ? 22 : 30,
+                                    isMobile ? 24 : 28,
+                                  ),
+                                  child: child,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Bottom Trust & Quick Install Pill
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (onInstallTap != null) ...[
+                            InkWell(
+                              borderRadius: BorderRadius.circular(999),
+                              onTap: onInstallTap,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(color: const Color(0xFFD6E3FF)),
+                                  boxShadow: const [
+                                    BoxShadow(color: Color(0xFFCBD6E6), blurRadius: 0, offset: Offset(0, 2)),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.install_mobile_rounded, size: 15, color: Color(0xFF245CEB)),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Install App (iPhone / Android / PC)',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF245CEB),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.lock_outline_rounded, size: 13, color: Color(0xFF667894)),
+                              SizedBox(width: 5),
+                              Text(
+                                'Protected by 6-digit Email OTP  •  Invite-Only',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF667894),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

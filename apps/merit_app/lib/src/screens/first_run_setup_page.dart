@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/pwa_bridge.dart';
 import '../widgets/glassy_otp_view.dart';
 import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
@@ -129,6 +130,7 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
         body: GlassyCardFrame(
+          onInstallTap: () => triggerMeritPwaInstall('auto'),
           child: SmoothStepSwitcher(
             child: _codeSent
                 ? GlassyOtpView(

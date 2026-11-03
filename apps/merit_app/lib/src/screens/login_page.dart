@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/pwa_bridge.dart';
 import '../widgets/glassy_otp_view.dart';
 import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
@@ -129,6 +130,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
         body: GlassyCardFrame(
+          onInstallTap: () => triggerMeritPwaInstall('auto'),
           child: SmoothStepSwitcher(
             child: _codeSent
                 ? GlassyOtpView(
@@ -153,11 +155,49 @@ class _LoginPageState extends State<LoginPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const MeritBrand(compact: true),
-            const SizedBox(height: 22),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const MeritBrand(compact: false),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF3FF),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: const Color(0xFFD6E3FF)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.bolt_rounded, size: 13, color: Color(0xFF245CEB)),
+                      SizedBox(width: 3),
+                      Text(
+                        'OTP',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF245CEB),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            const Divider(height: 1, color: Color(0xFFEEF2F8)),
+            const SizedBox(height: 18),
             Row(
               children: [
-                Text('Sign in', style: Theme.of(context).textTheme.titleLarge),
+                const Text(
+                  'Welcome back',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                    color: Color(0xFF141C2E),
+                  ),
+                ),
                 const SizedBox(width: 4),
                 const InfoTooltip(
                   message: 'Invite-only access. Only pre-authorized staff and administrator emails will receive a one-time code.',
@@ -166,10 +206,10 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 4),
             const Text(
-              'Enter your invited email for a 6-digit code.',
-              style: TextStyle(color: Color(0xFF667894), fontSize: 13),
+              'Sign in with your invited email to receive a 6-digit verification code.',
+              style: TextStyle(color: Color(0xFF667894), fontSize: 13, height: 1.35),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
             TextFormField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
@@ -177,14 +217,14 @@ class _LoginPageState extends State<LoginPage> {
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _sendOtp(),
               decoration: const InputDecoration(
-                labelText: 'Email address',
-                prefixIcon: Icon(Icons.mail_outline_rounded, size: 20),
+                labelText: 'Work or invited email',
+                prefixIcon: Icon(Icons.mail_outline_rounded, size: 20, color: Color(0xFF245CEB)),
                 hintText: 'name@organization.com',
               ),
               validator: (value) =>
                   value == null || !value.trim().contains('@') ? 'Enter a valid email.' : null,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             if (_error != null) ...[
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -196,26 +236,33 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 12),
             ],
-            FilledButton.icon(
-              onPressed: _busy ? null : _sendOtp,
-              icon: _busy
-                  ? const ThinkingOrbsLoader(size: 18, label: 'Sending')
-                  : const Icon(Icons.arrow_forward_rounded, size: 18),
-              label: Text(
-                _busy ? 'Sending…' : 'Send sign-in code',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+            SizedBox(
+              height: 48,
+              child: FilledButton.icon(
+                onPressed: _busy ? null : _sendOtp,
+                icon: _busy
+                    ? const ThinkingOrbsLoader(size: 18, label: 'Sending')
+                    : const Icon(Icons.arrow_forward_rounded, size: 18),
+                label: Text(
+                  _busy ? 'Sending code…' : 'Send 6-digit code',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+                ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Center(
-              child: TextButton(
+              child: TextButton.icon(
                 onPressed: _busy ? null : _openExistingCode,
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text('Already have a code?', style: TextStyle(fontSize: 12.5)),
+                icon: const Icon(Icons.pin_outlined, size: 15),
+                label: const Text(
+                  'Already have a 6-digit code?',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ],

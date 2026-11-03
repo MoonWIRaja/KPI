@@ -135,8 +135,10 @@ class _FirstRunGateState extends State<_FirstRunGate> {
       final setupComplete = await Supabase.instance.client.rpc('is_initial_owner_setup_complete') as bool;
       if (mounted) setState(() => _state = setupComplete ? 'login' : 'first-run');
     } catch (_) {
-      // Keep established accounts usable while the one-time setup migration is pending.
-      if (mounted) setState(() => _state = 'login');
+      // The first-run sign-in accepts only operator-created Auth accounts.
+      // If the status RPC is missing, let the owner continue; the authenticated
+      // gate and trusted bootstrap RPC still enforce whether setup is allowed.
+      if (mounted) setState(() => _state = 'first-run');
     }
   }
 

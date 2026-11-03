@@ -111,11 +111,10 @@ class MeritRepository {
     while (true) {
       var query = _client
           .from('merit_events')
-          .select('id, staff_id, actor_display_name, event_type, delta_tenths, score_before_tenths, score_after_tenths, reason, created_at, staff(full_name, staff_code)')
-          .order('created_at', ascending: false);
+          .select('id, staff_id, actor_display_name, event_type, delta_tenths, score_before_tenths, score_after_tenths, reason, created_at, staff(full_name, staff_code)');
       if (from != null) query = query.gte('created_at', from.toUtc().toIso8601String());
       if (to != null) query = query.lt('created_at', to.add(const Duration(days: 1)).toUtc().toIso8601String());
-      final rows = await query.range(offset, offset + pageSize - 1);
+      final rows = await query.order('created_at', ascending: false).range(offset, offset + pageSize - 1);
       result.addAll(rows.map((row) => MeritEvent.fromMap(row)));
       if (result.length > 10000) throw const MeritRepositoryException('Laporan melebihi 10,000 baris. Kecilkan julat tarikh dan cuba lagi.');
       if (rows.length < pageSize) return result;

@@ -117,7 +117,7 @@ class _ReportsPageState extends State<ReportsPage> {
         Wrap(spacing: 10, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
           OutlinedButton.icon(onPressed: () => _chooseDate(true), icon: const Icon(Icons.calendar_today_outlined, size: 16), label: Text('Dari  ${formatDate(_from)}')),
           OutlinedButton.icon(onPressed: () => _chooseDate(false), icon: const Icon(Icons.event_outlined, size: 16), label: Text('Hingga  ${formatDate(_to)}')),
-          SizedBox(width: 170, child: DropdownButtonFormField<String>(initialValue: _direction, decoration: const InputDecoration(labelText: 'Jenis perubahan', isDense: true), items: const ['Semua', 'Kenaikan', 'Pengurangan'].map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(), onChanged: (value) => setState(() => _direction = value ?? 'Semua')),
+          SizedBox(width: 170, child: DropdownButtonFormField<String>(initialValue: _direction, decoration: const InputDecoration(labelText: 'Jenis perubahan', isDense: true), items: const ['Semua', 'Kenaikan', 'Pengurangan'].map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(), onChanged: (value) => setState(() => _direction = value ?? 'Semua'))),
         ]),
         const SizedBox(height: 14),
         Wrap(spacing: 12, runSpacing: 12, children: [

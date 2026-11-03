@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'screens/home_shell.dart';
+import 'screens/initial_owner_setup_page.dart';
 import 'screens/login_page.dart';
 import 'screens/password_setup_page.dart';
 
@@ -105,10 +106,146 @@ class _AuthGateState extends State<_AuthGate> {
         if (_recoveringPassword || snapshot.data?.event == AuthChangeEvent.passwordRecovery) {
           return const PasswordSetupPage(isRecovery: true);
         }
-        return const HomeShell();
+        return _AuthenticatedAccountGate(key: ValueKey(session.user.id), userId: session.user.id, email: session.user.email ?? '');
       },
     );
   }
+}
+
+class _AuthenticatedAccountGate extends StatefulWidget {
+  const _AuthenticatedAccountGate({required this.userId, required this.email, super.key});
+
+  final String userId;
+  final String email;
+
+  @override
+  State<_AuthenticatedAccountGate> createState() => _AuthenticatedAccountGateState();
+}
+
+class _AuthenticatedAccountGateState extends State<_AuthenticatedAccountGate> {
+  String _state = 'loading';
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  Future<void> _resolve() async {
+    setState(() => _state = 'loading');
+    try {
+      final client = Supabase.instance.client;
+      final profile = await client.from('profiles').select('user_id').eq('user_id', widget.userId).maybeSingle();
+      if (!mounted) return;
+      if (profile != null) {
+        setState(() => _state = 'home');
+        return;
+      }
+      final canClaimOwner = await client.rpc('can_claim_initial_owner') as bool;
+      if (mounted) setState(() => _state = canClaimOwner ? 'owner-setup' : 'unlinked');
+    } catch (_) {
+      if (mounted) setState(() => _state = 'setup-unavailable');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => switch (_state) {
+        'home' => const HomeShell(),
+        'owner-setup' => InitialOwnerSetupPage(email: widget.email, onComplete: _resolve),
+        'unlinked' => _AccountPendingPage(onSignOut: () => Supabase.instance.client.auth.signOut()),
+        'setup-unavailable' => _AccountSetupUnavailablePage(onRetry: _resolve),
+        _ => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      };
+}
+
+class _AccountPendingPage extends StatelessWidget {
+  const _AccountPendingPage({required this.onSignOut});
+
+  final Future<void> Function() onSignOut;
+
+  @override
+  Widget build(BuildContext context) => _AccountMessagePage(
+        title: 'Akaun belum dipautkan',
+        message: 'Hubungi Owner untuk jemputan atau akses. Pendaftaran akaun awam ditutup.',
+        actionLabel: 'Log keluar',
+        onAction: onSignOut,
+      );
+}
+
+class _AccountSetupUnavailablePage extends StatelessWidget {
+  const _AccountSetupUnavailablePage({required this.onRetry});
+
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) => _AccountMessagePage(
+        title: 'Setup Supabase belum tersedia',
+        message: 'Pastikan migration aplikasi telah digunakan pada project Supabase dan cuba semula.',
+        actionLabel: 'Cuba lagi',
+        onAction: onRetry,
+        showSignOut: true,
+      );
+}
+
+class _AccountMessagePage extends StatefulWidget {
+  const _AccountMessagePage({required this.title, required this.message, required this.actionLabel, required this.onAction, this.showSignOut = false});
+
+  final String title;
+  final String message;
+  final String actionLabel;
+  final Future<void> Function() onAction;
+  final bool showSignOut;
+
+  @override
+  State<_AccountMessagePage> createState() => _AccountMessagePageState();
+}
+
+class _AccountMessagePageState extends State<_AccountMessagePage> {
+  bool _busy = false;
+
+  Future<void> _act() async {
+    setState(() => _busy = true);
+    try {
+      await widget.onAction();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Icon(Icons.lock_outline, size: 34, color: Color(0xFF245CEB)),
+                      const SizedBox(height: 16),
+                      Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 8),
+                      Text(widget.message),
+                      const SizedBox(height: 18),
+                      FilledButton(onPressed: _busy ? null : _act, child: Text(_busy ? 'Sila tunggu…' : widget.actionLabel)),
+                      if (widget.showSignOut)
+                        TextButton(
+                          onPressed: _busy ? null : () => Supabase.instance.client.auth.signOut(),
+                          child: const Text('Log keluar'),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class _ConfigurationRequired extends StatelessWidget {

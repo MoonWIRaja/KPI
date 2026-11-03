@@ -46,7 +46,7 @@ Permission checks must be enforced in Supabase policies/functions, not only by h
 | FR-MERIT-03 | P0 | Adjustments are exactly `±0.1` through `±1.0` in 0.1 increments. A reason is required. |
 | FR-MERIT-04 | P0 | Each change records actor, UTC time, staff, reason, signed delta and before/after values. The ledger is append-only through the application; corrections create compensating entries. |
 | FR-MERIT-05 | P0 | Authorization, validation, ledger insert and score update happen atomically in the trusted data layer; clients cannot directly update scores or ledger rows. |
-| FR-AUTH-01 | P0 | No public self-registration. The initial Owner account is provisioned by the maintainer; only Owner can invite accounts or assign CEO/Staff roles. |
+| FR-AUTH-01 | P0 | No public self-registration. An operator allowlists one confirmed Auth email; the first-login wizard can claim Owner once for that identity. Only Owner can invite accounts or assign permissions. |
 | FR-AUTH-02 | P0 | Authentication uses Supabase Auth. Expired/revoked sessions return users to sign-in safely. |
 | FR-AUTH-03 | P0 | Owner and CEO require TOTP MFA; privileged database policies and functions require an AAL2 session. |
 | FR-AUTH-04 | P0 | Staff self-view is scoped to the authenticated account-to-staff link; changing an ID, URL or request body cannot expose another record. |

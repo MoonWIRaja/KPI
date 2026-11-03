@@ -77,7 +77,7 @@ Clients receive no direct insert/update permission for score or merit-event fiel
 
 ## 7. Authentication, invitations and email
 
-Public self-signup must be disabled. The first Owner is provisioned through trusted Dashboard/Auth setup and linked by the project operator. Owner invitations use the JWT-protected `invite-user` Edge Function; the function checks `users.invite`, creates the Auth invitation, links the profile and audits the operation. Invitation/password recovery needs a configured production SMTP provider. The Owner bootstrap is manual SQL documented in `SUPABASE-SETUP.md`; automated owner recovery remains an operational release gate.
+Public self-signup must be disabled. The operator creates the first Auth user through Dashboard and writes its verified email to the private one-time setup row. On first login, the app offers an Owner setup wizard; a security-definer RPC locks the setup row, verifies the JWT user/email against the allowlist, confirms no Owner exists, creates the profile and audit event, then permanently closes the claim. Owner invitations use the JWT-protected `invite-user` Edge Function. Invitation/password recovery needs a configured production SMTP provider; Owner recovery remains an operational release gate.
 
 ## 8. GitHub Pages routing and release
 

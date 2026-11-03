@@ -12,7 +12,7 @@ Maintain separate Supabase projects for development, staging and production. Res
 2. Configure Auth site URL, redirect allowlist and disable public user sign-up.
 3. Apply reviewed database migrations to development, verify RLS and function tests, then stage and production through a controlled release.
 4. Store only the Supabase URL and publishable key in Flutter's public build configuration. Keep service-role/secret keys and SMTP credentials in restricted Supabase/GitHub secret stores; never commit them or embed them in Pages artifacts.
-5. Create the first owner using the approved secure bootstrap procedure. The procedure is a release gate and must not rely on a default password or public bootstrap endpoint.
+5. Create the first confirmed Auth user in the Dashboard, set its exact email in the private bootstrap row, then use the one-time first-login Owner wizard. Keep public signup disabled; no public bootstrap endpoint exists.
 6. Configure production email delivery if invitations/recovery are enabled. Test the whole invitation and reset flow with non-production accounts.
 
 ## GitHub Pages deployment

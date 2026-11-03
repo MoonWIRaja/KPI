@@ -43,8 +43,9 @@ Navigation is generated from permissions, but hiding a screen is not an authoriz
 
 ### Login and owner setup
 
-- The Flutter client signs in through Supabase Auth; no local first-run owner wizard or public signup is assumed.
-- Owner bootstrap and account recovery follow an approved secure hosted procedure.
+- The Flutter client signs in through Supabase Auth; public signup stays disabled.
+- A one-time first-login Owner wizard is shown only to an authenticated, email-confirmed user whose email matches the private operator-configured bootstrap address. The user sets a display name and new password, then enrolls TOTP.
+- The operator creates the first Auth user in the Supabase Dashboard and configures the one-time allowlisted email in SQL; the app never creates arbitrary users or accepts a client-provided Owner role.
 - Login has accessible labels, generic failure messages and a password reveal control.
 - Invitation/reset email availability depends on configured production delivery.
 - Do not display a PC LAN/IP setup workflow in the hosted web v1.

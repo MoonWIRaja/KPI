@@ -14,7 +14,7 @@ supabase link --project-ref YOUR_PROJECT_REF
 supabase migration list --remote
 ```
 
-Migration terkini ialah `20261103010000_initial_schema.sql`. **Jangan teruskan push jika migration `20261103010000` sudah tercatat sebagai applied tetapi schema itu bukan versi semasa repo.** Migration yang sudah applied tidak dijalankan semula. Semak schema remote; jika ia schema lama, sediakan migration pembaikan forward yang disemak terlebih dahulu. Jika projek mengandungi schema/data lain, hentikan dan buat pelan migrasi khusus—jangan reset projek.
+Migration asas ialah `20261103010000_initial_schema.sql`; wizard Owner berada dalam migration forward `20261103015100_owner_bootstrap_wizard.sql`. **Jangan teruskan push jika migration asas sudah applied tetapi schema itu bukan versi aplikasi semasa.** Migration applied tidak dijalankan semula. Semak schema remote; jika ia schema lama, sediakan migration pembaikan forward yang disemak dahulu. Jika projek mengandungi schema/data lain, hentikan dan buat pelan migrasi khusus—jangan reset projek.
 
 Jika projek kosong atau belum ada migration ini, lihat perubahan yang akan dihantar:
 
@@ -42,28 +42,26 @@ Dalam Dashboard projek yang sama:
 
 SMTP ialah sambungan keluar daripada Supabase Auth. PC bos tidak memerlukan public IP untuk penghantaran jemputan. Had dan reputasi email tertakluk kepada pembekal SMTP yang dipilih.
 
-## 3. Cipta Owner pertama
+## 3. Sediakan wizard Owner pertama
 
-Buat akaun Auth Owner pertama melalui kaedah admin yang diluluskan dan pastikan emailnya verified. Selepas migration berjaya, jalankan SQL berikut di SQL Editor Dashboard sebagai project operator. Tukar email dan nama placeholder:
+Selepas migration setup wizard berjaya digunakan, matikan public sign-up dan buat satu akaun Auth melalui Dashboard sebagai operator. Gunakan e-mel Owner yang disahkan, tetapkan kata laluan sementara, dan jangan invite pengguna lain dahulu.
+
+Di SQL Editor, benarkan satu alamat e-mel untuk tuntutan Owner pertama. Gantikan placeholder dan sahkan satu baris dikemas kini:
 
 ```sql
-insert into public.profiles
-  (user_id, email, display_name, role, staff_id, is_active, must_set_password)
-select id, email, 'Moon', 'owner', null, true, false
-from auth.users
-where email = 'OWNER_EMAIL_HERE'
-  and email_confirmed_at is not null
-  and not exists (select 1 from public.profiles where role = 'owner');
+update public.initial_owner_setup
+set expected_email = lower(trim('OWNER_EMAIL_HERE'))
+where id = true and claimed_at is null and claimed_user_id is null;
 ```
 
-Semak hasilnya sebelum login. Jangan dedahkan SQL Editor kepada client dan jangan cipta endpoint bootstrap awam. Log masuk, enroll TOTP, sahkan aal2. Jemput CEO/staff hanya selepas invitation SMTP diuji.
+Log masuk dengan akaun Auth tersebut. Wizard hanya boleh claim jika email tepat sepadan, telah disahkan dan belum ada Owner. Wizard menetapkan nama serta kata laluan baharu; selepas itu Owner perlu enroll TOTP. Tiada signup atau claim awam. Jemput CEO/staff hanya selepas invitation SMTP diuji.
 
 ## 4. Deploy invitation function
 
 Pastikan `SITE_URL` dan `CORS_ORIGINS` sepadan dengan alamat production sebenar. Arahan ini menulis konfigurasi fungsi pada project yang telah dilink:
 
 ```powershell
-supabase secrets set SITE_URL=https://moonwiraja.github.io/KPI/ CORS_ORIGINS=https://moonwiraja.github.io,http://localhost:7357 --remote
+supabase secrets set 'SITE_URL=https://moonwiraja.github.io/KPI/' 'CORS_ORIGINS=https://moonwiraja.github.io,http://localhost:7357' --remote
 supabase functions deploy invite-user --remote
 ```
 
@@ -73,9 +71,9 @@ Fungsi menggunakan kunci terbina dalam Supabase Edge Functions dan masih menerim
 
 Di GitHub repo `MoonWIRaja/KPI`:
 
-1. Tambah **Actions variables** `SUPABASE_URL` dan `SUPABASE_PUBLISHABLE_KEY` daripada Dashboard → API Settings. Ini konfigurasi client awam; ia bukan pengganti RLS.
+1. Repository variables `SUPABASE_URL` dan `SUPABASE_PUBLISHABLE_KEY` sudah diisi untuk project ini. Kedua-duanya konfigurasi client awam; ia bukan pengganti RLS.
 2. Pilih **Settings → Pages → GitHub Actions**.
-3. Workflow Pages hanya deploy dari `main` dan membina app di subpath `/KPI/`. Semak branch/Actions status serta redirect URL selepas release.
+3. Jalankan **Build and deploy Merit Tracker** melalui **Actions → Run workflow** pada branch release yang dipilih. Workflow membina app di subpath `/KPI/`. Semak status Actions serta redirect URL selepas release.
 4. Jangan simpan kunci `secret`/`service_role`, password database atau SMTP di repository variables, source code, chat atau artifact.
 
 ## 6. Checklist selepas konfigurasi

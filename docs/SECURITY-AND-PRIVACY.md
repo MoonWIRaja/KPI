@@ -41,7 +41,7 @@ Protect employee identity and merit records, user sessions, role configuration, 
 ## 4. Authorization and data rules
 
 - Enable RLS on every API-exposed table, including newly added tables. Policies default to deny.
-- Disable public Auth signup. The system maintainer provisions the first Owner through trusted Dashboard/SQL access; the client cannot claim a bootstrap role.
+- Disable public Auth signup. The operator creates the first Auth user in Dashboard, allowlists exactly one verified email in the private `initial_owner_setup` row, and the first-login wizard claims Owner atomically. The client cannot set or change the allowlisted email, and the claim RPC fails after an Owner exists.
 - Only Owner may invite users or assign CEO/Staff roles. Invitation is performed by a JWT-verified Edge Function that checks the Owner role, sends through Supabase Auth SMTP and writes an audit event.
 - Require TOTP MFA for Owner and CEO and verify AAL2 in database policy/function checks. Store a second factor on a separate protected device before production; the in-app recovery UX is not complete yet.
 - Role permissions are server-enforced. Self-view policy checks account-to-staff identity, not a client-selected staff ID. Default CEO grants and Staff self-only grants are inserted by a database trigger; Owner-managed permission changes use a trusted function.

@@ -12,7 +12,7 @@ This log separates user-confirmed direction from proposals and unresolved decisi
 | D-006 | Reason/history | Confirmed: reason required | Record actor, time, before/after and delta. |
 | D-007 | Staff visibility | Confirmed default: invited staff see own merit only | Broader scope requires explicit permission. |
 | D-008 | Roles | Confirmed direction: configurable function-level permissions | Owner/admin separation and delegation boundaries open. |
-| D-009 | Provisioning | Confirmed: admin-created accounts, no public registration | First Owner is created in Supabase Dashboard and linked using trusted SQL Editor; Owner alone invites CEO/Staff through Edge Function. |
+| D-009 | Provisioning | Confirmed: invite-only accounts, no public registration | Operator creates the first confirmed Auth user in Supabase Dashboard and allowlists that verified email in the private setup row; the first-login wizard claims Owner once. Owner invites CEO/Staff through Edge Function. |
 | D-010 | Email | Confirmed requirement: SMTP for invitations and recovery | Configure custom SMTP in Supabase; provider choice and verified sender remain open. |
 | D-011 | Hosting | Superseded | Owner-PC Rust service + SQLite replaced by D-021. |
 | D-012 | Network scope | Superseded/open | Office-LAN-only replaced by hosted direction; whether office-only access remains required is open. |

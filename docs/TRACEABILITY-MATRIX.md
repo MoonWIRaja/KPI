@@ -9,7 +9,7 @@ This matrix links the approved business needs to application controls and the ve
 | Signed 0.1–1.0 adjustments and required reason | FR-MERIT-03..05 | UI and atomic `adjust_merit` validate step, reason, bounds and request ID; concurrency and reconciliation remain. |
 | Traceable history and corrections | FR-MERIT-04 | Ledger captures actor, timestamp, before/after and reason; corrections append events; staging reconciliation remains. |
 | Staff self-view and function permissions | FR-AUTH-03..04 | RLS and trusted functions enforce scope/grants; negative cross-account API verification remains. |
-| Invite-only accounts | FR-AUTH-01..02, FR-AUTH-05 | Owner-only invitation function and account controls implemented; hosted signup, SMTP, MFA and recovery setup remain. |
+| Invite-only accounts | FR-AUTH-01..02, FR-AUTH-05 | One-time verified-email Owner wizard and Owner-only invitations implemented; hosted signup, SMTP, MFA and recovery setup remain. |
 | Bulk staff import | FR-CSV-01..02 | CSV preview/validation and transactional 500-row RPC implemented; hosted verification remains. |
 | Reports explain score changes | FR-REPORT-01 | Scoped report history, CSV formula neutralization and export audit implemented; hosted permission checks remain. |
 | Hosted web app | FR-OPS-03 | Pages workflow builds `/KPI/`; actual repository variables and production URL remain. |

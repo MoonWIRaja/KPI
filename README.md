@@ -4,7 +4,7 @@ Invite-only staff merit tracking for internal use. The application is built with
 
 ## Implemented workflows
 
-- Owner and CEO sign-in; TOTP MFA required for privileged accounts and permission-elevated users.
+- First Owner setup wizard restricted to one operator-approved, verified email; then Owner and CEO sign-in with required TOTP MFA for privileged access.
 - Staff directory, add/edit/archive/restore, individual starting scores and configurable default score/bounds.
 - Reason-required merit adjustments in 0.1 increments from 0.1 through 1.0; immutable history and compensating corrections.
 - CSV import with preview, validation, duplicate checks, limits and transactional commit.
@@ -36,7 +36,7 @@ Follow [the Supabase setup guide](docs/SUPABASE-SETUP.md) before connecting a ho
 
 ## GitHub Pages
 
-The Pages workflow builds for `/KPI/` from `main`. Set repository Actions variables `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`, then choose **Settings → Pages → GitHub Actions**. Both are public client configuration. Supabase RLS and server-side functions protect private data.
+The Pages workflow builds for `/KPI/`. Repository Actions variables `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are configured for the current Supabase project. Choose **Settings → Pages → GitHub Actions**, then run the Pages workflow from the release branch after Supabase migrations and Auth are ready. Both values are public client configuration. Supabase RLS and server-side functions protect private data.
 
 ## Operational boundary
 

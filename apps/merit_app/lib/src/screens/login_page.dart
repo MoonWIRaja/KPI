@@ -37,7 +37,6 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // 1. Strict invite-only precheck
       try {
         final allowed = await Supabase.instance.client.rpc(
           'can_request_otp',
@@ -52,11 +51,8 @@ class _LoginPageState extends State<LoginPage> {
           }
           return;
         }
-      } catch (_) {
-        // Fallback if RPC check is unavailable
-      }
+      } catch (_) {}
 
-      // 2. Request OTP via Supabase Auth
       await Supabase.instance.client.auth.signInWithOtp(
         email: email,
         shouldCreateUser: false,
@@ -118,28 +114,22 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFF060911),
-        body: Stack(
-          children: [
-            const MetallicRibbonsBackground(),
-            GlassyCardFrame(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: _codeSent
-                    ? GlassyOtpView(
-                        key: const ValueKey('otp_view'),
-                        email: _email.text.trim(),
-                        busy: _busy,
-                        error: _error,
-                        notice: _notice,
-                        onVerify: _verifyOtp,
-                        onResend: _sendOtp,
-                        onChangeEmail: _resetEmail,
-                      )
-                    : _buildEmailForm(context),
-              ),
-            ),
-          ],
+        body: GlassyCardFrame(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: _codeSent
+                ? GlassyOtpView(
+                    key: const ValueKey('otp_view'),
+                    email: _email.text.trim(),
+                    busy: _busy,
+                    error: _error,
+                    notice: _notice,
+                    onVerify: _verifyOtp,
+                    onResend: _sendOtp,
+                    onChangeEmail: _resetEmail,
+                  )
+                : _buildEmailForm(context),
+          ),
         ),
       );
 
@@ -150,145 +140,69 @@ class _LoginPageState extends State<LoginPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top Logo
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B).withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-                ),
-                child: const MeritBrand(compact: true),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            const Text(
-              'Sign in',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
+            const MeritBrand(compact: true),
+            const SizedBox(height: 28),
+            Text('Sign in', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 6),
             const Text(
               'Sign in with your invited email. We will send a one-time verification code (OTP).',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+              style: TextStyle(color: Color(0xFF667894)),
             ),
-            const SizedBox(height: 22),
-
-            // Email Field styled with dark glass
+            const SizedBox(height: 20),
             TextFormField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email, AutofillHints.username],
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _sendOtp(),
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Invited email address',
-                labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                prefixIcon: const Icon(Icons.mail_outline, color: Color(0xFF94A3B8)),
+                prefixIcon: Icon(Icons.mail_outline),
                 hintText: 'e.g. name@organization.com',
-                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                fillColor: const Color(0xFF0F172A).withValues(alpha: 0.5),
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8),
-                ),
               ),
               validator: (value) =>
                   value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
             ),
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 14),
             if (_error != null) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.35)),
+                  color: const Color(0xFFB42318).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline, color: Color(0xFFF87171), size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _error!,
-                        style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
+                child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
             ],
             if (_notice != null) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                  color: const Color(0xFF16794B).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle_outline, color: Color(0xFF34D399), size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _notice!,
-                        style: const TextStyle(color: Color(0xFFA7F3D0), fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
+                child: Text(_notice!, style: const TextStyle(color: Color(0xFF16794B))),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
             ],
-
-            // Submit Button
-            SizedBox(
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: _busy ? null : _sendOtp,
-                icon: _busy
-                    ? const ThinkingOrbsLoader(size: 18, label: 'Sending code')
-                    : const Icon(Icons.send_rounded, size: 18),
-                label: Text(
-                  _busy ? 'Sending code…' : 'Send sign-in code',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: const Color(0xFF2563EB).withValues(alpha: 0.4),
-                  disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
-                ),
+            FilledButton.icon(
+              onPressed: _busy ? null : _sendOtp,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 46),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
+              icon: _busy
+                  ? const ThinkingOrbsLoader(size: 18, label: 'Sending code')
+                  : const Icon(Icons.send_rounded),
+              label: Text(_busy ? 'Sending code…' : 'Send sign-in code'),
             ),
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 12),
             const Center(
               child: Text(
                 'Access is strictly invite-only.\nOnly pre-authorized staff emails will receive a code.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.4),
+                style: TextStyle(fontSize: 11, color: Color(0xFF8896AB)),
               ),
             ),
           ],

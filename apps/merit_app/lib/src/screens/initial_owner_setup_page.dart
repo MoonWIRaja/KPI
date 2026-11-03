@@ -56,140 +56,79 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFF060911),
-        body: Stack(
-          children: [
-            const MetallicRibbonsBackground(),
-            GlassyCardFrame(
-              maxWidth: 460,
-              child: Form(
-                key: _form,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B).withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        body: GlassyCardFrame(
+          maxWidth: 460,
+          child: Form(
+            key: _form,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const MeritBrand(compact: true),
+                const SizedBox(height: 24),
+                Text('Set up administrator account (Owner)', style: Theme.of(context).textTheme.headlineMedium),
+                const SizedBox(height: 8),
+                const Text(
+                  'Your email has been verified via OTP. Enter your full name to claim and permanently lock the primary Owner account.',
+                  style: TextStyle(color: Color(0xFF667894)),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16794B).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.verified_outlined, size: 16, color: Color(0xFF16794B)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SelectableText(
+                          widget.email,
+                          style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF16794B)),
                         ),
-                        child: const MeritBrand(compact: true),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Complete Owner Setup',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Your email has been verified via OTP. Enter your full name to permanently claim and secure the primary Owner account.',
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                    ),
-                    const SizedBox(height: 18),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.verified_outlined, size: 16, color: Color(0xFF34D399)),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              widget.email,
-                              style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFA7F3D0), fontSize: 13),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    TextFormField(
-                      controller: _name,
-                      textCapitalization: TextCapitalization.words,
-                      inputFormatters: [LengthLimitingTextInputFormatter(160)],
-                      onFieldSubmitted: (_) => _finishSetup(),
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                      decoration: InputDecoration(
-                        labelText: 'System owner full name',
-                        labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                        hintText: 'e.g. Moon',
-                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                        prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF94A3B8)),
-                        fillColor: const Color(0xFF0F172A).withValues(alpha: 0.5),
-                        filled: true,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8),
-                        ),
-                      ),
-                      validator: (value) => value == null || value.trim().isEmpty ? 'Enter your name.' : null,
-                    ),
-                    if (_error != null) ...[
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.35)),
-                        ),
-                        child: Text(_error!, style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 12)),
                       ),
                     ],
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: _busy ? null : _finishSetup,
-                        icon: _busy
-                            ? const ThinkingOrbsLoader(size: 18, label: 'Securing Owner account')
-                            : const Icon(Icons.verified_user_outlined, size: 18),
-                        label: Text(
-                          _busy ? 'Securing Owner account…' : 'Complete Owner Setup',
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: const Color(0xFF10B981).withValues(alpha: 0.4),
-                          disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 0,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Center(
-                      child: TextButton(
-                        onPressed: _busy ? null : () => Supabase.instance.client.auth.signOut(),
-                        child: const Text('Sign out', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 18),
+                TextFormField(
+                  controller: _name,
+                  textCapitalization: TextCapitalization.words,
+                  inputFormatters: [LengthLimitingTextInputFormatter(160)],
+                  onFieldSubmitted: (_) => _finishSetup(),
+                  decoration: const InputDecoration(
+                    labelText: 'System owner full name',
+                    hintText: 'e.g. Moon',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  validator: (value) => value == null || value.trim().isEmpty ? 'Enter your name.' : null,
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
+                ],
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: _busy ? null : _finishSetup,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 46),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: _busy
+                      ? const ThinkingOrbsLoader(size: 18, label: 'Securing Owner account')
+                      : const Icon(Icons.verified_user_outlined),
+                  label: Text(_busy ? 'Securing Owner account…' : 'Complete Owner Setup'),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: _busy ? null : () => Supabase.instance.client.auth.signOut(),
+                  child: const Text('Sign out'),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
 }

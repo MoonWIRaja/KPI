@@ -41,7 +41,9 @@ class _ThinkingOrbsLoaderState extends State<ThinkingOrbsLoader>
             animation: _controller,
             builder: (context, _) => CustomPaint(
               painter: _OrbPainter(
-                phase: reduceMotion || TickerMode.of(context) == false ? 0 : _controller.value,
+                phase: reduceMotion || !TickerMode.valuesOf(context).enabled
+                    ? 0
+                    : _controller.value,
                 color: color,
               ),
             ),

@@ -996,7 +996,7 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
       final staff = widget.staff;
       if (staff == null) {
         final scoreTenths = parseScoreTenths(_score.text);
-        if (scoreTenths == null) throw const MeritRepositoryException('Gunakan skor sah dengan maksimum satu tempat perpuluhan.');
+        if (scoreTenths == null) throw const MeritRepositoryException('Enter a valid score with at most one decimal place.');
         await widget.repository.createStaff(code: _code.text, name: _name.text, department: _department.text, startingScoreTenths: scoreTenths);
       } else {
         await widget.repository.updateStaff(staff, code: _code.text, name: _name.text, department: _department.text);
@@ -1174,4 +1174,4 @@ class _InviteDialogState extends State<_InviteDialog> {
   }
 }
 
-String? _required(String? value) => value == null || value.trim().isEmpty ? 'Medan ini wajib diisi.' : null;
+String? _required(String? value) => value == null || value.trim().isEmpty ? 'This field is required.' : null;

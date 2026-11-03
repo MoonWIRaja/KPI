@@ -2,7 +2,7 @@ name: Build and deploy Merit Tracker
 
 on:
   push:
-    branches: [main]
+    branches: [codex/mvp-foundation]
   workflow_dispatch:
 
 permissions:

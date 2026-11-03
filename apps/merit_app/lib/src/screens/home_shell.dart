@@ -283,13 +283,9 @@ class _HomeShellState extends State<HomeShell> {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: .97),
                     borderRadius: BorderRadius.circular(24),
-                    border: const Border(
-                      top: BorderSide(color: Color(0xFFEAF0F8), width: 1.0),
-                      left: BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
-                      right: BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
-                      bottom: BorderSide(color: Color(0xFFCBD6E6), width: 3.0),
-                    ),
+                    border: Border.all(color: const Color(0xFFDCE5F2), width: 1.2),
                     boxShadow: const [
+                      BoxShadow(color: Color(0xFFCBD6E6), blurRadius: 0, offset: Offset(0, 3)),
                       BoxShadow(color: Color(0x180F1D36), blurRadius: 22, offset: Offset(0, 7)),
                     ],
                   ),
@@ -363,13 +359,9 @@ class _HomeShellState extends State<HomeShell> {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: .97),
                       borderRadius: BorderRadius.circular(24),
-                      border: const Border(
-                        top: BorderSide(color: Color(0xFFEAF0F8), width: 1.0),
-                        left: BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
-                        right: BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
-                        bottom: BorderSide(color: Color(0xFFCBD6E6), width: 3.0),
-                      ),
+                      border: Border.all(color: const Color(0xFFDCE5F2), width: 1.2),
                       boxShadow: const [
+                        BoxShadow(color: Color(0xFFCBD6E6), blurRadius: 0, offset: Offset(0, 3)),
                         BoxShadow(color: Color(0x180F1D36), blurRadius: 22, offset: Offset(0, 7)),
                       ],
                     ),

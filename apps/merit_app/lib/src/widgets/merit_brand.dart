@@ -57,47 +57,50 @@ class _Surface3DCardState extends State<Surface3DCard> {
         onTapUp: activeInteractive ? (_) => setState(() => _pressed = false) : null,
         onTapCancel: activeInteractive ? () => setState(() => _pressed = false) : null,
         onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: reduceMotion ? 0 : 180),
+        child: AnimatedScale(
+          duration: Duration(milliseconds: reduceMotion ? 0 : 160),
           curve: Curves.easeOutCubic,
-          transformAlignment: Alignment.center,
-          transform: Matrix4.identity()
-            ..translateByDouble(0.0, translateY, 0.0, 1.0)
-            ..scaleByDouble(scale, scale, 1.0, 1.0),
-          padding: widget.padding,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFFFFFF),
-                Color(0xFFFAFCFF),
+          scale: scale,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: reduceMotion ? 0 : 180),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(0.0, translateY, 0.0),
+            padding: widget.padding,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFFFFFFF),
+                  Color(0xFFFAFCFF),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              border: Border.all(
+                color: _hovered && activeInteractive ? const Color(0xFFB8CCF0) : const Color(0xFFDCE5F2),
+                width: 1.2,
+              ),
+              boxShadow: [
+                // 3D Tactile Bottom Bevel Lip Shadow (compatible with uniform BorderRadius)
+                BoxShadow(
+                  color: _hovered && activeInteractive ? const Color(0xFF9EB8E8) : const Color(0xFFCBD6E6),
+                  blurRadius: 0,
+                  offset: Offset(0, _pressed ? 1.5 : 3.0),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF141C2E).withValues(alpha: _hovered && activeInteractive ? 0.08 : 0.05),
+                  blurRadius: _hovered && activeInteractive ? 22 : 16,
+                  offset: Offset(0, _hovered && activeInteractive ? 10 : 6),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF245CEB).withValues(alpha: _hovered && activeInteractive ? 0.07 : 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            border: Border(
-              top: const BorderSide(color: Color(0xFFEAF0F8), width: 1.0),
-              left: const BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
-              right: const BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
-              bottom: BorderSide(
-                color: _hovered && activeInteractive ? const Color(0xFF9EB8E8) : const Color(0xFFCBD6E6),
-                width: _pressed ? 1.5 : 3.0,
-              ),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF141C2E).withValues(alpha: _hovered && activeInteractive ? 0.08 : 0.05),
-                blurRadius: _hovered && activeInteractive ? 22 : 16,
-                offset: Offset(0, _hovered && activeInteractive ? 10 : 6),
-              ),
-              BoxShadow(
-                color: const Color(0xFF245CEB).withValues(alpha: _hovered && activeInteractive ? 0.07 : 0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            child: widget.child,
           ),
-          child: widget.child,
         ),
       ),
     );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../widgets/glassy_otp_view.dart';
 import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
 
@@ -14,9 +14,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _emailFormKey = GlobalKey<FormState>();
-  final _otpFormKey = GlobalKey<FormState>();
   final _email = TextEditingController();
-  final _otp = TextEditingController();
 
   bool _busy = false;
   bool _codeSent = false;
@@ -26,7 +24,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void dispose() {
     _email.dispose();
-    _otp.dispose();
     super.dispose();
   }
 
@@ -56,10 +53,10 @@ class _LoginPageState extends State<LoginPage> {
           return;
         }
       } catch (_) {
-        // Fallback if RPC check encounters an issue
+        // Fallback if RPC check is unavailable
       }
 
-      // 2. Request OTP via Supabase Auth (sent through configured Google SMTP)
+      // 2. Request OTP via Supabase Auth
       await Supabase.instance.client.auth.signInWithOtp(
         email: email,
         shouldCreateUser: false,
@@ -84,10 +81,8 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _verifyOtp() async {
-    if (!_otpFormKey.currentState!.validate()) return;
+  Future<bool> _verifyOtp(String token) async {
     final email = _email.text.trim();
-    final token = _otp.text.trim();
     setState(() {
       _busy = true;
       _error = null;
@@ -99,10 +94,15 @@ class _LoginPageState extends State<LoginPage> {
         token: token,
         type: OtpType.email,
       );
-    } on AuthException {
-      if (mounted) setState(() => _error = 'Invalid or expired verification code. Please check your email and try again.');
+      return true;
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Invalid or expired verification code. (${e.message})');
+      }
+      return false;
     } catch (_) {
       if (mounted) setState(() => _error = 'Verification failed. Please try again.');
+      return false;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -111,163 +111,187 @@ class _LoginPageState extends State<LoginPage> {
   void _resetEmail() {
     setState(() {
       _codeSent = false;
-      _otp.clear();
       _error = null;
       _notice = null;
     });
   }
 
   @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(width < 480 ? 16 : 24),
-          child: SizedBox(
-            width: width < 520 ? double.infinity : 430,
-            child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(width < 480 ? 22 : 30),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: _codeSent ? _buildOtpForm(context) : _buildEmailForm(context),
-                ),
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: const Color(0xFF060911),
+        body: Stack(
+          children: [
+            const MetallicRibbonsBackground(),
+            GlassyCardFrame(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _codeSent
+                    ? GlassyOtpView(
+                        key: const ValueKey('otp_view'),
+                        email: _email.text.trim(),
+                        busy: _busy,
+                        error: _error,
+                        notice: _notice,
+                        onVerify: _verifyOtp,
+                        onResend: _sendOtp,
+                        onChangeEmail: _resetEmail,
+                      )
+                    : _buildEmailForm(context),
               ),
             ),
-          ),
+          ],
         ),
-      ),
-    );
-  }
+      );
 
   Widget _buildEmailForm(BuildContext context) => Form(
         key: _emailFormKey,
         child: Column(
           key: const ValueKey('email_form'),
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const MeritBrand(compact: true),
-            const SizedBox(height: 30),
-            Text('Sign in', style: Theme.of(context).textTheme.headlineMedium),
+            // Top Logo
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B).withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                ),
+                child: const MeritBrand(compact: true),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            const Text(
+              'Sign in',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
             const SizedBox(height: 6),
             const Text(
               'Sign in with your invited email. We will send a one-time verification code (OTP).',
-              style: TextStyle(color: Color(0xFF667894)),
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
+
+            // Email Field styled with dark glass
             TextFormField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email, AutofillHints.username],
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _sendOtp(),
-              decoration: const InputDecoration(
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
                 labelText: 'Invited email address',
-                prefixIcon: Icon(Icons.mail_outline),
+                labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                prefixIcon: const Icon(Icons.mail_outline, color: Color(0xFF94A3B8)),
                 hintText: 'e.g. name@organization.com',
+                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                fillColor: const Color(0xFF0F172A).withValues(alpha: 0.5),
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8),
+                ),
               ),
-              validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
+              validator: (value) =>
+                  value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
             ),
-            const SizedBox(height: 14),
-            if (_error != null) _MessageBox(text: _error!, isError: true),
-            if (_notice != null) _MessageBox(text: _notice!, isError: false),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: _busy ? null : _sendOtp,
-              icon: _busy
-                  ? const ThinkingOrbsLoader(size: 18, label: 'Sending code')
-                  : const Icon(Icons.send_rounded),
-              label: Text(_busy ? 'Sending code…' : 'Send sign-in code'),
+            const SizedBox(height: 16),
+
+            if (_error != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.35)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Color(0xFFF87171), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (_notice != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline, color: Color(0xFF34D399), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _notice!,
+                        style: const TextStyle(color: Color(0xFFA7F3D0), fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+
+            // Submit Button
+            SizedBox(
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: _busy ? null : _sendOtp,
+                icon: _busy
+                    ? const ThinkingOrbsLoader(size: 18, label: 'Sending code')
+                    : const Icon(Icons.send_rounded, size: 18),
+                label: Text(
+                  _busy ? 'Sending code…' : 'Send sign-in code',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(0xFF2563EB).withValues(alpha: 0.4),
+                  disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+
             const Center(
               child: Text(
                 'Access is strictly invite-only.\nOnly pre-authorized staff emails will receive a code.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 11, color: Color(0xFF8896AB)),
+                style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.4),
               ),
             ),
           ],
         ),
       );
-
-  Widget _buildOtpForm(BuildContext context) => Form(
-        key: _otpFormKey,
-        child: Column(
-          key: const ValueKey('otp_form'),
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const MeritBrand(compact: true),
-            const SizedBox(height: 24),
-            Text('Enter verification code', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 6),
-            Text(
-              'A 6-digit one-time code was sent to ${_email.text.trim()}.',
-              style: const TextStyle(color: Color(0xFF667894)),
-            ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _otp,
-              keyboardType: TextInputType.number,
-              autofillHints: const [AutofillHints.oneTimeCode],
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(8),
-              ],
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _verifyOtp(),
-              decoration: const InputDecoration(
-                labelText: '6-digit code',
-                prefixIcon: Icon(Icons.pin_outlined),
-                hintText: '123456',
-              ),
-              validator: (value) => value == null || value.trim().length < 6 ? 'Enter the full verification code.' : null,
-            ),
-            const SizedBox(height: 14),
-            if (_error != null) _MessageBox(text: _error!, isError: true),
-            if (_notice != null) _MessageBox(text: _notice!, isError: false),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: _busy ? null : _verifyOtp,
-              icon: _busy
-                  ? const ThinkingOrbsLoader(size: 18, label: 'Verifying code')
-                  : const Icon(Icons.check_rounded),
-              label: Text(_busy ? 'Verifying…' : 'Verify & Sign In'),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton(
-                  onPressed: _busy ? null : _resetEmail,
-                  child: const Text('Change email'),
-                ),
-                TextButton(
-                  onPressed: _busy ? null : _sendOtp,
-                  child: const Text('Resend code'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-}
-
-class _MessageBox extends StatelessWidget {
-  const _MessageBox({required this.text, required this.isError});
-
-  final String text;
-  final bool isError;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isError ? const Color(0xFFB42318) : const Color(0xFF16794B);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
-      child: Text(text, style: TextStyle(color: color)),
-    );
-  }
 }

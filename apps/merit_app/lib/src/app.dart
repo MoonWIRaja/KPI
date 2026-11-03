@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -78,6 +78,7 @@ class _AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<_AuthGate> {
   bool _recoveringPassword = false;
+  bool _holdForAnimation = false;
   late final Stream<AuthState> _authChanges;
   late final StreamSubscription<AuthState> _authSubscription;
 
@@ -92,6 +93,11 @@ class _AuthGateState extends State<_AuthGate> {
         setState(() => _recoveringPassword = true);
       } else if (state.event == AuthChangeEvent.signedOut && _recoveringPassword) {
         setState(() => _recoveringPassword = false);
+      } else if (state.event == AuthChangeEvent.signedIn && !_holdForAnimation) {
+        setState(() => _holdForAnimation = true);
+        Future.delayed(const Duration(milliseconds: 1400), () {
+          if (mounted) setState(() => _holdForAnimation = false);
+        });
       }
     });
   }
@@ -109,7 +115,7 @@ class _AuthGateState extends State<_AuthGate> {
       stream: _authChanges,
       builder: (context, snapshot) {
         final session = snapshot.data?.session ?? client.auth.currentSession;
-        if (session == null) return const _FirstRunGate();
+        if (session == null || _holdForAnimation) return const _FirstRunGate();
         if (_recoveringPassword || snapshot.data?.event == AuthChangeEvent.passwordRecovery) {
           return const PasswordSetupPage(isRecovery: true);
         }

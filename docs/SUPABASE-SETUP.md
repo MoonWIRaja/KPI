@@ -48,6 +48,11 @@ Dalam Dashboard projek yang sama:
    - **User:** `support@mesrc.com.my`
    - **Password:** Masukkan 16-character Google Workspace App Password (jangan commit ke git).
    - Simpan tetapan dan hantar emel ujian untuk pengesahan.
+6. Kemas kini template e-mel di **Authentication → Email Templates → Magic Link**:
+   - Secara lalai, Supabase meletakkan pautan URL `{{ .ConfirmationURL }}` dan bukannya nombor kod 6-digit.
+   - Supaya pengguna menerima kod 6-digit (OTP) dan bukannya pautan biasa, tukar **Subject** kepada: `Your Merit Tracker Verification Code`
+   - Gantikan kandungan **Body** dengan HTML dari fail `supabase/templates/magic_link_otp.html` yang menggunakan token: `{{ .Token }}`.
+   - Klik **Save changes**.
 
 SMTP ialah sambungan keluar daripada Supabase Auth. PC bos tidak memerlukan public IP untuk penghantaran kod OTP.
 

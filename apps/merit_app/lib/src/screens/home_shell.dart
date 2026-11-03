@@ -62,7 +62,7 @@ class _HomeShellState extends State<HomeShell> {
       }
       if (profile['role'] == 'owner' || profile['role'] == 'ceo') {
         final aal = Supabase.instance.client.auth.mfa.getAuthenticatorAssuranceLevel();
-        if (aal.currentLevel.name != 'aal2') {
+        if (aal.currentLevel?.name != 'aal2') {
           setState(() {
             _mfaRequired = true;
             _loading = false;
@@ -133,11 +133,6 @@ class _HomeShellState extends State<HomeShell> {
     ];
     if (_isOwner) items.add(const _NavItem('Pengguna', Icons.manage_accounts_outlined));
     return items;
-  }
-
-  String get _pageTitle {
-    if (_selectedPage >= _navItems.length) return _navItems.first.label;
-    return _navItems[_selectedPage].label;
   }
 
   @override
@@ -725,7 +720,7 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
         const SizedBox(height: 16),
         SegmentedButton<int>(segments: const [ButtonSegment(value: 1, label: Text('Tambah'), icon: Icon(Icons.add)), ButtonSegment(value: -1, label: Text('Kurang'), icon: Icon(Icons.remove))], selected: {_direction}, onSelectionChanged: (selection) => setState(() => _direction = selection.first)),
         const SizedBox(height: 12),
-        DropdownButtonFormField<int>(value: _step, decoration: const InputDecoration(labelText: 'Jumlah perubahan'), items: List.generate(10, (index) { final amount = (index + 1) * 10; return DropdownMenuItem(value: amount, child: Text(formatMerit(amount))); }), onChanged: (value) => setState(() => _step = value ?? 10)),
+        DropdownButtonFormField<int>(initialValue: _step, decoration: const InputDecoration(labelText: 'Jumlah perubahan'), items: List.generate(10, (index) { final amount = (index + 1) * 10; return DropdownMenuItem(value: amount, child: Text(formatMerit(amount))); }), onChanged: (value) => setState(() => _step = value ?? 10)),
         const SizedBox(height: 12),
         TextField(controller: _reason, onChanged: (_) => setState(() {}), minLines: 2, maxLines: 4, maxLength: 500, decoration: const InputDecoration(labelText: 'Sebab (wajib)', alignLabelWithHint: true)),
         const SizedBox(height: 8),
@@ -789,13 +784,13 @@ class _InviteDialogState extends State<_InviteDialog> {
         const SizedBox(height: 10),
         TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Nama pengguna'), validator: _required),
         const SizedBox(height: 10),
-        DropdownButtonFormField<String>(value: _role, decoration: const InputDecoration(labelText: 'Peranan'), items: [if (!ceoExists) const DropdownMenuItem(value: 'ceo', child: Text('CEO')), const DropdownMenuItem(value: 'staff', child: Text('Staff — paparan sendiri'))], onChanged: (value) => setState(() { _role = value ?? 'staff'; _staffId = null; })),
+        DropdownButtonFormField<String>(initialValue: _role, decoration: const InputDecoration(labelText: 'Peranan'), items: [if (!ceoExists) const DropdownMenuItem(value: 'ceo', child: Text('CEO')), const DropdownMenuItem(value: 'staff', child: Text('Staff — paparan sendiri'))], onChanged: (value) => setState(() { _role = value ?? 'staff'; _staffId = null; })),
         if (_role == 'staff') ...[
           const SizedBox(height: 10),
           if (available.isEmpty)
             const Text('Tambah rekod staff dahulu sebelum menghantar jemputan staff.', style: TextStyle(color: Color(0xFF667894), fontSize: 12))
           else
-            DropdownButtonFormField<String>(value: _staffId, decoration: const InputDecoration(labelText: 'Pautkan rekod staff'), items: available.map((item) => DropdownMenuItem(value: item.id, child: Text('${item.code} — ${item.name}', overflow: TextOverflow.ellipsis))).toList(), onChanged: (value) => setState(() => _staffId = value), validator: (value) => _role == 'staff' && value == null ? 'Pilih rekod staff.' : null),
+            DropdownButtonFormField<String>(initialValue: _staffId, decoration: const InputDecoration(labelText: 'Pautkan rekod staff'), items: available.map((item) => DropdownMenuItem(value: item.id, child: Text('${item.code} — ${item.name}', overflow: TextOverflow.ellipsis))).toList(), onChanged: (value) => setState(() => _staffId = value), validator: (value) => _role == 'staff' && value == null ? 'Pilih rekod staff.' : null),
         ],
         if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318)))),
       ]))),

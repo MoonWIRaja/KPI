@@ -39,7 +39,7 @@ class _MfaGateState extends State<MfaGate> {
     try {
       final auth = Supabase.instance.client.auth;
       final assurance = auth.mfa.getAuthenticatorAssuranceLevel();
-      if (assurance.currentLevel.name == 'aal2') {
+      if (assurance.currentLevel?.name == 'aal2') {
         widget.onComplete();
         return;
       }
@@ -57,8 +57,10 @@ class _MfaGateState extends State<MfaGate> {
           issuer: 'Merit Tracker',
           friendlyName: 'Merit Tracker authenticator',
         );
+        final totp = enrolled.totp;
+        if (totp == null) throw StateError('TOTP enrollment data was not returned');
         _factorId = enrolled.id;
-        _secret = enrolled.totp.secret;
+        _secret = totp.secret;
       }
     } catch (_) {
       _error = 'Pengesahan tambahan tidak dapat disediakan. Cuba lagi atau hubungi pemantau sistem.';

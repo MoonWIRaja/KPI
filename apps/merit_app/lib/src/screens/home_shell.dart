@@ -386,47 +386,25 @@ class _HomeShellState extends State<HomeShell> {
 
   Widget _dashboardPage() {
     final active = _staff.where((staff) => !staff.archived).toList();
-    final average = active.isEmpty
-        ? '5.0'
-        : formatMerit((active.map((s) => s.scoreTenths).reduce((a, b) => a + b) / active.length).round());
-    final firstOfMonth = DateTime(DateTime.now().year, DateTime.now().month);
-    final monthChanges = _events
-        .where((event) => event.type == 'adjustment' && event.createdAt.toLocal().isAfter(firstOfMonth))
-        .toList();
     final staff = active
         .where((item) =>
             '${item.code} ${item.name} ${item.department ?? ''}'.toLowerCase().contains(_search.text.toLowerCase()))
         .toList();
     final width = MediaQuery.sizeOf(context).width;
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(width < 700 ? 18 : 32, 18, width < 700 ? 18 : 32, 30),
-      children: [
-        const _PageHeading(
-          title: 'Dashboard',
-          subtitle: 'Select any staff name to add or deduct merit points (0.1 – 1.0).',
-        ),
-        const SizedBox(height: 18),
-        _StatsRow(
-          items: [
-            _StatItem('Active staff', '${active.length}', 'Active records', Icons.groups_outlined),
-            _StatItem('Average merit', average, 'Default start ${formatMerit(_defaultScore)}', Icons.analytics_outlined),
-            _StatItem('Monthly changes', '${monthChanges.length}', 'This month', Icons.trending_up),
-          ],
-        ),
-        const SizedBox(height: 18),
-        _DashboardMeritCard(
-          staff: staff,
-          events: _events,
-          canAdjust: _hasPermission('merit.adjust'),
-          canCorrect: _hasPermission('merit.correct'),
-          search: _search,
-          onAdjust: _openAdjustment,
-          onCorrect: _openCorrection,
-          onSearchChanged: () => setState(() {}),
-          loading: _loading,
-        ),
-      ],
+    return Padding(
+      padding: EdgeInsets.fromLTRB(width < 700 ? 14 : 24, 14, width < 700 ? 14 : 24, 18),
+      child: _DashboardMeritCard(
+        staff: staff,
+        events: _events,
+        canAdjust: _hasPermission('merit.adjust'),
+        canCorrect: _hasPermission('merit.correct'),
+        search: _search,
+        onAdjust: _openAdjustment,
+        onCorrect: _openCorrection,
+        onSearchChanged: () => setState(() {}),
+        loading: _loading,
+      ),
     );
   }
 
@@ -437,125 +415,119 @@ class _HomeShellState extends State<HomeShell> {
         .toList();
     final width = MediaQuery.sizeOf(context).width;
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(width < 700 ? 18 : 32, 18, width < 700 ? 18 : 32, 30),
-      children: [
-        _PageHeading(
-          title: 'Staff Registration',
-          subtitle: 'Register new staff, edit details, or import CSV. Default starting merit: ${formatMerit(_defaultScore)}.',
-          actions: [
-            if (_hasPermission('staff.import'))
-              OutlinedButton.icon(
-                onPressed: _openCsvImport,
-                icon: const Icon(Icons.upload_file_outlined, size: 18),
-                label: const Text('Import CSV'),
-              ),
-            if (_hasPermission('staff.create'))
-              FilledButton.icon(
-                onPressed: _openAddStaff,
-                icon: const Icon(Icons.person_add_alt_1, size: 18),
-                label: const Text('Add staff'),
-              ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        _StaffRosterCard(
-          staff: staff,
-          canEdit: _hasPermission('staff.update'),
-          canArchive: _hasPermission('staff.archive'),
-          canDelete: _hasPermission('staff.delete'),
-          search: _search,
-          onEdit: _openEditStaff,
-          onArchive: _toggleStaffArchived,
-          onDelete: _deleteStaff,
-          onSearchChanged: () => setState(() {}),
-          loading: _loading,
-        ),
-      ],
+    return Padding(
+      padding: EdgeInsets.fromLTRB(width < 700 ? 14 : 24, 14, width < 700 ? 14 : 24, 18),
+      child: _StaffRosterCard(
+        staff: staff,
+        canCreate: _hasPermission('staff.create'),
+        canImport: _hasPermission('staff.import'),
+        canEdit: _hasPermission('staff.update'),
+        canArchive: _hasPermission('staff.archive'),
+        canDelete: _hasPermission('staff.delete'),
+        search: _search,
+        onAddStaff: _openAddStaff,
+        onImportCsv: _openCsvImport,
+        onEdit: _openEditStaff,
+        onArchive: _toggleStaffArchived,
+        onDelete: _deleteStaff,
+        onSearchChanged: () => setState(() {}),
+        loading: _loading,
+      ),
     );
   }
 
   Widget _staffSelfPage() {
     final ownId = _profile?['staff_id'];
     final own = _staff.where((item) => item.id == ownId).toList();
-    return ListView(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.sizeOf(context).width < 700 ? 40 : 24),
-      children: [
-        const _PageHeading(title: 'My merit', subtitle: 'Your merit score and history.'),
-        const SizedBox(height: 20),
-        if (own.isEmpty)
-          const _EmptyState(
-            icon: Icons.person_off_outlined,
-            title: 'No staff record linked',
-            detail: 'Contact the system owner to link your account to a staff record.',
-          )
-        else ...[
-          _SelfScoreCard(staff: own.single),
-          const SizedBox(height: 18),
-          _EventsCard(events: _events, canSeeAllStaff: false),
-        ],
-      ],
+    final width = MediaQuery.sizeOf(context).width;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(width < 700 ? 14 : 24, 14, width < 700 ? 14 : 24, 18),
+      child: Surface3DCard(
+        padding: const EdgeInsets.all(18),
+        child: own.isEmpty
+            ? const Center(
+                child: _EmptyState(
+                  icon: Icons.person_off_outlined,
+                  title: 'No staff record linked',
+                  detail: 'Contact the system owner to link your account to a staff record.',
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _SelfScoreCard(staff: own.single),
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: _EventsCard(events: _events, canSeeAllStaff: false),
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
-  Widget _eventsPage() => ListView(
-        padding: EdgeInsets.fromLTRB(
-          MediaQuery.sizeOf(context).width < 700 ? 18 : 32,
-          18,
-          MediaQuery.sizeOf(context).width < 700 ? 18 : 32,
-          30,
+  Widget _eventsPage() {
+    final width = MediaQuery.sizeOf(context).width;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(width < 700 ? 14 : 24, 14, width < 700 ? 14 : 24, 18),
+      child: Surface3DCard(
+        padding: const EdgeInsets.all(18),
+        child: SingleChildScrollView(
+          child: _EventsCard(events: _events, canSeeAllStaff: _hasPermission('merit.read.all')),
         ),
-        children: [
-          _PageHeading(
-            title: _isStaff ? 'Merit history' : 'Merit activity',
-            subtitle: 'Merit changes available to this account.',
-          ),
-          const SizedBox(height: 20),
-          _EventsCard(events: _events, canSeeAllStaff: _hasPermission('merit.read.all')),
-        ],
-      );
+      ),
+    );
+  }
 
-  Widget _usersPage() => ListView(
-        padding: EdgeInsets.fromLTRB(
-          MediaQuery.sizeOf(context).width < 700 ? 18 : 32,
-          18,
-          MediaQuery.sizeOf(context).width < 700 ? 18 : 32,
-          30,
+  Widget _usersPage() {
+    final width = MediaQuery.sizeOf(context).width;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(width < 700 ? 14 : 24, 14, width < 700 ? 14 : 24, 18),
+      child: Surface3DCard(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton.icon(
+                  onPressed: _openInvite,
+                  icon: const Icon(Icons.mail_outline, size: 18),
+                  label: const Text('Invite user'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Expanded(
+              child: _profiles.isEmpty
+                  ? const Center(
+                      child: _EmptyState(
+                        icon: Icons.people_outline,
+                        title: 'No additional users',
+                        detail: 'Use Invite user to add accounts.',
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: _profiles.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEEF2F8)),
+                      itemBuilder: (context, index) {
+                        final profile = _profiles[index];
+                        return _UserAccessRow(
+                          profile: profile,
+                          onPermissions: () => _editUserPermissions(profile),
+                          onToggleActive: () => _toggleUserActive(profile),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
-        children: [
-          _PageHeading(
-            title: 'Users & invitations',
-            subtitle: 'Invite-only access. Only the Owner can invite users and assign roles.',
-            actions: [
-              FilledButton.icon(
-                onPressed: _openInvite,
-                icon: const Icon(Icons.mail_outline),
-                label: const Text('Invite user'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Card(
-            child: _profiles.isEmpty
-                ? const _EmptyState(
-                    icon: Icons.people_outline,
-                    title: 'No additional users',
-                    detail: 'The CEO and staff can be added by email invitation.',
-                  )
-                : Column(
-                    children: _profiles
-                        .map(
-                          (profile) => _UserAccessRow(
-                            profile: profile,
-                            onPermissions: () => _editUserPermissions(profile),
-                            onToggleActive: () => _toggleUserActive(profile),
-                          ),
-                        )
-                        .toList(),
-                  ),
-          ),
-        ],
-      );
+      ),
+    );
+  }
 
   Future<void> _openAddStaff() async {
     final created = await showDialog<bool>(
@@ -1150,80 +1122,6 @@ class _BrandMark extends StatelessWidget {
   Widget build(BuildContext context) => const MeritBrand(compact: true);
 }
 
-class _StatItem {
-  const _StatItem(this.label, this.value, this.detail, this.icon);
-  final String label;
-  final String value;
-  final String detail;
-  final IconData icon;
-}
-
-class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.items});
-  final List<_StatItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 680;
-        final cardWidth = narrow
-            ? constraints.maxWidth
-            : (constraints.maxWidth - 28) / 3;
-        return Wrap(
-          spacing: 14,
-          runSpacing: 14,
-          children: items
-              .map(
-                (item) => SizedBox(
-                  width: cardWidth,
-                  child: Surface3DCard(
-                    interactive: true,
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                item.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF53637D), fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.all(7),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEEF3FF),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFD6E3FF)),
-                              ),
-                              child: Icon(item.icon, size: 17, color: const Color(0xFF245CEB)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          item.value,
-                          style: const TextStyle(fontSize: 28, height: 1.1, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(item.detail, style: const TextStyle(fontSize: 12, color: Color(0xFF667894))),
-                      ],
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        );
-      },
-    );
-  }
-}
-
 class _DashboardMeritCard extends StatelessWidget {
   const _DashboardMeritCard({
     required this.staff,
@@ -1254,19 +1152,6 @@ class _DashboardMeritCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text('Staff Merit Board', style: Theme.of(context).textTheme.titleMedium),
-              ),
-              if (canAdjust)
-                const Text(
-                  'Tap staff name to adjust merit',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
-                ),
-            ],
-          ),
-          const SizedBox(height: 14),
           TextField(
             controller: search,
             onChanged: (_) => onSearchChanged(),
@@ -1277,98 +1162,108 @@ class _DashboardMeritCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          if (loading && staff.isEmpty)
-            const Padding(padding: EdgeInsets.all(24), child: Center(child: ThinkingOrbsLoader()))
-          else if (staff.isEmpty)
-            const _EmptyState(
-              icon: Icons.groups_outlined,
-              title: 'No active staff yet',
-              detail: 'Go to the Staff tab to register staff records.',
-            )
-          else if (narrow)
-            Column(
-              children: staff
-                  .map(
-                    (item) => _DashboardStaffCard(
-                      staff: item,
-                      latest: _latestFor(item, events),
-                      canAdjust: canAdjust,
-                      canCorrect: canCorrect,
-                      onAdjust: onAdjust,
-                      onCorrect: onCorrect,
-                    ),
-                  )
-                  .toList(),
-            )
-          else
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                showCheckboxColumn: false,
-                headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F7FA)),
-                columns: const [
-                  DataColumn(label: Text('STAFF CODE')),
-                  DataColumn(label: Text('NAME')),
-                  DataColumn(label: Text('DEPARTMENT')),
-                  DataColumn(label: Text('MERIT')),
-                  DataColumn(label: Text('LATEST CHANGE')),
-                  DataColumn(label: Text('ACTION')),
-                ],
-                rows: staff.map((item) {
-                  final latest = _latestFor(item, events);
-                  return DataRow(
-                    onSelectChanged: canAdjust ? (_) => onAdjust(item) : null,
-                    cells: [
-                      DataCell(Text(item.code, style: const TextStyle(fontWeight: FontWeight.w700))),
-                      DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              item.name,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: canAdjust ? const Color(0xFF245CEB) : const Color(0xFF141C2E),
+          Expanded(
+            child: loading && staff.isEmpty
+                ? const Center(child: ThinkingOrbsLoader())
+                : staff.isEmpty
+                    ? const Center(
+                        child: _EmptyState(
+                          icon: Icons.groups_outlined,
+                          title: 'No active staff yet',
+                          detail: 'Open the Staff tab to add staff records.',
+                        ),
+                      )
+                    : narrow
+                        ? ListView.builder(
+                            itemCount: staff.length,
+                            itemBuilder: (context, index) {
+                              final item = staff[index];
+                              return _DashboardStaffCard(
+                                staff: item,
+                                latest: _latestFor(item, events),
+                                canAdjust: canAdjust,
+                                canCorrect: canCorrect,
+                                onAdjust: onAdjust,
+                                onCorrect: onCorrect,
+                              );
+                            },
+                          )
+                        : SingleChildScrollView(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minWidth: MediaQuery.sizeOf(context).width - 310,
+                                ),
+                                child: DataTable(
+                                  showCheckboxColumn: false,
+                                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F7FA)),
+                                  columns: const [
+                                    DataColumn(label: Text('STAFF CODE')),
+                                    DataColumn(label: Text('NAME')),
+                                    DataColumn(label: Text('DEPARTMENT')),
+                                    DataColumn(label: Text('MERIT')),
+                                    DataColumn(label: Text('LATEST CHANGE')),
+                                    DataColumn(label: Text('ACTION')),
+                                  ],
+                                  rows: staff.map((item) {
+                                    final latest = _latestFor(item, events);
+                                    return DataRow(
+                                      onSelectChanged: canAdjust ? (_) => onAdjust(item) : null,
+                                      cells: [
+                                        DataCell(Text(item.code, style: const TextStyle(fontWeight: FontWeight.w700))),
+                                        DataCell(
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                item.name,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  color: canAdjust ? const Color(0xFF245CEB) : const Color(0xFF141C2E),
+                                                ),
+                                              ),
+                                              if (canAdjust) ...[
+                                                const SizedBox(width: 6),
+                                                const Icon(Icons.touch_app_outlined, size: 15, color: Color(0xFF245CEB)),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        DataCell(Text(item.department ?? '—')),
+                                        DataCell(
+                                          Text(
+                                            formatMerit(item.scoreTenths),
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                          ),
+                                        ),
+                                        DataCell(latest == null ? const Text('—') : _DeltaPill(delta: latest.deltaTenths)),
+                                        DataCell(
+                                          Wrap(
+                                            spacing: 4,
+                                            children: [
+                                              if (canAdjust)
+                                                FilledButton.tonal(
+                                                  onPressed: () => onAdjust(item),
+                                                  child: const Text('Adjust merit'),
+                                                ),
+                                              if (canCorrect)
+                                                IconButton(
+                                                  tooltip: 'Correct score',
+                                                  onPressed: () => onCorrect(item),
+                                                  icon: const Icon(Icons.edit_note_outlined, size: 18),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
                               ),
                             ),
-                            if (canAdjust) ...[
-                              const SizedBox(width: 6),
-                              const Icon(Icons.touch_app_outlined, size: 15, color: Color(0xFF245CEB)),
-                            ],
-                          ],
-                        ),
-                      ),
-                      DataCell(Text(item.department ?? '—')),
-                      DataCell(
-                        Text(
-                          formatMerit(item.scoreTenths),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      DataCell(latest == null ? const Text('No changes yet') : _DeltaPill(delta: latest.deltaTenths)),
-                      DataCell(
-                        Wrap(
-                          spacing: 4,
-                          children: [
-                            if (canAdjust)
-                              FilledButton.tonal(
-                                onPressed: () => onAdjust(item),
-                                child: const Text('Adjust merit'),
-                              ),
-                            if (canCorrect)
-                              IconButton(
-                                tooltip: 'Correct score',
-                                onPressed: () => onCorrect(item),
-                                icon: const Icon(Icons.edit_note_outlined, size: 18),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ),
+                          ),
+          ),
         ],
       ),
     );
@@ -1378,10 +1273,14 @@ class _DashboardMeritCard extends StatelessWidget {
 class _StaffRosterCard extends StatelessWidget {
   const _StaffRosterCard({
     required this.staff,
+    required this.canCreate,
+    required this.canImport,
     required this.canEdit,
     required this.canArchive,
     required this.canDelete,
     required this.search,
+    required this.onAddStaff,
+    required this.onImportCsv,
     required this.onEdit,
     required this.onArchive,
     required this.onDelete,
@@ -1389,10 +1288,14 @@ class _StaffRosterCard extends StatelessWidget {
     required this.loading,
   });
   final List<StaffMember> staff;
+  final bool canCreate;
+  final bool canImport;
   final bool canEdit;
   final bool canArchive;
   final bool canDelete;
   final TextEditingController search;
+  final VoidCallback onAddStaff;
+  final VoidCallback onImportCsv;
   final ValueChanged<StaffMember> onEdit;
   final ValueChanged<StaffMember> onArchive;
   final ValueChanged<StaffMember> onDelete;
@@ -1407,150 +1310,181 @@ class _StaffRosterCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Text('Registered Staff Roster (${staff.length})', style: Theme.of(context).textTheme.titleMedium),
+              SizedBox(
+                width: narrow ? double.infinity : 320,
+                child: TextField(
+                  controller: search,
+                  onChanged: (_) => onSearchChanged(),
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search),
+                    hintText: 'Search staff code, name, or department',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (canImport)
+                    OutlinedButton.icon(
+                      onPressed: onImportCsv,
+                      icon: const Icon(Icons.upload_file_outlined, size: 18),
+                      label: const Text('Import CSV'),
+                    ),
+                  if (canCreate)
+                    FilledButton.icon(
+                      onPressed: onAddStaff,
+                      icon: const Icon(Icons.person_add_alt_1, size: 18),
+                      label: const Text('Add staff'),
+                    ),
+                ],
               ),
             ],
           ),
           const SizedBox(height: 14),
-          TextField(
-            controller: search,
-            onChanged: (_) => onSearchChanged(),
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              hintText: 'Search staff code, name, or department',
-              isDense: true,
-            ),
+          Expanded(
+            child: loading && staff.isEmpty
+                ? const Center(child: ThinkingOrbsLoader())
+                : staff.isEmpty
+                    ? const Center(
+                        child: _EmptyState(
+                          icon: Icons.badge_outlined,
+                          title: 'No staff registered yet',
+                          detail: 'Use Add staff or Import CSV above.',
+                        ),
+                      )
+                    : narrow
+                        ? ListView.builder(
+                            itemCount: staff.length,
+                            itemBuilder: (context, index) {
+                              final item = staff[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Surface3DCard(
+                                  padding: const EdgeInsets.all(14),
+                                  borderRadius: 12,
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item.name,
+                                              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              '${item.code}  •  ${item.department ?? 'No department'}${item.archived ? '  •  Archived' : ''}',
+                                              style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (canEdit)
+                                        IconButton(
+                                          tooltip: 'Edit staff',
+                                          onPressed: () => onEdit(item),
+                                          icon: const Icon(Icons.edit_outlined),
+                                        ),
+                                      if (canArchive)
+                                        IconButton(
+                                          tooltip: item.archived ? 'Restore staff' : 'Archive staff',
+                                          onPressed: () => onArchive(item),
+                                          icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined),
+                                        ),
+                                      if (canDelete)
+                                        IconButton(
+                                          tooltip: 'Delete staff record',
+                                          onPressed: () => onDelete(item),
+                                          icon: const Icon(Icons.delete_outline),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : SingleChildScrollView(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minWidth: MediaQuery.sizeOf(context).width - 310,
+                                ),
+                                child: DataTable(
+                                  showCheckboxColumn: false,
+                                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F7FA)),
+                                  columns: const [
+                                    DataColumn(label: Text('STAFF CODE')),
+                                    DataColumn(label: Text('FULL NAME')),
+                                    DataColumn(label: Text('DEPARTMENT')),
+                                    DataColumn(label: Text('STATUS')),
+                                    DataColumn(label: Text('MANAGE')),
+                                  ],
+                                  rows: staff.map((item) {
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(Text(item.code, style: const TextStyle(fontWeight: FontWeight.w700))),
+                                        DataCell(Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                                        DataCell(Text(item.department ?? '—')),
+                                        DataCell(
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: item.archived ? const Color(0xFFF0F3F8) : const Color(0xFFE8F7EE),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              item.archived ? 'Archived' : 'Active',
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: item.archived ? const Color(0xFF667894) : const Color(0xFF16804A),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Wrap(
+                                            spacing: 4,
+                                            children: [
+                                              if (canEdit)
+                                                IconButton(
+                                                  tooltip: 'Edit staff',
+                                                  onPressed: () => onEdit(item),
+                                                  icon: const Icon(Icons.edit_outlined, size: 18),
+                                                ),
+                                              if (canArchive)
+                                                IconButton(
+                                                  tooltip: item.archived ? 'Restore staff' : 'Archive staff',
+                                                  onPressed: () => onArchive(item),
+                                                  icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 18),
+                                                ),
+                                              if (canDelete)
+                                                IconButton(
+                                                  tooltip: 'Delete staff without merit history',
+                                                  onPressed: () => onDelete(item),
+                                                  icon: const Icon(Icons.delete_outline, size: 18),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                          ),
           ),
-          const SizedBox(height: 14),
-          if (loading && staff.isEmpty)
-            const Padding(padding: EdgeInsets.all(24), child: Center(child: ThinkingOrbsLoader()))
-          else if (staff.isEmpty)
-            const _EmptyState(
-              icon: Icons.badge_outlined,
-              title: 'No staff registered yet',
-              detail: 'Click Add staff or Import CSV to register staff members.',
-            )
-          else if (narrow)
-            Column(
-              children: staff
-                  .map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Surface3DCard(
-                        padding: const EdgeInsets.all(14),
-                        borderRadius: 12,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.name,
-                                    style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    '${item.code}  •  ${item.department ?? 'No department'}${item.archived ? '  •  Archived' : ''}',
-                                    style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (canEdit)
-                              IconButton(
-                                tooltip: 'Edit staff',
-                                onPressed: () => onEdit(item),
-                                icon: const Icon(Icons.edit_outlined),
-                              ),
-                            if (canArchive)
-                              IconButton(
-                                tooltip: item.archived ? 'Restore staff' : 'Archive staff',
-                                onPressed: () => onArchive(item),
-                                icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined),
-                              ),
-                            if (canDelete)
-                              IconButton(
-                                tooltip: 'Delete staff record',
-                                onPressed: () => onDelete(item),
-                                icon: const Icon(Icons.delete_outline),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            )
-          else
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                showCheckboxColumn: false,
-                headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F7FA)),
-                columns: const [
-                  DataColumn(label: Text('STAFF CODE')),
-                  DataColumn(label: Text('FULL NAME')),
-                  DataColumn(label: Text('DEPARTMENT')),
-                  DataColumn(label: Text('STATUS')),
-                  DataColumn(label: Text('MANAGE')),
-                ],
-                rows: staff.map((item) {
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(item.code, style: const TextStyle(fontWeight: FontWeight.w700))),
-                      DataCell(Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600))),
-                      DataCell(Text(item.department ?? '—')),
-                      DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: item.archived ? const Color(0xFFF0F3F8) : const Color(0xFFE8F7EE),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            item.archived ? 'Archived' : 'Active',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: item.archived ? const Color(0xFF667894) : const Color(0xFF16804A),
-                            ),
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Wrap(
-                          spacing: 4,
-                          children: [
-                            if (canEdit)
-                              IconButton(
-                                tooltip: 'Edit staff',
-                                onPressed: () => onEdit(item),
-                                icon: const Icon(Icons.edit_outlined, size: 18),
-                              ),
-                            if (canArchive)
-                              IconButton(
-                                tooltip: item.archived ? 'Restore staff' : 'Archive staff',
-                                onPressed: () => onArchive(item),
-                                icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 18),
-                              ),
-                            if (canDelete)
-                              IconButton(
-                                tooltip: 'Delete staff without merit history',
-                                onPressed: () => onDelete(item),
-                                icon: const Icon(Icons.delete_outline, size: 18),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ),
         ],
       ),
     );
@@ -1668,24 +1602,27 @@ class _SelfScoreCard extends StatelessWidget {
   const _SelfScoreCard({required this.staff});
   final StaffMember staff;
   @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'MERIT SEMASA',
-                style: TextStyle(fontSize: 11, letterSpacing: .5, color: Color(0xFF667894), fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                formatMerit(staff.scoreTenths),
-                style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w700, color: Color(0xFF172033)),
-              ),
-              Text('${staff.code}  •  ${staff.name}', style: const TextStyle(color: Color(0xFF667894))),
-            ],
-          ),
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7F9FC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFDCE5F2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'CURRENT MERIT',
+              style: TextStyle(fontSize: 11, letterSpacing: .5, color: Color(0xFF667894), fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              formatMerit(staff.scoreTenths),
+              style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w700, color: Color(0xFF172033)),
+            ),
+            Text('${staff.code}  •  ${staff.name}', style: const TextStyle(color: Color(0xFF667894))),
+          ],
         ),
       );
 }
@@ -1697,44 +1634,41 @@ class _EventsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (events.isEmpty) {
-      return const Card(
-        child: _EmptyState(
-          icon: Icons.history,
-          title: 'No activity yet',
-          detail: 'Merit records will appear here.',
-        ),
+      return const _EmptyState(
+        icon: Icons.history,
+        title: 'No activity yet',
+        detail: 'Merit records will appear here.',
       );
     }
-    return Card(
-      child: Column(
-        children: events
-            .map(
-              (event) => ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: event.deltaTenths >= 0 ? const Color(0xFFE8F7EE) : const Color(0xFFFFEEEE),
-                  child: Icon(
-                    event.deltaTenths >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
-                    color: event.deltaTenths >= 0 ? const Color(0xFF16804A) : const Color(0xFFB42318),
-                    size: 18,
-                  ),
+    return Column(
+      children: events
+          .map(
+            (event) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              leading: CircleAvatar(
+                backgroundColor: event.deltaTenths >= 0 ? const Color(0xFFE8F7EE) : const Color(0xFFFFEEEE),
+                child: Icon(
+                  event.deltaTenths >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
+                  color: event.deltaTenths >= 0 ? const Color(0xFF16804A) : const Color(0xFFB42318),
+                  size: 18,
                 ),
-                title: Text(
-                  canSeeAllStaff
-                      ? '${event.staffName ?? 'Staff'}  •  ${formatDelta(event.deltaTenths)}'
-                      : '${formatDelta(event.deltaTenths)}  •  ${formatMerit(event.afterTenths)} merit',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  '${event.reason}\n${formatDate(event.createdAt)}',
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                isThreeLine: true,
-                trailing: Text(formatMerit(event.afterTenths), style: const TextStyle(fontWeight: FontWeight.w700)),
               ),
-            )
-            .toList(),
-      ),
+              title: Text(
+                canSeeAllStaff
+                    ? '${event.staffName ?? 'Staff'}  •  ${formatDelta(event.deltaTenths)}'
+                    : '${formatDelta(event.deltaTenths)}  •  ${formatMerit(event.afterTenths)} merit',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                '${event.reason}\n${formatDate(event.createdAt)}',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              isThreeLine: true,
+              trailing: Text(formatMerit(event.afterTenths), style: const TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          )
+          .toList(),
     );
   }
 }
@@ -1901,107 +1835,70 @@ class _SettingsPageState extends State<_SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        width < 700 ? 18 : 32,
-        18,
-        width < 700 ? 18 : 32,
-        30,
-      ),
-      children: [
-          Text('Merit settings', style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 5),
-          const Text(
-            'Default starting merit is 5.0 (can be customized below for new staff).',
-            style: TextStyle(color: Color(0xFF667894)),
-          ),
-          const SizedBox(height: 20),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (_loading)
-                      const Center(child: ThinkingOrbsLoader())
-                    else ...[
-                      TextField(
-                        controller: _default,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                        decoration: const InputDecoration(
-                          labelText: 'Default starting merit score (e.g. 5.0)',
-                          suffixText: 'merit',
+    return Padding(
+      padding: EdgeInsets.fromLTRB(width < 700 ? 14 : 24, 14, width < 700 ? 14 : 24, 18),
+      child: Surface3DCard(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _loading
+                  ? const Center(child: ThinkingOrbsLoader())
+                  : SingleChildScrollView(
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 520),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TextField(
+                                controller: _default,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                                decoration: const InputDecoration(
+                                  labelText: 'Default starting merit score (e.g. 5.0)',
+                                  suffixText: 'merit',
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              TextField(
+                                controller: _floor,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                                decoration: const InputDecoration(labelText: 'Minimum limit (optional)', hintText: 'Not set'),
+                              ),
+                              const SizedBox(height: 14),
+                              TextField(
+                                controller: _ceiling,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                                decoration: const InputDecoration(labelText: 'Maximum limit (optional)', hintText: 'Not set'),
+                              ),
+                              const SizedBox(height: 18),
+                              if (_error != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
+                                ),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: FilledButton.icon(
+                                  onPressed: _saving ? null : _save,
+                                  icon: _saving
+                                      ? const ThinkingOrbsLoader(size: 18, label: 'Saving settings')
+                                      : const Icon(Icons.save_outlined),
+                                  label: Text(_saving ? 'Saving…' : 'Save settings'),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _floor,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                        decoration: const InputDecoration(labelText: 'Minimum limit (optional)', hintText: 'Not set'),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _ceiling,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                        decoration: const InputDecoration(labelText: 'Maximum limit (optional)', hintText: 'Not set'),
-                      ),
-                      const SizedBox(height: 16),
-                      if (_error != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
-                        ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton.icon(
-                          onPressed: _saving ? null : _save,
-                          icon: _saving
-                              ? const ThinkingOrbsLoader(size: 18, label: 'Saving settings')
-                              : const Icon(Icons.save_outlined),
-                          label: Text(_saving ? 'Saving…' : 'Save settings'),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+                    ),
             ),
-          ),
-        ],
-      );
-  }
-}
-
-class _PageHeading extends StatelessWidget {
-  const _PageHeading({required this.title, required this.subtitle, this.actions = const []});
-  final String title;
-  final String subtitle;
-  final List<Widget> actions;
-  @override
-  Widget build(BuildContext context) {
-    final heading = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 4),
-        Text(subtitle, style: const TextStyle(color: Color(0xFF667894), height: 1.4)),
-      ],
-    );
-    if (MediaQuery.sizeOf(context).width < 760) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          heading,
-          if (actions.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Wrap(spacing: 8, runSpacing: 8, children: actions),
           ],
-        ],
-      );
-    }
-    return Row(children: [Expanded(child: heading), ...actions.expand((w) => [const SizedBox(width: 8), w])]);
+        ),
+      ),
+    );
   }
 }
 

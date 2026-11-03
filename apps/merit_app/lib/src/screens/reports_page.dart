@@ -318,136 +318,107 @@ class _ReportsPageState extends State<ReportsPage> {
     final allFilteredSelected =
         staffRows.isNotEmpty && staffRows.every((s) => _selectedStaffIds.contains(s.id));
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        width < 700 ? 18 : 32,
-        18,
-        width < 700 ? 18 : 32,
-        width < 700 ? 104 + MediaQuery.paddingOf(context).bottom : 30,
-      ),
-      children: [
-        Wrap(
-          spacing: 12,
-          runSpacing: 10,
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
+    return Padding(
+      padding: EdgeInsets.fromLTRB(width < 700 ? 14 : 24, 14, width < 700 ? 14 : 24, 18),
+      child: Surface3DCard(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Staff Merit Reports', style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 4),
-                const Text(
-                  'Select one or multiple staff to preview or export a formatted PDF report.',
-                  style: TextStyle(color: Color(0xFF667894)),
-                ),
-              ],
-            ),
             Wrap(
-              spacing: 8,
+              spacing: 10,
               runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                OutlinedButton.icon(
-                  onPressed: _selectedStaffIds.isEmpty || _loading ? null : () => _previewReport(),
-                  icon: const Icon(Icons.visibility_outlined, size: 18),
-                  label: Text('Preview (${_selectedStaffIds.length})'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _chooseDate(true),
+                      icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                      label: Text('From  ${formatDate(_from)}'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _chooseDate(false),
+                      icon: const Icon(Icons.event_outlined, size: 16),
+                      label: Text('To  ${formatDate(_to)}'),
+                    ),
+                    SizedBox(
+                      width: 145,
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _direction,
+                        decoration: const InputDecoration(labelText: 'Filter', isDense: true),
+                        items: const ['All', 'Increase', 'Decrease']
+                            .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                            .toList(),
+                        onChanged: (value) => setState(() => _direction = value ?? 'All'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 220,
+                      child: TextField(
+                        controller: _search,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.search, size: 18),
+                          hintText: 'Search staff name or code',
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: staffRows.isEmpty ? null : _toggleSelectAll,
+                      icon: Icon(
+                        allFilteredSelected ? Icons.deselect_outlined : Icons.select_all_outlined,
+                        size: 18,
+                      ),
+                      label: Text(allFilteredSelected ? 'Clear selection' : 'Select all'),
+                    ),
+                  ],
                 ),
-                if (widget.canExport)
-                  FilledButton.icon(
-                    onPressed: _selectedStaffIds.isEmpty || _exporting || _loading ? null : () => _exportPdf(),
-                    icon: _exporting
-                        ? const ThinkingOrbsLoader(size: 18, label: 'Exporting PDF')
-                        : const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                    label: Text(_exporting ? 'Exporting…' : 'Export PDF (${_selectedStaffIds.length})'),
-                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _selectedStaffIds.isEmpty || _loading ? null : () => _previewReport(),
+                      icon: const Icon(Icons.visibility_outlined, size: 18),
+                      label: Text('Preview (${_selectedStaffIds.length})'),
+                    ),
+                    if (widget.canExport)
+                      FilledButton.icon(
+                        onPressed: _selectedStaffIds.isEmpty || _exporting || _loading ? null : () => _exportPdf(),
+                        icon: _exporting
+                            ? const ThinkingOrbsLoader(size: 18, label: 'Exporting PDF')
+                            : const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                        label: Text(_exporting ? 'Exporting…' : 'Export PDF (${_selectedStaffIds.length})'),
+                      ),
+                  ],
+                ),
               ],
+            ),
+            const SizedBox(height: 14),
+            Expanded(
+              child: _loading
+                  ? const Center(child: ThinkingOrbsLoader())
+                  : _error != null
+                      ? Center(
+                          child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
+                        )
+                      : staffRows.isEmpty
+                          ? const Center(child: Text('No active staff records found.'))
+                          : ListView.separated(
+                              itemCount: staffRows.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEEF2F8)),
+                              itemBuilder: (context, index) => _buildStaffReportRow(context, staffRows[index]),
+                            ),
             ),
           ],
         ),
-        const SizedBox(height: 18),
-        Wrap(
-          spacing: 10,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            OutlinedButton.icon(
-              onPressed: () => _chooseDate(true),
-              icon: const Icon(Icons.calendar_today_outlined, size: 16),
-              label: Text('From  ${formatDate(_from)}'),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => _chooseDate(false),
-              icon: const Icon(Icons.event_outlined, size: 16),
-              label: Text('To  ${formatDate(_to)}'),
-            ),
-            SizedBox(
-              width: 160,
-              child: DropdownButtonFormField<String>(
-                initialValue: _direction,
-                decoration: const InputDecoration(labelText: 'Filter', isDense: true),
-                items: const ['All', 'Increase', 'Decrease']
-                    .map((value) => DropdownMenuItem(value: value, child: Text(value)))
-                    .toList(),
-                onChanged: (value) => setState(() => _direction = value ?? 'All'),
-              ),
-            ),
-            SizedBox(
-              width: 240,
-              child: TextField(
-                controller: _search,
-                onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search, size: 18),
-                  hintText: 'Search staff name or code',
-                  isDense: true,
-                ),
-              ),
-            ),
-            TextButton.icon(
-              onPressed: staffRows.isEmpty ? null : _toggleSelectAll,
-              icon: Icon(
-                allFilteredSelected ? Icons.deselect_outlined : Icons.select_all_outlined,
-                size: 18,
-              ),
-              label: Text(allFilteredSelected ? 'Clear selection' : 'Select all'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (_loading)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(28),
-              child: Center(child: ThinkingOrbsLoader()),
-            ),
-          )
-        else if (_error != null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
-            ),
-          )
-        else if (staffRows.isEmpty)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: Text('No active staff records found.')),
-            ),
-          )
-        else
-          Surface3DCard(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Column(
-              children: [
-                for (var i = 0; i < staffRows.length; i++) ...[
-                  if (i > 0) const Divider(height: 1, color: Color(0xFFEEF2F8)),
-                  _buildStaffReportRow(context, staffRows[i]),
-                ],
-              ],
-            ),
-          ),
-      ],
+      ),
     );
   }
 

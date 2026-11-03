@@ -55,61 +55,40 @@ class _AuditPageState extends State<AuditPage> {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        width < 700 ? 18 : 32,
-        18,
-        width < 700 ? 18 : 32,
-        width < 700 ? 104 + MediaQuery.paddingOf(context).bottom : 30,
-      ),
-      children: [
-        Wrap(
-          spacing: 12,
-          runSpacing: 10,
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
+    return Padding(
+      padding: EdgeInsets.fromLTRB(width < 700 ? 14 : 24, 14, width < 700 ? 14 : 24, 18),
+      child: Surface3DCard(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Audit Log', style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 4),
-                const Text(
-                  'Unified merit activity and system audit history.',
-                  style: TextStyle(color: Color(0xFF667894)),
+            if (widget.canReadSystemAudit) ...[
+              Align(
+                alignment: Alignment.centerRight,
+                child: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'all', label: Text('All')),
+                    ButtonSegment(value: 'merit', label: Text('Merit')),
+                    ButtonSegment(value: 'system', label: Text('System')),
+                  ],
+                  selected: {_filter},
+                  onSelectionChanged: (s) => setState(() => _filter = s.first),
                 ),
-              ],
-            ),
-            if (widget.canReadSystemAudit)
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'all', label: Text('All')),
-                  ButtonSegment(value: 'merit', label: Text('Merit')),
-                  ButtonSegment(value: 'system', label: Text('System')),
-                ],
-                selected: {_filter},
-                onSelectionChanged: (s) => setState(() => _filter = s.first),
               ),
+              const SizedBox(height: 14),
+            ],
+            Expanded(
+              child: _loading
+                  ? const Center(child: ThinkingOrbsLoader())
+                  : _error != null
+                      ? Center(
+                          child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
+                        )
+                      : _buildUnifiedList(context),
+            ),
           ],
         ),
-        const SizedBox(height: 18),
-        if (_loading)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(28),
-              child: Center(child: ThinkingOrbsLoader()),
-            ),
-          )
-        else if (_error != null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
-            ),
-          )
-        else
-          _buildUnifiedList(context),
-      ],
+      ),
     );
   }
 
@@ -138,24 +117,13 @@ class _AuditPageState extends State<AuditPage> {
     items.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
     if (items.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(child: Text('No audit activity recorded yet.')),
-        ),
-      );
+      return const Center(child: Text('No audit activity recorded yet.'));
     }
 
-    return Surface3DCard(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: Color(0xFFEEF2F8)),
-            _buildRow(context, items[i]),
-          ],
-        ],
-      ),
+    return ListView.separated(
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEEF2F8)),
+      itemBuilder: (context, index) => _buildRow(context, items[index]),
     );
   }
 

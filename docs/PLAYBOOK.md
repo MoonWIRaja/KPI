@@ -11,7 +11,7 @@ Deliver the invite-only Merit Tracker application for desktop and phone browsers
 3. [x] Implement Supabase schema/RLS, private email-allowlisted Owner claim, permission catalog, atomic merit/import functions, invitations and audit operations.
 4. [x] Add Flutter Web/Pages and isolated local Supabase migration CI workflows.
 5. [x] Write setup, user, permission, security and operations documentation.
-6. [ ] Run Flutter analysis/Web build and clean local migration CI against the current Owner wizard changes; fix reported failures before release.
+6. [x] Flutter analysis/Web release build and clean Supabase migration CI pass on Owner wizard commit `12de7f2` (GitHub Actions).
 7. [ ] Inspect the owner's existing Supabase migration history/schema. Apply reviewed forward migrations only; never reset an existing hosted database.
 8. [ ] Configure Auth signup/MFA/redirects, SMTP and Edge Function settings in the owner's Supabase project.
 9. [ ] Set public Pages Actions variables, enable Pages Actions and deploy through the protected production branch.

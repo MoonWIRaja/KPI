@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,35 +23,29 @@ class GlassyCardFrame extends StatelessWidget {
         padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(22),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: const Color(0xFFE3E9F2), width: 1.2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF141C2E).withValues(alpha: 0.06),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE3E9F2), width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF141C2E).withValues(alpha: 0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
                 ),
-                child: Stack(
-                  children: [
-                    const Positioned.fill(
-                      child: CustomPaint(painter: _CornerAccentsPainter()),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(isMobile ? 22 : 30),
-                      child: child,
-                    ),
-                  ],
+              ],
+            ),
+            child: Stack(
+              children: [
+                const Positioned.fill(
+                  child: CustomPaint(painter: _CornerAccentsPainter()),
                 ),
-              ),
+                Padding(
+                  padding: EdgeInsets.all(isMobile ? 22 : 30),
+                  child: child,
+                ),
+              ],
             ),
           ),
         ),

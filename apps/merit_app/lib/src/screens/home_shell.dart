@@ -63,6 +63,7 @@ class _HomeShellState extends State<HomeShell> {
       _profile = profile;
       _permissions = _isOwner ? const {} : await _repository.loadPermissions(user.id);
       await _loadData();
+      autoCheckAuthenticatedIosPwa();
     } on MeritRepositoryException catch (error) {
       _loadError = error.message;
     } catch (_) {

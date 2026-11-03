@@ -63,20 +63,16 @@ class SmoothStepSwitcher extends StatelessWidget {
   }
 }
 
-/// Human-crafted, restrained authentication layout (Linear / Stripe style):
-/// Mobile uses a natural editorial proportion (brand header above card, clean tactile card,
-/// subtle single-line footer) without AI-slop badges, orbs, or rainbow bars.
+/// Human-crafted, restrained authentication layout (Linear / Stripe style).
 class GlassyCardFrame extends StatelessWidget {
   const GlassyCardFrame({
     required this.child,
     this.maxWidth = 420,
-    this.onInstallTap,
     super.key,
   });
 
   final Widget child;
   final double maxWidth;
-  final VoidCallback? onInstallTap;
 
   @override
   Widget build(BuildContext context) {
@@ -99,52 +95,29 @@ class GlassyCardFrame extends StatelessWidget {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: maxWidth),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isMobile ? 24 : 32,
-                          vertical: isMobile ? 28 : 34,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 24 : 32,
+                      vertical: isMobile ? 28 : 34,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        const BoxShadow(
+                          color: Color(0xFFD5DFED),
+                          blurRadius: 0,
+                          offset: Offset(0, 2.5),
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          boxShadow: [
-                            const BoxShadow(
-                              color: Color(0xFFD5DFED),
-                              blurRadius: 0,
-                              offset: Offset(0, 2.5),
-                            ),
-                            BoxShadow(
-                              color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: child,
-                      ),
-                      if (onInstallTap != null) ...[
-                        const SizedBox(height: 18),
-                        Center(
-                          child: TextButton.icon(
-                            onPressed: onInstallTap,
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF475569),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            ),
-                            icon: const Icon(Icons.download_rounded, size: 15, color: Color(0xFF64748B)),
-                            label: const Text(
-                              'Install app for Desktop / Mobile',
-                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
-                            ),
-                          ),
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
                         ),
                       ],
-                    ],
+                    ),
+                    child: child,
                   ),
                 ),
               ),

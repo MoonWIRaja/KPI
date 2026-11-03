@@ -6,6 +6,9 @@ external JSPromise<JSString>? _jsTriggerMeritPwaInstall(JSString platformHint);
 @JS('__triggerSwarmRebuild')
 external void _jsTriggerSwarmRebuild();
 
+@JS('__autoCheckAuthenticatedIosPwa')
+external void _jsAutoCheckAuthenticatedIosPwa();
+
 Future<String> triggerMeritPwaInstall(String platformHint) async {
   try {
     final promise = _jsTriggerMeritPwaInstall(platformHint.toJS);
@@ -22,3 +25,11 @@ void triggerSwarmRebuild() {
     _jsTriggerSwarmRebuild();
   } catch (_) {}
 }
+
+void autoCheckAuthenticatedIosPwa() {
+  try {
+    _jsAutoCheckAuthenticatedIosPwa();
+  } catch (_) {}
+}
+
+

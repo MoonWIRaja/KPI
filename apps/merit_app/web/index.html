@@ -241,15 +241,15 @@
         }
       });
 
-      // Auto-show install sheet on iPhone/iPad if not installed in standalone mode yet
-      if (isIOS && !isStandalone) {
-        setTimeout(function() {
+      // Expose helper for authenticated users (triggered from HomeShell / Profile popup only)
+      window.__autoCheckAuthenticatedIosPwa = function() {
+        if (isIOS && !isStandalone) {
           try {
             if (sessionStorage.getItem('merit_pwa_dismissed') === '1') return;
           } catch (_) {}
           window.__triggerMeritPwaInstall('ios');
-        }, 2200);
-      }
+        }
+      };
     })();
   </script>
   <script src="flutter_bootstrap.js" async></script>

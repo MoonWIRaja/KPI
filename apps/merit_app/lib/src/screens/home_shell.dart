@@ -120,7 +120,7 @@ class _HomeShellState extends State<HomeShell> {
       items.add(const _NavItem('My History', Icons.history, 'self-events', mobileLabel: 'History'));
     }
     if (_hasPermission('staff.read.all')) {
-      items.add(const _NavItem('Dashboard', Icons.dashboard_outlined, 'dashboard', mobileLabel: 'Dashboard'));
+      items.add(const _NavItem('Dashboard', Icons.dashboard_outlined, 'dashboard', mobileLabel: 'Board'));
     }
     if (_hasPermission('staff.read.all') ||
         _hasPermission('staff.create') ||
@@ -181,7 +181,7 @@ class _HomeShellState extends State<HomeShell> {
       );
     }
     final wide = width >= 1040;
-    final narrow = width < 700;
+    final narrow = width < 1040;
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -204,10 +204,6 @@ class _HomeShellState extends State<HomeShell> {
               padding: EdgeInsets.symmetric(horizontal: 12),
               child: ThinkingOrbsLoader(size: 22, label: 'Refreshing data'),
             ),
-          if (!wide && !narrow) ...[
-            _AccountTrigger(profile: _profile!, onTap: _openProfileDialog),
-            const SizedBox(width: 16),
-          ],
         ],
       ),
       body: Stack(
@@ -386,18 +382,7 @@ class _HomeShellState extends State<HomeShell> {
         ),
       );
 
-  List<int> get _visibleMobileNavItems {
-    if (_navItems.length <= 5) return List<int>.generate(_navItems.length, (index) => index);
-    final primary = <int>[];
-    for (final route in ['dashboard', 'staff', 'self', 'reports', 'audit', 'settings']) {
-      final index = _navItems.indexWhere((item) => item.route == route);
-      if (index >= 0 && !primary.contains(index) && primary.length < 5) primary.add(index);
-    }
-    if (_selectedPage >= 0 && !primary.contains(_selectedPage)) {
-      primary[primary.length - 1] = _selectedPage;
-    }
-    return primary;
-  }
+  List<int> get _visibleMobileNavItems => List<int>.generate(_navItems.length, (index) => index);
 
   Widget _dashboardPage() {
     final active = _staff.where((staff) => !staff.archived).toList();
@@ -1179,55 +1164,62 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final narrow = MediaQuery.sizeOf(context).width < 820;
-    return Wrap(
-      spacing: 14,
-      runSpacing: 14,
-      children: items
-          .map(
-            (item) => SizedBox(
-              width: narrow ? double.infinity : (MediaQuery.sizeOf(context).width - 320) / 3,
-              child: Surface3DCard(
-                interactive: true,
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 680;
+        final cardWidth = narrow
+            ? constraints.maxWidth
+            : (constraints.maxWidth - 28) / 3;
+        return Wrap(
+          spacing: 14,
+          runSpacing: 14,
+          children: items
+              .map(
+                (item) => SizedBox(
+                  width: cardWidth,
+                  child: Surface3DCard(
+                    interactive: true,
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            item.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF53637D), fontWeight: FontWeight.w600),
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF53637D), fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF3FF),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFD6E3FF)),
+                              ),
+                              child: Icon(item.icon, size: 17, color: const Color(0xFF245CEB)),
+                            ),
+                          ],
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEEF3FF),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFD6E3FF)),
-                          ),
-                          child: Icon(item.icon, size: 17, color: const Color(0xFF245CEB)),
+                        const SizedBox(height: 10),
+                        Text(
+                          item.value,
+                          style: const TextStyle(fontSize: 28, height: 1.1, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
                         ),
+                        const SizedBox(height: 5),
+                        Text(item.detail, style: const TextStyle(fontSize: 12, color: Color(0xFF667894))),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      item.value,
-                      style: const TextStyle(fontSize: 28, height: 1.1, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(item.detail, style: const TextStyle(fontSize: 12, color: Color(0xFF667894))),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          )
-          .toList(),
+              )
+              .toList(),
+        );
+      },
     );
   }
 }
@@ -1907,9 +1899,16 @@ class _SettingsPageState extends State<_SettingsPage> {
   }
 
   @override
-  Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(28),
-        children: [
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        width < 700 ? 18 : 32,
+        18,
+        width < 700 ? 18 : 32,
+        30,
+      ),
+      children: [
           Text('Merit settings', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 5),
           const Text(
@@ -1972,6 +1971,7 @@ class _SettingsPageState extends State<_SettingsPage> {
           ),
         ],
       );
+  }
 }
 
 class _PageHeading extends StatelessWidget {
@@ -2128,7 +2128,7 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
     } on MeritRepositoryException catch (error) {
       setState(() => _error = error.message);
     } catch (_) {
-      setState(() => _error = 'Semak nilai merit dan cuba lagi.');
+      setState(() => _error = 'Please check the merit value and try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -2221,128 +2221,130 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
         child: Surface3DCard(
           padding: const EdgeInsets.all(24),
           borderRadius: 20,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(widget.staff.name, style: Theme.of(context).textTheme.titleLarge),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${widget.staff.code}  •  Current Merit: ${formatMerit(widget.staff.scoreTenths)}',
+                              style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(
+                        value: -1,
+                        label: Text('Deduct (-)'),
+                        icon: Icon(Icons.remove_circle_outline, size: 18),
+                      ),
+                      ButtonSegment(
+                        value: 1,
+                        label: Text('Add (+)'),
+                        icon: Icon(Icons.add_circle_outline, size: 18),
+                      ),
+                    ],
+                    selected: {_direction},
+                    onSelectionChanged: (selection) => setState(() => _direction = selection.first),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Select points (0.1 – 1.0)',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF34435D)),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _steps.map((amount) {
+                      final selected = _step == amount;
+                      final label = '${isPositive ? '+' : '-'}${formatMerit(amount)}';
+                      return ChoiceChip(
+                        label: Text(
+                          label,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: selected ? Colors.white : const Color(0xFF141C2E),
+                          ),
+                        ),
+                        selected: selected,
+                        selectedColor: accentColor,
+                        backgroundColor: const Color(0xFFF5F8FC),
+                        showCheckmark: false,
+                        onSelected: (_) => setState(() => _step = amount),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _reason,
+                    onChanged: (_) => setState(() {}),
+                    minLines: 2,
+                    maxLines: 4,
+                    maxLength: 500,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Reason (required)',
+                      hintText: 'State the reason for this merit adjustment…',
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isPositive ? const Color(0xFFE8F7EE) : const Color(0xFFFFEEEE),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(widget.staff.name, style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 2),
+                        const Text('Updated Merit Score', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                         Text(
-                          '${widget.staff.code}  •  Current Merit: ${formatMerit(widget.staff.scoreTenths)}',
-                          style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
+                          '${formatMerit(widget.staff.scoreTenths)}  →  ${formatDelta(delta)}  →  ${formatMerit(after)}',
+                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: accentColor),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(
-                    value: -1,
-                    label: Text('Deduct (-)'),
-                    icon: Icon(Icons.remove_circle_outline, size: 18),
-                  ),
-                  ButtonSegment(
-                    value: 1,
-                    label: Text('Add (+)'),
-                    icon: Icon(Icons.add_circle_outline, size: 18),
-                  ),
-                ],
-                selected: {_direction},
-                onSelectionChanged: (selection) => setState(() => _direction = selection.first),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Select points (0.1 – 1.0)',
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF34435D)),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _steps.map((amount) {
-                  final selected = _step == amount;
-                  final label = '${isPositive ? '+' : '-'}${formatMerit(amount)}';
-                  return ChoiceChip(
-                    label: Text(
-                      label,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: selected ? Colors.white : const Color(0xFF141C2E),
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
                       ),
-                    ),
-                    selected: selected,
-                    selectedColor: accentColor,
-                    backgroundColor: const Color(0xFFF5F8FC),
-                    showCheckmark: false,
-                    onSelected: (_) => setState(() => _step = amount),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _reason,
-                onChanged: (_) => setState(() {}),
-                minLines: 2,
-                maxLines: 4,
-                maxLength: 500,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Reason (required)',
-                  hintText: 'State the reason for this merit adjustment…',
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: isPositive ? const Color(0xFFE8F7EE) : const Color(0xFFFFEEEE),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Updated Merit Score', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text(
-                      '${formatMerit(widget.staff.scoreTenths)}  →  ${formatDelta(delta)}  →  ${formatMerit(after)}',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: accentColor),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: accentColor),
-                    onPressed: _reason.text.trim().isEmpty
-                        ? null
-                        : () => Navigator.pop(context, _AdjustmentInput(delta, _reason.text.trim())),
-                    child: Text('Confirm ${formatDelta(delta)}'),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        style: FilledButton.styleFrom(backgroundColor: accentColor),
+                        onPressed: _reason.text.trim().isEmpty
+                            ? null
+                            : () => Navigator.pop(context, _AdjustmentInput(delta, _reason.text.trim())),
+                        child: Text('Confirm ${formatDelta(delta)}'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
         ),
       ),
     );

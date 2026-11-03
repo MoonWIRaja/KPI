@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
@@ -108,7 +108,7 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
           width: 560,
           child: SingleChildScrollView(
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-              const Text('UTF-8 CSV â€¢ maximum 2 MB and 500 staff. Duplicate staff codes will cancel the entire import.'),
+              const Text('UTF-8 CSV • maximum 2 MB and 500 staff. Duplicate staff codes will cancel the entire import.'),
               const SizedBox(height: 10),
               const SelectableText('staff_code,full_name,department,starting_merit\nS001,Staff Name,Operations,5.0'),
               const SizedBox(height: 12),
@@ -118,7 +118,7 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
                 const SizedBox(height: 12),
                 Text('${_rows.length} valid rows to preview', style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
-                ..._rows.take(5).map((row) => ListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text('${row['staff_code']} â€¢ ${row['full_name']}'), subtitle: Text('${row['department'] ?? 'No department'}  Â·  merit ${formatMerit(row['starting_score_tenths'] as int)}'))),
+                ..._rows.take(5).map((row) => ListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text('${row['staff_code']} • ${row['full_name']}'), subtitle: Text('${row['department'] ?? 'No department'}  ·  merit ${formatMerit(row['starting_score_tenths'] as int)}'))),
                 if (_rows.length > 5) Text('and ${_rows.length - 5} more', style: const TextStyle(color: Color(0xFF667894))),
               ],
               if (_errors.isNotEmpty) ...[

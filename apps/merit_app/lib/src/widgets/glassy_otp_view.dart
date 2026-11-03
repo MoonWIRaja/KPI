@@ -329,22 +329,24 @@ class _GlassyOtpViewState extends State<GlassyOtpView> with SingleTickerProvider
             alignment: Alignment.center,
             children: [
               _buildPinBoxes(context),
-              Opacity(
-                opacity: 0.0,
-                child: TextField(
-                  controller: _rawOtp,
-                  focusNode: _focusNode,
-                  keyboardType: TextInputType.number,
-                  autofillHints: const [AutofillHints.oneTimeCode],
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(6),
-                  ],
-                  onChanged: (val) {
-                    setState(() {});
-                    if (val.length == 6) _submitVerification();
-                  },
-                  onSubmitted: (_) => _submitVerification(),
+              Positioned.fill(
+                child: Opacity(
+                  opacity: 0.0,
+                  child: TextField(
+                    controller: _rawOtp,
+                    focusNode: _focusNode,
+                    keyboardType: TextInputType.number,
+                    autofillHints: const [AutofillHints.oneTimeCode],
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
+                    onChanged: (val) {
+                      setState(() {});
+                      if (val.length == 6) _submitVerification();
+                    },
+                    onSubmitted: (_) => _submitVerification(),
+                  ),
                 ),
               ),
             ],
@@ -461,60 +463,65 @@ class _GlassyOtpViewState extends State<GlassyOtpView> with SingleTickerProvider
     return GestureDetector(
       onTap: () => _focusNode.requestFocus(),
       behavior: HitTestBehavior.opaque,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(6, (index) {
-          final digit = index < text.length ? text[index] : '';
-          final isActive = isFocused && index == text.length.clamp(0, 5);
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final boxWidth = ((constraints.maxWidth - 40) / 6).clamp(36.0, 48.0);
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(6, (index) {
+              final digit = index < text.length ? text[index] : '';
+              final isActive = isFocused && index == text.length.clamp(0, 5);
 
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 140),
-            curve: Curves.easeOutCubic,
-            width: 45,
-            height: 52,
-            decoration: BoxDecoration(
-              color: isActive ? Colors.white : const Color(0xFFF7F9FC),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: isActive
-                    ? _primaryColor
-                    : digit.isNotEmpty
-                        ? const Color(0xFF94A3B8)
-                        : const Color(0xFFD9E1EC),
-                width: isActive ? 1.8 : 1.0,
-              ),
-              boxShadow: isActive
-                  ? [
-                      BoxShadow(
-                        color: _primaryColor.withValues(alpha: 0.12),
-                        blurRadius: 6,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Center(
-              child: digit.isNotEmpty
-                  ? Text(
-                      digit,
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w700,
-                        color: _headingColor,
-                      ),
-                    )
-                  : isActive
-                      ? Container(
-                          width: 2,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: _primaryColor,
-                            borderRadius: BorderRadius.circular(1),
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                curve: Curves.easeOutCubic,
+                width: boxWidth,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: isActive ? Colors.white : const Color(0xFFF7F9FC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isActive
+                        ? _primaryColor
+                        : digit.isNotEmpty
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFFD9E1EC),
+                    width: isActive ? 1.8 : 1.0,
+                  ),
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: _primaryColor.withValues(alpha: 0.12),
+                            blurRadius: 6,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: digit.isNotEmpty
+                      ? Text(
+                          digit,
+                          style: const TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w700,
+                            color: _headingColor,
                           ),
                         )
-                      : const SizedBox.shrink(),
-            ),
+                      : isActive
+                          ? Container(
+                              width: 2,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: _primaryColor,
+                                borderRadius: BorderRadius.circular(1),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                ),
+              );
+            }),
           );
-        }),
+        },
       ),
     );
   }

@@ -58,6 +58,7 @@ jobs:
           find apps/merit_app/build/web -type f -name '*.map' -delete
           sed -i "s/flutter_bootstrap.js/flutter_bootstrap.js?v=${GITHUB_SHA::8}/g" apps/merit_app/build/web/index.html
           sed -i "s/main.dart.js/main.dart.js?v=${GITHUB_SHA::8}/g" apps/merit_app/build/web/flutter_bootstrap.js
+          sed -i "s/merit-tracker-v1/merit-tracker-${GITHUB_SHA::8}/g" apps/merit_app/build/web/sw.js
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4

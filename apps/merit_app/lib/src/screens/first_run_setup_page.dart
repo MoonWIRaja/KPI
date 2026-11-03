@@ -81,11 +81,19 @@ class _FirstRunSetupPageState extends State<FirstRunSetupPage> {
     });
 
     try {
-      await Supabase.instance.client.auth.verifyOTP(
-        email: email,
-        token: token,
-        type: OtpType.email,
-      );
+      try {
+        await Supabase.instance.client.auth.verifyOTP(
+          email: email,
+          token: token,
+          type: OtpType.email,
+        );
+      } on AuthException {
+        await Supabase.instance.client.auth.verifyOTP(
+          email: email,
+          token: token,
+          type: OtpType.signup,
+        );
+      }
       return true;
     } on AuthException catch (e) {
       if (mounted) setState(() => _error = 'Invalid or expired setup code. (${e.message})');

@@ -85,11 +85,19 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      await Supabase.instance.client.auth.verifyOTP(
-        email: email,
-        token: token,
-        type: OtpType.email,
-      );
+      try {
+        await Supabase.instance.client.auth.verifyOTP(
+          email: email,
+          token: token,
+          type: OtpType.email,
+        );
+      } on AuthException {
+        await Supabase.instance.client.auth.verifyOTP(
+          email: email,
+          token: token,
+          type: OtpType.signup,
+        );
+      }
       return true;
     } on AuthException catch (e) {
       if (mounted) {

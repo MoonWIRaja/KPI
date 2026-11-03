@@ -13,7 +13,7 @@ This matrix links the approved business needs to application controls and the ve
 | Bulk staff import | FR-CSV-01..02 | CSV preview/validation and transactional 500-row RPC implemented; hosted verification remains. |
 | Reports explain score changes | FR-REPORT-01 | Scoped report history, CSV formula neutralization and export audit implemented; hosted permission checks remain. |
 | Hosted web app | FR-OPS-03 | Pages workflow builds `/KPI/`; actual repository variables and production URL remain. |
-| Stability and recovery | FR-OPS-02, FR-OPS-04 | Recoverable UI errors and idempotent mutation IDs implemented; clean migration CI, restore drill and recovery operations remain. |
+| Stability and recovery | FR-OPS-02, FR-OPS-04 | Flutter analyzer/Web build and clean migration CI pass on `231cfb9`; restore drill and recovery operations remain. |
 | Employee data stays private | Security and Privacy Plan | RLS/security controls are present in source; verify direct API roles and scan deployed artifacts. |
 | Cloud operation approved | PRD release gates | Owner must approve region, provider processing, retention, privacy notice, backups and incident responsibilities. |
 

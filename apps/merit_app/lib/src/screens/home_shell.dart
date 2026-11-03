@@ -203,7 +203,7 @@ class _HomeShellState extends State<HomeShell> {
               if (wide) SizedBox(width: 224, child: _Navigation(items: _navItems, selected: _selectedPage, onSelected: _selectPage)),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.only(bottom: narrow ? 86 : 0),
+                  padding: EdgeInsets.only(bottom: narrow ? 88 + MediaQuery.paddingOf(context).bottom : 0),
                   child: _loadError != null ? _FailurePage(message: _loadError!, onRetry: _refresh) : _buildPage(),
                 ),
               ),

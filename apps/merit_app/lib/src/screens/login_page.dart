@@ -78,23 +78,23 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(width < 480 ? 16 : 24),
           child: SizedBox(
             width: width < 520 ? double.infinity : 430,
             child: Card(
               child: Padding(
-                padding: const EdgeInsets.all(30),
+                padding: EdgeInsets.all(width < 480 ? 22 : 30),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const MeritBrand(compact: true),
-                      const SizedBox(height: 35),
+                      const SizedBox(height: 30),
                       Text('Sign in', style: Theme.of(context).textTheme.headlineMedium),
-                      const SizedBox(height: 8),
-                      const Text('Access is limited to invited accounts.'),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 6),
+                      const Text('Sign in with your invited account.', style: TextStyle(color: Color(0xFF667894))),
+                      const SizedBox(height: 20),
                       TextFormField(
                         controller: _email,
                         keyboardType: TextInputType.emailAddress,
@@ -134,8 +134,7 @@ class _LoginPageState extends State<LoginPage> {
                             : const Icon(Icons.arrow_forward),
                         label: Text(_busy ? 'Signing in...' : 'Sign in'),
                       ),
-                      const SizedBox(height: 18),
-                      const Text('Public sign-up is disabled. Contact the system owner for an invitation.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF667894), fontSize: 12)),
+                      const SizedBox(height: 10),
                     ],
                   ),
                 ),

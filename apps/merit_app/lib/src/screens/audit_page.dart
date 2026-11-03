@@ -39,7 +39,14 @@ class _AuditPageState extends State<AuditPage> {
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: EdgeInsets.fromLTRB(MediaQuery.sizeOf(context).width < 700 ? 18 : 28, 18, MediaQuery.sizeOf(context).width < 700 ? 18 : 28, 30),
+        padding: EdgeInsets.fromLTRB(
+          MediaQuery.sizeOf(context).width < 700 ? 18 : 28,
+          18,
+          MediaQuery.sizeOf(context).width < 700 ? 18 : 28,
+          MediaQuery.sizeOf(context).width < 700
+              ? 104 + MediaQuery.paddingOf(context).bottom
+              : 30,
+        ),
         children: [
           Row(
             children: [

@@ -111,7 +111,7 @@ class _ReportsPageState extends State<ReportsPage> {
     final total = changes.fold<int>(0, (sum, event) => sum + event.deltaTenths);
     final width = MediaQuery.sizeOf(context).width;
     return ListView(
-        padding: EdgeInsets.fromLTRB(width < 700 ? 18 : 32, 18, width < 700 ? 18 : 32, 30),
+        padding: EdgeInsets.fromLTRB(width < 700 ? 18 : 32, 18, width < 700 ? 18 : 32, width < 700 ? 104 + MediaQuery.paddingOf(context).bottom : 30),
       children: [
         Wrap(runSpacing: 8, alignment: WrapAlignment.spaceBetween, children: [Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Merit reports', style: Theme.of(context).textTheme.headlineMedium), const SizedBox(height: 4), const Text('Review reasons for merit increases and decreases within a selected period.', style: TextStyle(color: Color(0xFF667894)))]), if (widget.canExport) OutlinedButton.icon(onPressed: _exporting || _loading ? null : _export, icon: _exporting ? const ThinkingOrbsLoader(size: 18, label: 'Exporting report') : const Icon(Icons.download_outlined), label: Text(_exporting ? 'Exporting…' : 'Export CSV'))]),
         const SizedBox(height: 20),

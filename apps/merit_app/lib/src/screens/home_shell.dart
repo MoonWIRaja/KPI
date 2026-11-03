@@ -146,19 +146,28 @@ class _HomeShellState extends State<HomeShell> {
         ),
         actions: [
           if (_loading)
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: ThinkingOrbsLoader(size: 22, label: 'Refreshing data'))
-          else
-            IconButton(tooltip: 'Refresh data', onPressed: _refresh, icon: const Icon(Icons.refresh)),
-          const SizedBox(width: 5),
-          _AccountMenu(profile: _profile!, onSignOut: () => Supabase.instance.client.auth.signOut()),
-          const SizedBox(width: 16),
+            const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: ThinkingOrbsLoader(size: 22, label: 'Refreshing data')),
+          if (!wide) ...[
+            _AccountMenu(profile: _profile!, onSignOut: () => Supabase.instance.client.auth.signOut()),
+            const SizedBox(width: 16),
+          ],
         ],
       ),
       body: Stack(
         children: [
           Row(
             children: [
-              if (wide) SizedBox(width: 224, child: _Navigation(items: _navItems, selected: _selectedPage, onSelected: _selectPage)),
+              if (wide)
+                SizedBox(
+                  width: 224,
+                  child: _Navigation(
+                    items: _navItems,
+                    selected: _selectedPage,
+                    onSelected: _selectPage,
+                    profile: _profile!,
+                    onSignOut: () => Supabase.instance.client.auth.signOut(),
+                  ),
+                ),
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(bottom: narrow ? 88 + MediaQuery.paddingOf(context).bottom : 0),
@@ -472,10 +481,18 @@ class _NavItem {
 }
 
 class _Navigation extends StatelessWidget {
-  const _Navigation({required this.items, required this.selected, required this.onSelected});
+  const _Navigation({
+    required this.items,
+    required this.selected,
+    required this.onSelected,
+    required this.profile,
+    required this.onSignOut,
+  });
   final List<_NavItem> items;
   final int selected;
   final ValueChanged<int> onSelected;
+  final Map<String, dynamic> profile;
+  final VoidCallback onSignOut;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -497,9 +514,13 @@ class _Navigation extends StatelessWidget {
                 ),
               ),
             const Spacer(),
-            const Padding(
-              padding: EdgeInsets.all(14),
-              child: _InfoBanner(text: 'Invite-only access\nMerit data is protected'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
+              child: _AccountMenu(
+                profile: profile,
+                onSignOut: onSignOut,
+                expanded: true,
+              ),
             ),
           ],
         ),
@@ -507,9 +528,10 @@ class _Navigation extends StatelessWidget {
 }
 
 class _AccountMenu extends StatelessWidget {
-  const _AccountMenu({required this.profile, required this.onSignOut});
+  const _AccountMenu({required this.profile, required this.onSignOut, this.expanded = false});
   final Map<String, dynamic> profile;
   final VoidCallback onSignOut;
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) => PopupMenuButton<String>(
@@ -519,17 +541,20 @@ class _AccountMenu extends StatelessWidget {
         },
         itemBuilder: (_) => const [PopupMenuItem(value: 'signout', child: ListTile(leading: Icon(Icons.logout), title: Text('Sign out')))],
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE3E9F2)), borderRadius: BorderRadius.circular(8)),
+          margin: expanded ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE3E9F2)), borderRadius: BorderRadius.circular(10)),
           child: Row(children: [
             CircleAvatar(radius: 14, backgroundColor: const Color(0xFFEAF0FF), child: Text((profile['display_name'] as String).characters.first.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF245CEB)))),
             const SizedBox(width: 9),
-            if (MediaQuery.sizeOf(context).width > 460)
-              Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(profile['display_name'] as String, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                Text(_roleLabel(profile['role'] as String), style: const TextStyle(color: Color(0xFF667894), fontSize: 10)),
-              ]),
+            if (expanded || MediaQuery.sizeOf(context).width > 460)
+              Expanded(
+                flex: expanded ? 1 : 0,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(profile['display_name'] as String, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                  Text(_roleLabel(profile['role'] as String), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF667894), fontSize: 10)),
+                ]),
+              ),
             const SizedBox(width: 5),
             const Icon(Icons.expand_more, size: 18),
           ]),

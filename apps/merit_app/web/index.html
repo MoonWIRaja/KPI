@@ -6,23 +6,251 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Private Merit Tracker for invited staff and administrators.">
   <meta name="theme-color" content="#f7f9fc">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Merit Tracker">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="apple-touch-icon" href="/KPI/icons/merit-192.png">
-  <link rel="manifest" href="/KPI/manifest.json">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/merit-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/merit-512.png">
+  <link rel="manifest" href="manifest.json">
   <title>Merit Tracker</title>
+  <style>
+    #ios-pwa-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: rgba(15, 29, 54, 0.42);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      align-items: flex-end;
+      justify-content: center;
+      padding: 18px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #ios-pwa-modal.open {
+      display: flex;
+      animation: pwaFadeIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @keyframes pwaFadeIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .pwa-sheet {
+      width: 100%;
+      max-width: 390px;
+      background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+      border-radius: 22px;
+      border: 1px solid #d9e2ef;
+      box-shadow: 0 22px 48px rgba(15, 29, 54, 0.22), inset 0 1px 0 #ffffff;
+      padding: 20px;
+      color: #141c2e;
+    }
+    .pwa-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .pwa-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #3b76f6, #1d4ed8);
+      box-shadow: 0 6px 14px rgba(36, 92, 235, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 20px;
+    }
+    .pwa-title {
+      font-weight: 700;
+      font-size: 16px;
+      margin: 0;
+    }
+    .pwa-sub {
+      font-size: 12.5px;
+      color: #667894;
+      margin: 2px 0 0 0;
+    }
+    .pwa-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #eef3ff;
+      border: 1px solid #d8e4ff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #1e3a8a;
+    }
+    .pwa-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: #245ceb;
+      color: #fff;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .pwa-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .pwa-btn {
+      flex: 1;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .pwa-btn-primary {
+      background: #245ceb;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(36, 92, 235, 0.25);
+    }
+    .pwa-btn-ghost {
+      background: #e9eff8;
+      color: #34435d;
+    }
+  </style>
 </head>
 <body style="background-color: #f7f9fc; margin: 0;">
+  <div id="ios-pwa-modal" role="dialog" aria-modal="true" aria-labelledby="pwa-modal-title">
+    <div class="pwa-sheet">
+      <div class="pwa-head">
+        <div class="pwa-icon">&#9733;</div>
+        <div>
+          <p id="pwa-modal-title" class="pwa-title">Install Merit Tracker App</p>
+          <p id="pwa-modal-sub" class="pwa-sub">Allow full-screen app experience on your device</p>
+        </div>
+      </div>
+      <div id="pwa-steps-container">
+        <div class="pwa-step">
+          <span class="pwa-num">1</span>
+          <span>Tap the browser <b>Share</b> button (&#x2191;) at the bottom of Safari</span>
+        </div>
+        <div class="pwa-step">
+          <span class="pwa-num">2</span>
+          <span>Select <b>Add to Home Screen</b> and tap <b>Add</b></span>
+        </div>
+      </div>
+      <div class="pwa-actions">
+        <button type="button" class="pwa-btn pwa-btn-ghost" onclick="window.__closePwaModal(true)">Later</button>
+        <button type="button" id="pwa-primary-action" class="pwa-btn pwa-btn-primary" onclick="window.__confirmPwaModal()">Allow &amp; Install</button>
+      </div>
+    </div>
+  </div>
   <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for (let r of registrations) { r.unregister(); }
+    (function() {
+      let deferredPrompt = null;
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('sw.js').catch(function() {});
+        });
+      }
+
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        window.__canPromptPwa = true;
       });
-    }
+
+      window.__closePwaModal = function(remember) {
+        var modal = document.getElementById('ios-pwa-modal');
+        if (modal) modal.classList.remove('open');
+        if (remember) {
+          try { sessionStorage.setItem('merit_pwa_dismissed', '1'); } catch (_) {}
+        }
+      };
+
+      window.__confirmPwaModal = async function() {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          try { await deferredPrompt.userChoice; } catch (_) {}
+          deferredPrompt = null;
+          window.__closePwaModal(true);
+          return;
+        }
+        if ('Notification' in window && Notification.permission === 'default') {
+          try { await Notification.requestPermission(); } catch (_) {}
+        }
+        window.__closePwaModal(true);
+      };
+
+      window.__triggerMeritPwaInstall = async function(platformHint) {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          try { await deferredPrompt.userChoice; } catch (_) {}
+          deferredPrompt = null;
+          return 'prompted';
+        }
+        var modal = document.getElementById('ios-pwa-modal');
+        var steps = document.getElementById('pwa-steps-container');
+        var sub = document.getElementById('pwa-modal-sub');
+        var btn = document.getElementById('pwa-primary-action');
+        if (modal && steps && sub && btn) {
+          if (platformHint === 'desktop' && !isIOS) {
+            sub.textContent = 'Install Merit Tracker on Desktop / Android';
+            steps.innerHTML =
+              '<div class="pwa-step"><span class="pwa-num">1</span><span>Click the <b>Install icon</b> in your browser address bar (top right)</span></div>' +
+              '<div class="pwa-step"><span class="pwa-num">2</span><span>Click <b>Install</b> to launch Merit Tracker as a desktop app</span></div>';
+            btn.textContent = 'Got it';
+          } else {
+            sub.textContent = 'Install Merit Tracker on iPhone / iPad';
+            steps.innerHTML =
+              '<div class="pwa-step"><span class="pwa-num">1</span><span>Tap <b>Share</b> (square with arrow &#x2191;) in Safari toolbar</span></div>' +
+              '<div class="pwa-step"><span class="pwa-num">2</span><span>Scroll down and tap <b>Add to Home Screen</b></span></div>';
+            btn.textContent = 'Allow & Continue';
+          }
+          modal.classList.add('open');
+        }
+        return 'modal';
+      };
+
+      window.__triggerSwarmRebuild = function() {
+        if (window.__swarmRebuild) {
+          window.__swarmRebuild.toggle();
+          return;
+        }
+        var s = document.createElement('script');
+        s.src = 'swarm.js';
+        document.body.appendChild(s);
+      };
+
+      window.addEventListener('keydown', function(e) {
+        if (e.altKey && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+          e.preventDefault();
+          window.__triggerSwarmRebuild();
+        }
+      });
+
+      // Auto-show install sheet on iPhone/iPad if not installed in standalone mode yet
+      if (isIOS && !isStandalone) {
+        setTimeout(function() {
+          try {
+            if (sessionStorage.getItem('merit_pwa_dismissed') === '1') return;
+          } catch (_) {}
+          window.__triggerMeritPwaInstall('ios');
+        }, 2200);
+      }
+    })();
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>

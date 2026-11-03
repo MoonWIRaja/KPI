@@ -83,14 +83,28 @@ class GlassyCardFrame extends StatelessWidget {
           child: Container(
             padding: EdgeInsets.all(isMobile ? 22 : 28),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE3E9F2)),
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFFFFFFF), Color(0xFFFAFCFF)],
+              ),
+              borderRadius: BorderRadius.circular(18),
+              border: const Border(
+                top: BorderSide(color: Color(0xFFEAF0F8), width: 1.0),
+                left: BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
+                right: BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
+                bottom: BorderSide(color: Color(0xFFCBD6E6), width: 3.5),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF141C2E).withValues(alpha: 0.04),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
+                  color: const Color(0xFF141C2E).withValues(alpha: 0.06),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF245CEB).withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),

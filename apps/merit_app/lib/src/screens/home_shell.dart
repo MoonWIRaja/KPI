@@ -6,9 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/merit_repository.dart';
+import '../utils/pwa_bridge.dart';
 import 'csv_import_dialog.dart';
 import 'reports_page.dart';
 import 'audit_page.dart';
+import '../widgets/glassy_otp_view.dart';
 import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
 
@@ -221,7 +223,12 @@ class _HomeShellState extends State<HomeShell> {
                   ),
                   child: _loadError != null
                       ? _FailurePage(message: _loadError!, onRetry: _refresh)
-                      : _buildPage(),
+                      : SmoothStepSwitcher(
+                          child: KeyedSubtree(
+                            key: ValueKey(_navItems[_selectedPage].route),
+                            child: _buildPage(),
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -276,7 +283,12 @@ class _HomeShellState extends State<HomeShell> {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: .97),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFFE3E9F2)),
+                    border: const Border(
+                      top: BorderSide(color: Color(0xFFEAF0F8), width: 1.0),
+                      left: BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
+                      right: BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
+                      bottom: BorderSide(color: Color(0xFFCBD6E6), width: 3.0),
+                    ),
                     boxShadow: const [
                       BoxShadow(color: Color(0x180F1D36), blurRadius: 22, offset: Offset(0, 7)),
                     ],
@@ -351,7 +363,12 @@ class _HomeShellState extends State<HomeShell> {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: .97),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFE3E9F2)),
+                      border: const Border(
+                        top: BorderSide(color: Color(0xFFEAF0F8), width: 1.0),
+                        left: BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
+                        right: BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
+                        bottom: BorderSide(color: Color(0xFFCBD6E6), width: 3.0),
+                      ),
                       boxShadow: const [
                         BoxShadow(color: Color(0x180F1D36), blurRadius: 22, offset: Offset(0, 7)),
                       ],
@@ -805,46 +822,40 @@ class _AccountTrigger extends StatelessWidget {
   final bool expanded;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-        borderRadius: BorderRadius.circular(12),
+  Widget build(BuildContext context) => Surface3DCard(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        borderRadius: 12,
+        interactive: true,
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: const Color(0xFFE3E9F2)),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              _ProfileAvatar(profile: profile, radius: 15),
-              const SizedBox(width: 9),
-              if (expanded || MediaQuery.sizeOf(context).width > 460)
-                Expanded(
-                  flex: expanded ? 1 : 0,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        profile['display_name'] as String,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                      ),
-                      Text(
-                        _roleLabel(profile['role'] as String),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Color(0xFF667894), fontSize: 10),
-                      ),
-                    ],
-                  ),
+        child: Row(
+          children: [
+            _ProfileAvatar(profile: profile, radius: 15),
+            const SizedBox(width: 9),
+            if (expanded || MediaQuery.sizeOf(context).width > 460)
+              Expanded(
+                flex: expanded ? 1 : 0,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      profile['display_name'] as String,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF141C2E)),
+                    ),
+                    Text(
+                      _roleLabel(profile['role'] as String),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Color(0xFF667894), fontSize: 10),
+                    ),
+                  ],
                 ),
-              const SizedBox(width: 4),
-              const Icon(Icons.unfold_more_rounded, size: 16, color: Color(0xFF667894)),
-            ],
-          ),
+              ),
+            const SizedBox(width: 4),
+            const Icon(Icons.unfold_more_rounded, size: 16, color: Color(0xFF245CEB)),
+          ],
         ),
       );
 }
@@ -902,98 +913,227 @@ class _ProfileAccountDialogState extends State<_ProfileAccountDialog> {
     }
   }
 
+  Future<void> _installApp(String platformHint) async {
+    Navigator.pop(context);
+    await triggerMeritPwaInstall(platformHint);
+  }
+
   @override
   Widget build(BuildContext context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 340),
-          child: Padding(
+          constraints: const BoxConstraints(maxWidth: 380),
+          child: Surface3DCard(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    _ProfileAvatar(profile: _profile, radius: 36),
-                    Material(
-                      color: const Color(0xFF245CEB),
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: _saving ? null : _pickPhoto,
-                        child: const Padding(
-                          padding: EdgeInsets.all(6),
-                          child: Icon(Icons.camera_alt_outlined, size: 15, color: Colors.white),
+            borderRadius: 20,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'MY ACCOUNT',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                          color: Color(0xFF667894),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  _profile['display_name'] as String? ?? '',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  _profile['email'] as String? ?? '',
-                  style: const TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEEF3FF),
-                    borderRadius: BorderRadius.circular(999),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF667894)),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    _roleLabel(_profile['role'] as String? ?? 'staff'),
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF245CEB),
-                    ),
+                  const SizedBox(height: 6),
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFFCBD6E6), width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF245CEB).withValues(alpha: 0.14),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: _ProfileAvatar(profile: _profile, radius: 36),
+                      ),
+                      Material(
+                        color: const Color(0xFF245CEB),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: _saving ? null : _pickPhoto,
+                          child: const Padding(
+                            padding: EdgeInsets.all(7),
+                            child: Icon(Icons.camera_alt_outlined, size: 15, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Text(
-                    _error!,
-                    style: const TextStyle(fontSize: 12, color: Color(0xFFB42318)),
+                    _profile['display_name'] as String? ?? '',
+                    style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
                     textAlign: TextAlign.center,
                   ),
-                ],
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _saving ? null : _pickPhoto,
-                    icon: _saving
-                        ? const ThinkingOrbsLoader(size: 16, label: 'Uploading')
-                        : const Icon(Icons.photo_camera_outlined, size: 17),
-                    label: Text(_saving ? 'Saving photo…' : 'Change profile photo'),
+                  const SizedBox(height: 2),
+                  Text(
+                    _profile['email'] as String? ?? '',
+                    style: const TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.tonalIcon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFEEEE),
-                      foregroundColor: const Color(0xFFB42318),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF3FF),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: const Color(0xFFD6E3FF)),
                     ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      widget.onSignOut();
-                    },
-                    icon: const Icon(Icons.logout_rounded, size: 17),
-                    label: const Text('Log out', style: TextStyle(fontWeight: FontWeight.w600)),
+                    child: Text(
+                      _roleLabel(_profile['role'] as String? ?? 'staff'),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF245CEB),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  if (_error != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      _error!,
+                      style: const TextStyle(fontSize: 12, color: Color(0xFFB42318)),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _saving ? null : _pickPhoto,
+                      icon: _saving
+                          ? const ThinkingOrbsLoader(size: 16, label: 'Uploading')
+                          : const Icon(Icons.photo_camera_outlined, size: 17),
+                      label: Text(_saving ? 'Saving photo…' : 'Change profile photo'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F9FC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFDCE5F2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.install_mobile_rounded, size: 16, color: Color(0xFF245CEB)),
+                            const SizedBox(width: 6),
+                            const Expanded(
+                              child: Text(
+                                'Install Merit Tracker App (PWA)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF141C2E),
+                                ),
+                              ),
+                            ),
+                            const InfoTooltip(
+                              message:
+                                  'Install on Desktop, Android, or iPhone (iOS). iPhone opens an automatic permission & Add-to-Home-Screen guide.',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FilledButton.tonalIcon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFFEEF3FF),
+                                  foregroundColor: const Color(0xFF245CEB),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                  textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                                ),
+                                onPressed: () => _installApp('desktop'),
+                                icon: const Icon(Icons.devices_rounded, size: 15),
+                                label: const Text('PC / Android'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF245CEB),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                  textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                                ),
+                                onPressed: () => _installApp('ios'),
+                                icon: const Icon(Icons.phone_iphone_rounded, size: 15),
+                                label: const Text('iPhone (iOS)'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF34435D),
+                        side: const BorderSide(color: Color(0xFFDCE5F2)),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        triggerSwarmRebuild();
+                      },
+                      icon: const Icon(Icons.auto_awesome_motion_rounded, size: 16, color: Color(0xFF245CEB)),
+                      label: const Text(
+                        'Swarm Cursors Rebuild (Alt+Shift+S)',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonalIcon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFEEEE),
+                        foregroundColor: const Color(0xFFB42318),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        widget.onSignOut();
+                      },
+                      icon: const Icon(Icons.logout_rounded, size: 17),
+                      label: const Text('Log out', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1027,35 +1167,42 @@ class _StatsRow extends StatelessWidget {
           .map(
             (item) => SizedBox(
               width: narrow ? double.infinity : (MediaQuery.sizeOf(context).width - 320) / 3,
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF53637D), fontWeight: FontWeight.w600),
-                            ),
+              child: Surface3DCard(
+                interactive: true,
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF53637D), fontWeight: FontWeight.w600),
                           ),
-                          Icon(item.icon, size: 18, color: const Color(0xFF245CEB)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        item.value,
-                        style: const TextStyle(fontSize: 28, height: 1.1, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(item.detail, style: const TextStyle(fontSize: 12, color: Color(0xFF667894))),
-                    ],
-                  ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEEF3FF),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFD6E3FF)),
+                          ),
+                          child: Icon(item.icon, size: 17, color: const Color(0xFF245CEB)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      item.value,
+                      style: const TextStyle(fontSize: 28, height: 1.1, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(item.detail, style: const TextStyle(fontSize: 12, color: Color(0xFF667894))),
+                  ],
                 ),
               ),
             ),
@@ -1102,12 +1249,11 @@ class _DirectoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 820;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+    return Surface3DCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
             Row(
               children: [
                 Expanded(
@@ -1249,8 +1395,7 @@ class _DirectoryCard extends StatelessWidget {
               ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -1292,81 +1437,76 @@ class _StaffCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+        child: Surface3DCard(
+          padding: const EdgeInsets.all(14),
+          borderRadius: 12,
+          interactive: canAdjust,
           onTap: canAdjust ? () => onAdjust(staff) : null,
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFE3E9F2)),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        staff.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: canAdjust ? const Color(0xFF245CEB) : const Color(0xFF141C2E),
-                        ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      staff.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: canAdjust ? const Color(0xFF245CEB) : const Color(0xFF141C2E),
                       ),
                     ),
-                    Text(
-                      formatMerit(staff.scoreTenths),
-                      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    formatMerit(staff.scoreTenths),
+                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              Text(
+                '${staff.code}  •  ${staff.department ?? 'No department'}',
+                style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 2,
+                runSpacing: 2,
+                children: [
+                  if (latest != null) _DeltaPill(delta: latest!.deltaTenths),
+                  if (canCorrect)
+                    IconButton(
+                      tooltip: 'Correct score',
+                      onPressed: () => onCorrect(staff),
+                      icon: const Icon(Icons.edit_note_outlined),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '${staff.code}  •  ${staff.department ?? 'No department'}',
-                  style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 2,
-                  runSpacing: 2,
-                  children: [
-                    if (latest != null) _DeltaPill(delta: latest!.deltaTenths),
-                    if (canCorrect)
-                      IconButton(
-                        tooltip: 'Correct score',
-                        onPressed: () => onCorrect(staff),
-                        icon: const Icon(Icons.edit_note_outlined),
-                      ),
-                    if (canEdit)
-                      IconButton(
-                        tooltip: 'Edit staff',
-                        onPressed: () => onEdit(staff),
-                        icon: const Icon(Icons.edit_outlined),
-                      ),
-                    if (canArchive)
-                      IconButton(
-                        tooltip: staff.archived ? 'Restore staff' : 'Archive staff',
-                        onPressed: () => onArchive(staff),
-                        icon: Icon(staff.archived ? Icons.unarchive_outlined : Icons.archive_outlined),
-                      ),
-                    if (canDelete)
-                      IconButton(
-                        tooltip: 'Delete staff record',
-                        onPressed: () => onDelete(staff),
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                    if (canAdjust)
-                      OutlinedButton(
-                        onPressed: () => onAdjust(staff),
-                        child: const Text('Adjust'),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+                  if (canEdit)
+                    IconButton(
+                      tooltip: 'Edit staff',
+                      onPressed: () => onEdit(staff),
+                      icon: const Icon(Icons.edit_outlined),
+                    ),
+                  if (canArchive)
+                    IconButton(
+                      tooltip: staff.archived ? 'Restore staff' : 'Archive staff',
+                      onPressed: () => onArchive(staff),
+                      icon: Icon(staff.archived ? Icons.unarchive_outlined : Icons.archive_outlined),
+                    ),
+                  if (canDelete)
+                    IconButton(
+                      tooltip: 'Delete staff record',
+                      onPressed: () => onDelete(staff),
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                  if (canAdjust)
+                    OutlinedButton(
+                      onPressed: () => onAdjust(staff),
+                      child: const Text('Adjust'),
+                    ),
+                ],
+              ),
+            ],
           ),
         ),
       );
@@ -1938,11 +2078,13 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
     final accentColor = isPositive ? const Color(0xFF16804A) : const Color(0xFFB42318);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500),
-        child: Padding(
+        child: Surface3DCard(
           padding: const EdgeInsets.all(24),
+          borderRadius: 20,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

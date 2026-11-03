@@ -1,5 +1,109 @@
 import 'package:flutter/material.dart';
 
+/// Tactile 3D spatial surface card with top specular highlight, 3D bottom bevel lip,
+/// layered ambient/key depth shadows, and optional Framer-Motion hover/press physics.
+class Surface3DCard extends StatefulWidget {
+  const Surface3DCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(18),
+    this.borderRadius = 14,
+    this.interactive = false,
+    this.onTap,
+    super.key,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final double borderRadius;
+  final bool interactive;
+  final VoidCallback? onTap;
+
+  @override
+  State<Surface3DCard> createState() => _Surface3DCardState();
+}
+
+class _Surface3DCardState extends State<Surface3DCard> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final activeInteractive = widget.interactive || widget.onTap != null;
+    final translateY = !activeInteractive
+        ? 0.0
+        : _pressed
+            ? 1.5
+            : _hovered
+                ? -2.5
+                : 0.0;
+    final scale = !activeInteractive
+        ? 1.0
+        : _pressed
+            ? 0.992
+            : 1.0;
+
+    return MouseRegion(
+      cursor: activeInteractive ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: activeInteractive ? (_) => setState(() => _hovered = true) : null,
+      onExit: activeInteractive
+          ? (_) => setState(() {
+                _hovered = false;
+                _pressed = false;
+              })
+          : null,
+      child: GestureDetector(
+        onTapDown: activeInteractive ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: activeInteractive ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel: activeInteractive ? () => setState(() => _pressed = false) : null,
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: reduceMotion ? 0 : 180),
+          curve: Curves.easeOutCubic,
+          transformAlignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..translateByDouble(0.0, translateY, 0.0, 1.0)
+            ..scaleByDouble(scale, scale, 1.0, 1.0),
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFFFFFFF),
+                Color(0xFFFAFCFF),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            border: Border(
+              top: const BorderSide(color: Color(0xFFEAF0F8), width: 1.0),
+              left: const BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
+              right: const BorderSide(color: Color(0xFFDCE5F2), width: 1.0),
+              bottom: BorderSide(
+                color: _hovered && activeInteractive ? const Color(0xFF9EB8E8) : const Color(0xFFCBD6E6),
+                width: _pressed ? 1.5 : 3.0,
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF141C2E).withValues(alpha: _hovered && activeInteractive ? 0.08 : 0.05),
+                blurRadius: _hovered && activeInteractive ? 22 : 16,
+                offset: Offset(0, _hovered && activeInteractive ? 10 : 6),
+              ),
+              BoxShadow(
+                color: const Color(0xFF245CEB).withValues(alpha: _hovered && activeInteractive ? 0.07 : 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
 class MeritBrand extends StatelessWidget {
   const MeritBrand({this.compact = false, super.key});
 

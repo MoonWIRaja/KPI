@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/merit_repository.dart';
+import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
 
 class AuditPage extends StatefulWidget {
@@ -145,7 +146,8 @@ class _AuditPageState extends State<AuditPage> {
       );
     }
 
-    return Card(
+    return Surface3DCard(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         children: [
           for (var i = 0; i < items.length; i++) ...[

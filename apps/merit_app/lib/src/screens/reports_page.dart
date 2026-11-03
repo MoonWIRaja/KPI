@@ -6,6 +6,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../data/merit_repository.dart';
+import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
 
 class ReportsPage extends StatefulWidget {
@@ -117,13 +118,6 @@ class _ReportsPageState extends State<ReportsPage> {
 
   List<MeritEvent> _eventsForStaff(String staffId) => _events.where((event) {
         if (event.staffId != staffId) return false;
-        if (_direction == 'Increase') return event.deltaTenths > 0;
-        if (_direction == 'Decrease') return event.deltaTenths < 0;
-        return true;
-      }).toList();
-
-  List<MeritEvent> get _selectedEvents => _events.where((event) {
-        if (!_selectedStaffIds.contains(event.staffId)) return false;
         if (_direction == 'Increase') return event.deltaTenths > 0;
         if (_direction == 'Decrease') return event.deltaTenths < 0;
         return true;
@@ -298,7 +292,8 @@ class _ReportsPageState extends State<ReportsPage> {
         name: 'merit-report-$suffix-${_from.year}${_from.month.toString().padLeft(2, '0')}',
         bytes: Uint8List.fromList(bytes),
         fileExtension: 'pdf',
-        mimeType: MimeType.pdf,
+        mimeType: MimeType.custom,
+        customMimeType: 'application/pdf',
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -441,7 +436,8 @@ class _ReportsPageState extends State<ReportsPage> {
             ),
           )
         else
-          Card(
+          Surface3DCard(
+            padding: const EdgeInsets.symmetric(vertical: 4),
             child: Column(
               children: [
                 for (var i = 0; i < staffRows.length; i++) ...[

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -18,17 +18,12 @@ class InitialOwnerSetupPage extends StatefulWidget {
 class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _password = TextEditingController();
-  final _confirm = TextEditingController();
   bool _busy = false;
-  bool _showPassword = false;
   String? _error;
 
   @override
   void dispose() {
     _name.dispose();
-    _password.dispose();
-    _confirm.dispose();
     super.dispose();
   }
 
@@ -39,15 +34,11 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
       _error = null;
     });
     try {
-      final auth = Supabase.instance.client.auth;
-      await auth.updateUser(UserAttributes(password: _password.text));
       await Supabase.instance.client.rpc(
         'bootstrap_initial_owner',
         params: {'display_name_input': _name.text.trim()},
       );
       await widget.onComplete();
-    } on AuthException {
-      if (mounted) setState(() => _error = 'Password does not meet the project policy. Check the requirements and try again.');
     } on PostgrestException catch (error) {
       if (mounted) {
         _error = error.message.contains('not available')
@@ -82,60 +73,46 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
                         Text('Set up administrator account (Owner)', style: Theme.of(context).textTheme.headlineMedium),
                         const SizedBox(height: 8),
                         const Text(
-                          'This is a one-time setup for the system owner. The email must be allow-listed and verified by the Supabase operator.',
+                          'Your email has been verified via OTP. Enter your full name to claim and permanently lock the primary Owner account.',
                         ),
                         const SizedBox(height: 20),
-                        const Text('Signed-in account', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                        const Text('Verified Owner Email', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 5),
-                        SelectableText(widget.email, style: const TextStyle(color: Color(0xFF34435D))),
+                        Row(
+                          children: [
+                            const Icon(Icons.verified_outlined, size: 16, color: Color(0xFF15803D)),
+                            const SizedBox(width: 6),
+                            SelectableText(widget.email, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF15803D))),
+                          ],
+                        ),
                         const SizedBox(height: 18),
                         TextFormField(
                           controller: _name,
                           textCapitalization: TextCapitalization.words,
                           inputFormatters: [LengthLimitingTextInputFormatter(160)],
-                          decoration: const InputDecoration(labelText: 'System owner name'),
-                          validator: (value) => value == null || value.trim().isEmpty ? 'Enter your name.' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _password,
-                          obscureText: !_showPassword,
-                          autofillHints: const [AutofillHints.newPassword],
-                          decoration: InputDecoration(
-                            labelText: 'New password',
-                            helperText: 'At least 12 characters.',
-                            suffixIcon: IconButton(
-                              tooltip: _showPassword ? 'Hide password' : 'Show password',
-                              onPressed: () => setState(() => _showPassword = !_showPassword),
-                              icon: Icon(_showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                            ),
-                          ),
-                          validator: (value) => value == null || value.length < 12 ? 'Password must be at least 12 characters.' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _confirm,
-                          obscureText: !_showPassword,
-                          autofillHints: const [AutofillHints.newPassword],
                           onFieldSubmitted: (_) => _finishSetup(),
-                          decoration: const InputDecoration(labelText: 'Confirm new password'),
-                          validator: (value) => value != _password.text ? 'Passwords do not match.' : null,
+                          decoration: const InputDecoration(
+                            labelText: 'System owner full name',
+                            hintText: 'e.g. Moon',
+                            prefixIcon: Icon(Icons.person_outline),
+                          ),
+                          validator: (value) => value == null || value.trim().isEmpty ? 'Enter your name.' : null,
                         ),
                         if (_error != null) ...[
                           const SizedBox(height: 12),
                           Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
                         ],
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 20),
                         FilledButton.icon(
                           onPressed: _busy ? null : _finishSetup,
                           icon: _busy
-                              ? const ThinkingOrbsLoader(size: 18, label: 'Setting up account')
+                              ? const ThinkingOrbsLoader(size: 18, label: 'Securing Owner account')
                               : const Icon(Icons.verified_user_outlined),
-                          label: Text(_busy ? 'Setting up accountâ€¦' : 'Set up administrator account'),
+                          label: Text(_busy ? 'Securing Owner account…' : 'Complete Owner Setup'),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         const Text(
-                          'After setup, enable TOTP before viewing staff data.',
+                          'All future logins will be authenticated via Email OTP sent through Google SMTP (support@mesrc.com.my).',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
                         ),

@@ -59,13 +59,6 @@ class _HomeShellState extends State<HomeShell> {
       final profile = await _repository.loadProfile(user.id);
       _profile = profile;
       _permissions = _isOwner ? const {} : await _repository.loadPermissions(user.id);
-      if (profile['must_set_password'] == true) {
-        setState(() {
-          _passwordSetupRequired = true;
-          _loading = false;
-        });
-        return;
-      }
       final elevated = _permissions.any((permission) => !{'account.read.self', 'merit.read.self'}.contains(permission));
       if (profile['role'] == 'owner' || profile['role'] == 'ceo' || elevated) {
         final aal = Supabase.instance.client.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -158,7 +151,6 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    if (_passwordSetupRequired) return const PasswordSetupPage(isRecovery: false);
     if (_mfaRequired) return MfaGate(onComplete: _afterMfa);
     if (_loading && _profile == null) return const _LoadingPage();
     if (_loadError != null && _profile == null) {
@@ -1152,7 +1144,7 @@ class _InviteDialogState extends State<_InviteDialog> {
     return AlertDialog(
       title: const Text('Invite user'),
       content: SizedBox(width: 440, child: Form(key: _form, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Text('An invitation link will be sent by email. Production SMTP must be configured.'),
+        const Text('The user will be authorized to receive Email OTP sign-in codes via Google SMTP (support@mesrc.com.my).'),
         const SizedBox(height: 14),
         TextFormField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email'), validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null),
         const SizedBox(height: 10),

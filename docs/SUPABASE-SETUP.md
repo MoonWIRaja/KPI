@@ -35,24 +35,40 @@ CLI akan minta pengesahan bagi operasi remote mengikut versi semasa. Jangan guna
 Dalam Dashboard projek yang sama:
 
 1. Matikan **Allow new users to sign up** supaya pengguna hanya boleh dijemput.
-2. Kekalkan email provider dan tetapkan password policy/rate limit yang sesuai.
-3. Benarkan TOTP authenticator MFA; Owner dan CEO perlu mendaftar serta mengesahkan faktor sebelum guna akses pengurusan.
+2. Kekalkan email provider. Log masuk kini menggunakan **Email OTP (One-Time Password)** tanpa kata laluan.
+3. Benarkan TOTP authenticator MFA; Owner dan CEO boleh mendaftar serta mengesahkan faktor kedua sebelum guna akses pengurusan.
 4. Set Auth **Site URL** kepada `https://moonwiraja.github.io/KPI/` dan tambah redirect URL itu serta URL pembangunan yang benar-benar digunakan. Elakkan wildcard yang tidak diperlukan.
-5. Atur SMTP custom di **Project Settings → Authentication → SMTP Settings**. Sahkan domain dan sender dengan pembekal; simpan kelayakan di Dashboard sahaja. Uji invitation dan password recovery menggunakan akaun ujian.
+5. Atur Google SMTP di **Project Settings → Authentication → SMTP Settings**:
+   - **Enable Custom SMTP:** `ON`
+   - **Sender email:** `support@mesrc.com.my`
+   - **Sender name:** `Merit Tracker`
+   - **Host:** `smtp.gmail.com`
+   - **Port:** `587`
+   - **Minimum transfer security:** `STARTTLS`
+   - **User:** `support@mesrc.com.my`
+   - **Password:** Masukkan 16-character Google Workspace App Password (jangan commit ke git).
+   - Simpan tetapan dan hantar emel ujian untuk pengesahan.
 
-SMTP ialah sambungan keluar daripada Supabase Auth. PC bos tidak memerlukan public IP untuk penghantaran jemputan. Had dan reputasi email tertakluk kepada pembekal SMTP yang dipilih.
+SMTP ialah sambungan keluar daripada Supabase Auth. PC bos tidak memerlukan public IP untuk penghantaran kod OTP.
 
 ## 3. Sediakan wizard Owner pertama
 
-Selepas semua migration setup berjaya digunakan, matikan public sign-up dan buat satu akaun Auth melalui Dashboard sebagai operator. Gunakan e-mel Owner yang disahkan, tetapkan kata laluan sementara, dan jangan invite pengguna lain dahulu. Apabila laman dibuka kali pertama, app memaparkan skrin Sediakan sistem anda; Owner log masuk di situ, kemudian melengkapkan nama serta kata laluan baharu pada wizard.
+Selepas semua migration setup berjaya digunakan (termasuk `20261103030000_email_otp_auth_flow.sql`), matikan public sign-up.
 
-Di SQL Editor, benarkan satu alamat e-mel untuk tuntutan Owner pertama. Gantikan placeholder dan sahkan satu baris dikemas kini:
+Di SQL Editor, benarkan satu alamat e-mel untuk tuntutan Owner pertama (contohnya emel Moon):
 
 ```sql
 update public.initial_owner_setup
 set expected_email = lower(trim('OWNER_EMAIL_HERE'))
 where id = true and claimed_at is null and claimed_user_id is null;
 ```
+
+Apabila laman dibuka kali pertama:
+1. Skrin *First-Run Setup* memaparkan kotak emel Owner.
+2. Owner memasukkan emel `expected_email` yang dibenarkan dan menekan *Send setup code*.
+3. Sistem menghantar 6-digit OTP melalui Google SMTP (`support@mesrc.com.my`).
+4. Owner memasukkan kod OTP, mengesahkan nama paparan (*Owner name*), dan sistem mengunci tuntutan Owner secara atomik selama-lamanya.
+5. Seterusnya, pengguna lain hanya boleh log masuk jika telah dijemput oleh Owner melalui fungsi *Invite user*. Pengguna tidak dijemput akan ditolak daripada menerima sebarang kod OTP.
 
 Claim hanya berjaya jika e-mel tepat sepadan, telah disahkan dan belum ada Owner. Database mengunci tuntutan dalam satu transaksi dan menandakan setup selesai; selepas itu halaman first-run tidak muncul lagi dan semua orang menggunakan log masuk biasa. Owner perlu enroll TOTP. Tiada signup atau claim awam. Jemput CEO/staff hanya selepas invitation SMTP diuji.
 

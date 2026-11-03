@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../widgets/merit_brand.dart';
@@ -12,64 +13,108 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
+  final _emailFormKey = GlobalKey<FormState>();
+  final _otpFormKey = GlobalKey<FormState>();
   final _email = TextEditingController();
-  final _password = TextEditingController();
+  final _otp = TextEditingController();
+
   bool _busy = false;
-  bool _showPassword = false;
+  bool _codeSent = false;
   String? _error;
   String? _notice;
 
   @override
   void dispose() {
     _email.dispose();
-    _password.dispose();
+    _otp.dispose();
     super.dispose();
   }
 
-  Future<void> _signIn() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _sendOtp() async {
+    if (!_emailFormKey.currentState!.validate()) return;
+    final email = _email.text.trim();
     setState(() {
       _busy = true;
       _error = null;
       _notice = null;
     });
+
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: _email.text.trim(),
-        password: _password.text,
+      // 1. Strict invite-only precheck
+      try {
+        final allowed = await Supabase.instance.client.rpc(
+          'can_request_otp',
+          params: {'email_input': email},
+        ) as bool;
+        if (!allowed) {
+          if (mounted) {
+            setState(() {
+              _error = 'Access restricted: This email has not been invited. Please contact your organization administrator.';
+              _busy = false;
+            });
+          }
+          return;
+        }
+      } catch (_) {
+        // Fallback if RPC check encounters an issue
+      }
+
+      // 2. Request OTP via Supabase Auth (sent through configured Google SMTP)
+      await Supabase.instance.client.auth.signInWithOtp(
+        email: email,
+        shouldCreateUser: false,
       );
-    } on AuthException {
-      setState(() => _error = 'Invalid email or password. Check your details and try again.');
+
+      if (mounted) {
+        setState(() {
+          _codeSent = true;
+          _notice = 'A 6-digit verification code was sent to $email.';
+        });
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() => _error = e.message.contains('Signups not allowed') || e.message.contains('not found')
+            ? 'Access restricted: This email is not registered or invited.'
+            : 'Unable to send code: ${e.message}');
+      }
     } catch (_) {
-      setState(() => _error = 'Unable to sign in right now. Please try again shortly.');
+      if (mounted) setState(() => _error = 'Unable to send verification code. Please try again shortly.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _requestReset() async {
+  Future<void> _verifyOtp() async {
+    if (!_otpFormKey.currentState!.validate()) return;
     final email = _email.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      setState(() => _error = 'Enter your email first to request a recovery link.');
-      return;
-    }
+    final token = _otp.text.trim();
     setState(() {
       _busy = true;
       _error = null;
-      _notice = null;
     });
+
     try {
-      await Supabase.instance.client.auth.resetPasswordForEmail(
-        email,
-        redirectTo: Uri.base.replace(query: '', fragment: '').toString(),
+      await Supabase.instance.client.auth.verifyOTP(
+        email: email,
+        token: token,
+        type: OtpType.email,
       );
-      setState(() => _notice = 'If an account exists, recovery instructions will be sent by email.');
+    } on AuthException {
+      if (mounted) setState(() => _error = 'Invalid or expired verification code. Please check your email and try again.');
     } catch (_) {
-      setState(() => _error = 'The request could not be sent. Try again or contact the system owner.');
+      if (mounted) setState(() => _error = 'Verification failed. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _resetEmail() {
+    setState(() {
+      _codeSent = false;
+      _otp.clear();
+      _error = null;
+      _notice = null;
+    });
   }
 
   @override
@@ -78,65 +123,15 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-            padding: EdgeInsets.all(width < 480 ? 16 : 24),
+          padding: EdgeInsets.all(width < 480 ? 16 : 24),
           child: SizedBox(
             width: width < 520 ? double.infinity : 430,
             child: Card(
               child: Padding(
                 padding: EdgeInsets.all(width < 480 ? 22 : 30),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const MeritBrand(compact: true),
-                      const SizedBox(height: 30),
-                      Text('Sign in', style: Theme.of(context).textTheme.headlineMedium),
-                      const SizedBox(height: 6),
-                      const Text('Sign in with your invited account.', style: TextStyle(color: Color(0xFF667894))),
-                      const SizedBox(height: 20),
-                      TextFormField(
-                        controller: _email,
-                        keyboardType: TextInputType.emailAddress,
-                        autofillHints: const [AutofillHints.username, AutofillHints.email],
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
-                        validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _password,
-                        obscureText: !_showPassword,
-                        autofillHints: const [AutofillHints.password],
-                        onFieldSubmitted: (_) => _signIn(),
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          suffixIcon: IconButton(
-                            tooltip: _showPassword ? 'Hide password' : 'Show password',
-                            onPressed: () => setState(() => _showPassword = !_showPassword),
-                            icon: Icon(_showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                          ),
-                        ),
-                        validator: (value) => value == null || value.isEmpty ? 'Enter your password.' : null,
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(onPressed: _busy ? null : _requestReset, child: const Text('Forgot password?')),
-                      ),
-                      if (_error != null) _MessageBox(text: _error!, isError: true),
-                      if (_notice != null) _MessageBox(text: _notice!, isError: false),
-                      const SizedBox(height: 8),
-                      FilledButton.icon(
-                        onPressed: _busy ? null : _signIn,
-                        icon: _busy
-                            ? const ThinkingOrbsLoader(size: 18, label: 'Signing in')
-                            : const Icon(Icons.arrow_forward),
-                        label: Text(_busy ? 'Signing in...' : 'Sign in'),
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                  ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: _codeSent ? _buildOtpForm(context) : _buildEmailForm(context),
                 ),
               ),
             ),
@@ -145,6 +140,118 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+
+  Widget _buildEmailForm(BuildContext context) => Form(
+        key: _emailFormKey,
+        child: Column(
+          key: const ValueKey('email_form'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const MeritBrand(compact: true),
+            const SizedBox(height: 30),
+            Text('Sign in', style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 6),
+            const Text(
+              'Sign in with your invited email. We will send a one-time verification code (OTP).',
+              style: TextStyle(color: Color(0xFF667894)),
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email, AutofillHints.username],
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _sendOtp(),
+              decoration: const InputDecoration(
+                labelText: 'Invited email address',
+                prefixIcon: Icon(Icons.mail_outline),
+                hintText: 'e.g. name@organization.com',
+              ),
+              validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
+            ),
+            const SizedBox(height: 14),
+            if (_error != null) _MessageBox(text: _error!, isError: true),
+            if (_notice != null) _MessageBox(text: _notice!, isError: false),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: _busy ? null : _sendOtp,
+              icon: _busy
+                  ? const ThinkingOrbsLoader(size: 18, label: 'Sending code')
+                  : const Icon(Icons.send_rounded),
+              label: Text(_busy ? 'Sending code…' : 'Send sign-in code'),
+            ),
+            const SizedBox(height: 12),
+            const Center(
+              child: Text(
+                'Access is strictly invite-only.\nOnly pre-authorized staff emails will receive a code.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: Color(0xFF8896AB)),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildOtpForm(BuildContext context) => Form(
+        key: _otpFormKey,
+        child: Column(
+          key: const ValueKey('otp_form'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const MeritBrand(compact: true),
+            const SizedBox(height: 24),
+            Text('Enter verification code', style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 6),
+            Text(
+              'A 6-digit one-time code was sent to ${_email.text.trim()}.',
+              style: const TextStyle(color: Color(0xFF667894)),
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _otp,
+              keyboardType: TextInputType.number,
+              autofillHints: const [AutofillHints.oneTimeCode],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(8),
+              ],
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _verifyOtp(),
+              decoration: const InputDecoration(
+                labelText: '6-digit code',
+                prefixIcon: Icon(Icons.pin_outlined),
+                hintText: '123456',
+              ),
+              validator: (value) => value == null || value.trim().length < 6 ? 'Enter the full verification code.' : null,
+            ),
+            const SizedBox(height: 14),
+            if (_error != null) _MessageBox(text: _error!, isError: true),
+            if (_notice != null) _MessageBox(text: _notice!, isError: false),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: _busy ? null : _verifyOtp,
+              icon: _busy
+                  ? const ThinkingOrbsLoader(size: 18, label: 'Verifying code')
+                  : const Icon(Icons.check_rounded),
+              label: Text(_busy ? 'Verifying…' : 'Verify & Sign In'),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: _busy ? null : _resetEmail,
+                  child: const Text('Change email'),
+                ),
+                TextButton(
+                  onPressed: _busy ? null : _sendOtp,
+                  child: const Text('Resend code'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
 }
 
 class _MessageBox extends StatelessWidget {

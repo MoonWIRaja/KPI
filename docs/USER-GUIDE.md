@@ -1,51 +1,59 @@
-# User Guide (Draft)
+# Merit Tracker User Guide
 
-The application is not implemented yet. These proposed workflows must be checked against the released screens and account setup policy.
+The same Flutter Web application is responsive for desktop and phone browsers. Accounts are invitation-only. Available pages and actions depend on the permissions assigned by the Owner.
 
-## Owner / administrator
+## Sign in
 
-### Sign in and configure
-1. Open the approved Merit Tracker web address.
-2. Sign in using the owner account created through the deployment's secure bootstrap procedure.
-3. Keep the default starting merit at `5`, or choose a different organization default.
-4. Optionally configure score bounds after the product owner confirms the policy.
-5. Review roles and grant only the permissions each person needs.
+1. Open the approved Merit Tracker URL and sign in with the invited account.
+2. On first use, set a password using the invitation link.
+3. Owner, CEO and users with elevated permissions must enroll and verify an authenticator TOTP code before using protected operations.
+4. Staff accounts open their own merit page by default. Ask the Owner if an expected page is unavailable.
 
-### Add or import staff
-1. Open **Staff → Add staff**, enter required fields and choose the default or individual starting score.
-2. To import, download the template, fill supported columns and upload it.
-3. Review valid rows, duplicates, warnings and errors. Cancel to leave data unchanged or confirm to import.
+## Owner and management workflows
 
-### Adjust merit
-1. Open a staff profile and select **Adjust merit**.
-2. Choose an increase/decrease between `0.1` and `1.0` in `0.1` steps.
-3. Enter the required reason; review the before/after values and confirm.
-4. Check **History** for the committed event. Corrections append a new event rather than erasing the original.
+### Staff records
 
-### Accounts and email
+- Add a staff member with a unique staff code, name, optional department and initial merit. The organization default is `5.0` unless changed in Settings.
+- Edit staff details or archive/restore a record. Archive preserves history.
+- Permanent deletion is available only when the staff record has neither a linked user account nor merit history.
+- Score floor and ceiling are optional. Once configured, a setting cannot be saved if existing scores fall outside the proposed bounds.
 
-Admins provision invited accounts and assign roles. Public self-registration is disabled. Invitation and password recovery steps depend on the approved account-delivery method; automated email requires configured production SMTP. Do not use undocumented local activation codes.
+### Import a CSV
 
-### Reports
-1. Open **Reports → Merit history**, select permitted staff/date filters and review the preview.
-2. Confirm export permission and save the generated file in an approved private location.
-3. CSV is planned; PDF requires product-owner approval.
+1. Open the staff page and choose **Import CSV**.
+2. Upload a UTF-8 CSV, up to 2 MB and 500 data rows. Required columns are `staff_code`, `full_name`, and `starting_merit`; `department` is optional. Common aliases for code/name/score are accepted and shown in the dialog.
+3. Review the preview and row errors. Duplicate codes, invalid scores and malformed rows must be resolved before commit.
+4. Confirm import to add all rows in one transaction. If validation fails, no partial import is committed.
 
-## Invited staff
+### Adjust or correct merit
 
-1. Open the approved web address or released mobile app, if mobile is in scope.
-2. Follow the invitation/account activation instructions provided by the administrator.
-3. Sign in and open **My merit** to see the current score and permitted history.
-4. Contact an administrator if a record appears incorrect; staff cannot change merit by default.
+1. Select a staff member and choose **Adjust merit**.
+2. Select an increase or decrease from `0.1` to `1.0` in `0.1` steps, enter the reason, review the resulting score and confirm.
+3. The database records the actor, reason, before/after score and timestamp with the score update atomically.
+4. If an existing entry needs correction, use the correction workflow. It appends a compensating event; it does not erase the original history.
 
-## Frequently asked questions
+### Users and permissions
 
-**Is the system local to the boss's PC?** No. The new direction hosts the Flutter Web bundle on GitHub Pages and runtime data/auth in Supabase. Cloud processing must be approved before real staff data is entered.
+- The Owner can invite a CEO or Staff account. Staff invitations must be linked to an unassigned staff record.
+- The Owner can grant or revoke individual permissions and activate/deactivate accounts. Deactivation removes application access; it does not delete the audit or merit history.
+- Elevated users are required to use TOTP MFA. Grant permissions sparingly.
+- Public self-registration is disabled. Invitation and recovery emails require the project's configured SMTP provider.
 
-**Does the app need a public IP?** The static web app uses a web URL and Supabase is hosted. A custom domain and any office-only access restriction remain decisions.
+### Reports and audit
 
-**Can an admin change merit without a reason?** No; every adjustment requires a reason.
+- Filter the permitted merit history by month and direction. Scope is enforced by Supabase, not just by UI filters.
+- Export a CSV only when `reports.export` is granted. The export includes the visible audit fields and records an export audit event.
+- Store downloaded reports in the organization's approved private location. CSV exports may contain employee information.
+- The Audit page is visible only to accounts with `audit.read`.
 
-**Can staff see another person's merit?** No, not with the default self-only role. Supabase authorization must enforce this independently of the interface.
+## Email and account recovery
 
-**Does open-source code publish staff data?** Source code and the Flutter client are inspectable. Staff data must remain in the protected Supabase project; secrets and real records must not enter GitHub or Pages artifacts.
+Supabase Auth sends invitation and recovery links through the SMTP service configured by the project owner. If delivery fails, contact the Owner to check Auth SMTP, sender verification, redirect allowlist and Supabase function logs. Do not share invitation or reset links.
+
+## Phone use
+
+Open the same HTTPS URL in a phone browser while online. The app uses the same account, permissions and data as desktop. There is no separate native Android/iOS package in this repository; access from outside the office depends on the Owner's hosting and network policy.
+
+## Privacy
+
+Merit history and reasons are sensitive employee records. Use only for the approved internal purpose. Do not put real staff data in GitHub, issue reports, screenshots or unapproved exports. Follow the organization's retention, correction and deletion policy.

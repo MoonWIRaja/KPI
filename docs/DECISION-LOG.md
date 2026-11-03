@@ -31,7 +31,7 @@ This log separates user-confirmed direction from proposals and unresolved decisi
 | D-025 | Domain/access boundary | Open | Choose URL, Auth redirects, and whether office-only access remains required. |
 | D-026 | Recovery/operations | Open | Set RPO/RTO, backup retention, restore owner and incident process. |
 | D-027 | Desktop installer | Deferred for v1 | Hosted Flutter Web removes the always-running owner-PC service/installer requirement. Revisit only if requested. |
-| D-028 | Initial access model | Confirmed direction | One system maintainer/Owner and one CEO, with additional staff only by invitation. Public registration is disabled; Owner alone invites and assigns roles in the MVP. |
+| D-028 | Initial access model | Confirmed direction | One system maintainer/Owner and one CEO, with additional staff only by invitation. Public registration is disabled; Owner alone invites and assigns roles. |
 | D-029 | Privileged-user MFA | Implemented direction; deployment setup required | Owner and CEO must use TOTP MFA; database policies/functions require AAL2 for their operational permissions. Recovery and secondary-factor runbook remain to be completed. |
 | D-030 | Invitation email | Confirmed requirement | Custom SMTP must be configured in Supabase for production invitations and password recovery. Credentials remain in Supabase settings, never the Flutter client. |
-| D-031 | MVP roles | Confirmed implementation direction | Owner (maintainer) controls invites; CEO manages staff/merit; invited Staff is self-only. Owner and CEO require TOTP MFA/AAL2 for operations. |
+| D-031 | Built-in roles | Confirmed implementation direction | Owner (maintainer) controls invites; CEO manages staff/merit; invited Staff is self-only by default. Owner and CEO require TOTP MFA/AAL2 for operations. |

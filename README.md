@@ -1,29 +1,30 @@
 # Merit Tracker
 
-Flutter web application for internal staff merit tracking. The client is deployed as static files to GitHub Pages; authentication and staff records live in Supabase.
+Invite-only staff merit tracking for internal use. The application is built with Flutter Web; it works in desktop and phone browsers. GitHub Pages hosts the static client and Supabase provides authentication, PostgreSQL, row-level security and invitation email delivery.
 
-## Access model
+## Implemented workflows
 
-- Public registration is disabled in Supabase Auth.
-- First Owner account is provisioned by the system maintainer. Owner is the only role allowed to invite users or assign roles.
-- Owner and CEO accounts must enroll a TOTP authenticator before they can access operational data or run privileged actions. RLS and database functions require AAL2.
-- CEO manages merit and staff operations. Invited Staff accounts are linked to one staff record and can read only their own merit by default.
-- Supabase sends invitations and password recovery using custom SMTP configured in the Supabase Dashboard.
-- No privileged Supabase key is included in the Flutter web build.
+- Owner and CEO sign-in; TOTP MFA required for privileged accounts and permission-elevated users.
+- Staff directory, add/edit/archive/restore, individual starting scores and configurable default score/bounds.
+- Reason-required merit adjustments in 0.1 increments from 0.1 through 1.0; immutable history and compensating corrections.
+- CSV import with preview, validation, duplicate checks, limits and transactional commit.
+- Permission-scoped reports and CSV export with spreadsheet formula neutralization and export audit.
+- Owner-managed invitations, per-user permissions, account activation/deactivation and audit history.
+- Supabase RLS and trusted database functions enforce access and mutations independently of the interface.
 
 ## Repository layout
 
 ```text
 apps/merit_app/                 Flutter Web client
 supabase/migrations/            PostgreSQL schema, RLS and transactional functions
-supabase/functions/invite-user/ Trusted invite endpoint (service key stays server-side)
-.github/workflows/pages.yml     Build and GitHub Pages deployment
-docs/                           Requirements, operations and decisions
+supabase/functions/invite-user/ Trusted invite endpoint
+.github/workflows/              Flutter and Supabase migration verification; Pages deployment
+docs/                           Product, security and operating guides
 ```
 
 ## Local development
 
-Requirements: Flutter stable (Dart 3.9+), a Supabase project and configured project URL/publishable key.
+Requirements: Flutter stable (Dart 3.12+), Supabase CLI with Docker for local backend, and a Supabase project for hosted use.
 
 ```powershell
 cd apps/merit_app
@@ -31,20 +32,22 @@ flutter pub get
 flutter run -d chrome --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 ```
 
-Run SQL migrations and Supabase setup from [docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md). Disable public sign-up, create the first Owner Auth user in Supabase Dashboard, then link the Owner profile through the SQL Editor before first login. There is no client-callable bootstrap endpoint.
+Follow [the Supabase setup guide](docs/SUPABASE-SETUP.md) before connecting a hosted project. Never put a Supabase secret/service-role key or SMTP credential in Flutter, GitHub Pages, or chat.
 
 ## GitHub Pages
 
-Enable **Settings → Pages → GitHub Actions**. Add repository Actions variables `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. The workflow builds the Flutter app at `/KPI/` and deploys it. Both values are public client configuration; all private access depends on RLS and server-side functions. Never set the service-role key as a repository variable or Flutter define.
+The Pages workflow builds for `/KPI/` from `main`. Set repository Actions variables `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`, then choose **Settings → Pages → GitHub Actions**. Both are public client configuration. Supabase RLS and server-side functions protect private data.
 
-## Current implementation scope
+## Operational boundary
 
-Sign-in and recovery request; first Owner bootstrap; required Owner/CEO TOTP; role-scoped staff directory and merit history; staff creation; atomic ±0.1–1.0 merit changes; Owner-only email invitations; GitHub Pages workflow. CSV import, reports, custom role editor, account disabling, recovery operations and mobile releases remain planned work.
+The hosted project, SMTP provider, Auth settings, production data and Pages variables are controlled by the project owner. This repository contains setup instructions; it does not imply those external settings have been changed. Do not enter real staff records until the owner has approved hosting region, privacy/retention policy, backups and recovery procedures.
 
 ## Product and operating docs
 
 - [PRD](docs/PRD.md)
 - [Delivery playbook](docs/PLAYBOOK.md)
 - [Supabase setup](docs/SUPABASE-SETUP.md)
+- [Role and permission matrix](docs/ROLE-PERMISSION-MATRIX.md)
 - [Security and privacy](docs/SECURITY-AND-PRIVACY.md)
+- [User guide](docs/USER-GUIDE.md)
 - [Deployment and operations](docs/INSTALLER-AND-OPERATIONS.md)

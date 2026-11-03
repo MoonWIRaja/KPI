@@ -1,14 +1,14 @@
 # Technical Architecture — Merit Tracker
 
-**Status:** Proposed architecture for review
-**Stack direction:** Flutter + GitHub Pages + Supabase
+**Status:** Implemented source architecture; deployment and release checks remain open
+**Stack:** Flutter Web + GitHub Pages + Supabase
 
 ## 1. System boundary
 
 ```mermaid
 flowchart LR
   B[Browser: Flutter Web on GitHub Pages] -->|HTTPS; public client config| S[Supabase Auth + API]
-  M[Flutter mobile client, release scope TBD] -->|HTTPS; public client config| S
+  M[Phone browser: responsive Flutter Web] -->|HTTPS; public client config| S
   S --> RLS[PostgreSQL RLS and constraints]
   S --> F[Scoped SQL functions / authenticated Edge Functions]
   F --> DB[(Supabase PostgreSQL: staff, roles, merit ledger, audit)]
@@ -22,7 +22,7 @@ GitHub Pages serves static assets only; it does not host a trusted backend. Supa
 
 ```text
 apps/
-  merit_app/             Flutter app: web first; mobile targets by decision
+  merit_app/             Responsive Flutter Web client
 supabase/
   config.toml
   migrations/            versioned SQL schema and policy changes
@@ -54,15 +54,14 @@ One repository is a proposal. Keep the layout small; a TypeScript monorepo tool 
 
 | Entity | Core fields / rules |
 |---|---|
-| `organizations` | ID, name, default starting score in integer tenths, optional floor/ceiling, created timestamp. Multi-tenant organization scope is not confirmed; single-organization deployment is assumed for v1. |
-| `profiles` | `auth_user_id` linked to staff/user identity; active state; no client-controlled role claim. |
-| `roles`, `permissions`, `role_permissions`, `profile_roles` | Explicit function permissions; changes restricted and audited. |
-| `staff` | ID, organization ID, display/name fields needed by the business, status, starting score, current score in integer tenths, created/updated metadata. |
-| `merit_events` | Append-only event: staff, actor, signed delta or opening/correction type, before/after tenths, required reason, UTC timestamp, optional correction link and idempotency key. |
+| `organization_settings` | Single-project default starting score in tenths, optional floor/ceiling and update timestamp. |
+| `profiles` | Auth user ID, email/name, fixed role label, optional unique staff link, active and password-setup state. |
+| `permission_catalog`, `user_permissions` | Explicit permission keys, role default grants and Owner-managed per-user grants. |
+| `staff` | Unique case-insensitive code, name, optional department, starting/current score in integer tenths, archive state and timestamps. |
+| `merit_events` | Append-only event: staff, actor ID/name snapshot, signed delta or opening/correction type, before/after tenths, required reason, UTC timestamp and idempotency key. |
 | `audit_events` | Actor, action, target, timestamp, safe metadata; exclude passwords, tokens, secrets and full CSV row contents. |
-| `import_batches` | Initiator, status, counts, created/committed timestamps; avoid retaining raw uploaded files unless separately justified. |
 
-Apply foreign keys, check constraints, organization scoping, indexes and retention rules through migrations. Confirm whether a current-score column is maintained transactionally or derived from the ledger; whichever is chosen must reconcile and be tested.
+The schema is single-organization-per-Supabase-project. It maintains `current_score_tenths` transactionally alongside the append-only ledger. The application has no multi-tenant organization partitioning or native Android/iOS package in this release.
 
 ## 6. Atomic merit adjustment
 
@@ -78,7 +77,7 @@ Clients receive no direct insert/update permission for score or merit-event fiel
 
 ## 7. Authentication, invitations and email
 
-Public self-signup is disabled. Admin user provisioning must use a trusted administrative workflow, never an admin secret from Flutter. Supabase admin user-management operations require a trusted server or Dashboard. Automated invitations/password recovery need a configured production SMTP provider; the provider's built-in test mail is not a production guarantee. The no-SMTP owner bootstrap and recovery workflow is an unresolved decision and must be safely designed before account lifecycle acceptance.
+Public self-signup must be disabled. The first Owner is provisioned through trusted Dashboard/Auth setup and linked by the project operator. Owner invitations use the JWT-protected `invite-user` Edge Function; the function checks `users.invite`, creates the Auth invitation, links the profile and audits the operation. Invitation/password recovery needs a configured production SMTP provider. The Owner bootstrap is manual SQL documented in `SUPABASE-SETUP.md`; automated owner recovery remains an operational release gate.
 
 ## 8. GitHub Pages routing and release
 
@@ -86,7 +85,7 @@ Public self-signup is disabled. Admin user provisioning must use a trusted admin
 - Prefer Flutter's hash URL strategy because Pages does not natively rewrite arbitrary paths to `index.html`; use path URLs only with a tested redirect/404 design.
 - Configure Supabase Auth site URL and redirect allowlist for local, staging and production origins.
 - Publish only compiled static artifacts; exclude source maps and secrets.
-- Use GitHub Actions Pages artifact/deploy workflow with minimum required permissions, protected production environment and reviewed workflow changes. Pin third-party actions to immutable commit SHAs before production.
+- Use GitHub Actions Pages artifact/deploy workflow with minimum required permissions and pinned third-party action SHAs. Pages runs from `main`; protect that branch before production.
 - Treat public config (Supabase URL and publishable key) as visible. Do not put privileged keys in Actions artifacts or build arguments.
 
 ## 9. Environments, migration and operations

@@ -44,12 +44,12 @@ Protect employee identity and merit records, user sessions, role configuration, 
 - Disable public Auth signup. The system maintainer provisions the first Owner through trusted Dashboard/SQL access; the client cannot claim a bootstrap role.
 - Only Owner may invite users or assign CEO/Staff roles. Invitation is performed by a JWT-verified Edge Function that checks the Owner role, sends through Supabase Auth SMTP and writes an audit event.
 - Require TOTP MFA for Owner and CEO and verify AAL2 in database policy/function checks. Store a second factor on a separate protected device before production; the in-app recovery UX is not complete yet.
-- Role permissions are server-enforced. Self-view policy checks account-to-staff identity, not a client-selected staff ID.
+- Role permissions are server-enforced. Self-view policy checks account-to-staff identity, not a client-selected staff ID. Default CEO grants and Staff self-only grants are inserted by a database trigger; Owner-managed permission changes use a trusted function.
 - Separate read, adjust, import, export, user/role management, settings, audit and backup permissions.
 - Direct client insert/update/delete of scores and merit events is denied. Trusted operations append events and update score atomically.
 - Service-role operations run only in trusted Supabase environments with the narrowest practical interface; never expose admin APIs to anonymous callers.
 - Use database constraints for organization scope, valid delta, non-empty reason, valid event shape and referential integrity.
-- RLS and trusted-function tests run in CI against positive and negative cases; review policy changes as security-sensitive migrations.
+- A local Supabase migration-application workflow is included in CI. Positive/negative RLS/function tests are still required before production; the workflow alone does not verify authorization behavior.
 
 ## 5. Secrets, sessions and deployment
 

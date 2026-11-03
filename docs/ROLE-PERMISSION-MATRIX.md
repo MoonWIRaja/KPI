@@ -1,78 +1,54 @@
-# Role and Permission Matrix
+# Roles and Permissions
 
-**Status:** MVP role defaults implemented in the initial Supabase migration; custom role editor remains future work.
+The current schema enforces permissions through Supabase RLS and trusted functions. The Owner has full application authority (except immutable audit/ledger history); CEO defaults to staff and merit management; Staff defaults to self-only merit access. The Owner can grant eligible permissions individually. Owner invitation, user management and protected permissions stay Owner-only.
 
-Permissions are assigned to roles and roles to accounts. Enforcement runs in Supabase RLS and trusted functions. `Self` means the staff record linked to the authenticated account; `All` means records within the authorized organization.
+## Default access
 
-## 1. Proposed built-in roles
-
-| Capability | Owner | CEO | Invited Staff |
+| Capability | Owner | CEO default | Staff default |
 |---|---:|---:|---:|
-| Read own account | Yes | Yes | Yes |
-| Read own merit/history | Yes | Yes | Yes |
-| Read all staff/merit | Yes | Yes | No |
-| Add/edit/archive staff | Yes | Add staff only | No |
-| Set starting merit | Yes | When adding staff | No |
-| Adjust merit | Yes | Yes | No |
-| Correct merit | Yes | Yes | No |
-| Import CSV | Yes | Yes | No |
+| Read self profile | Yes | Yes | Yes |
+| Read staff directory and all merit history | Yes | Yes | No |
+| Add/edit/archive staff and import CSV | Yes | Yes | No |
+| Delete staff without history/account link | Yes | No | No |
+| Adjust or correct merit | Yes | Yes | No |
 | Read/export reports | Yes | Yes | No |
-| Invite/disable/reset accounts | Yes | No | No |
-| Manage roles/permissions | Yes | No | No |
-| Configure score defaults/bounds | Yes | No | No |
-| Manage email delivery | Supabase Dashboard only | No | No |
-| Read audit/operational status | Yes | Service status only | No |
+| Change score settings | Yes | Yes | No |
+| Read audit events | Yes | Yes | No |
+| Invite users; manage accounts and permissions | Yes | No | No |
+| Read own merit/history | Yes | Not applicable by default | Yes |
 
-Protect the Owner from accidental removal/demotion. Only Owner invites users or assigns CEO/Staff roles in the MVP. TOTP MFA and AAL2 are required for Owner/CEO privileged access.
+The Owner may assign role-assignable permissions to active CEO or Staff accounts. Any management permission beyond the two self permissions requires TOTP MFA/AAL2. Database functions also enforce each required permission, so hiding a page is not the security boundary.
 
-## 2. Permission catalog
+## Permission catalog
 
-| Permission key | Scope | Description |
+| Permission | Default grant | Enforcement |
 |---|---|---|
-| `account.read.self` | Self | Read own account/profile |
-| `account.update.self` | Self | Change permitted account settings |
-| `staff.read.self` | Self | Read linked staff profile only |
-| `staff.read.all` | All | Read staff directory/profiles |
-| `staff.create` | All | Create staff record |
-| `staff.update` | All | Edit staff attributes |
-| `staff.archive` | All | Archive staff while preserving history |
-| `staff.delete` | All | Request permanent deletion/anonymization under retention policy |
-| `merit.read.self` | Self | Read linked staff merit/history |
-| `merit.read.all` | All | Read all authorized merit/history |
-| `merit.initial-score.set` | All | Set starting score during creation/approved correction |
-| `merit.adjust` | All | Add an allowed reasoned adjustment |
-| `merit.correct` | All | Append a compensating correction entry |
-| `csv.import` | All | Preview and commit staff/starting-score CSV imports |
-| `reports.read` | Self or All | Read reports within assigned scope |
-| `reports.export` | Self or All | Export reports within assigned scope |
-| `users.invite` | All | Owner-only trusted invitation workflow |
-| `users.disable` | All | Planned: disable account and revoke sessions |
-| `users.reset` | All | User requests email reset; session revocation/owner recovery are operational tasks |
-| `roles.read` | All | View role definitions and assignments |
-| `roles.manage` | All | Manage roles subject to safeguards |
-| `settings.score.manage` | All | Change default score and optional bounds |
-| `settings.email.manage` | All | Manage email delivery; credentials remain server-side |
-| `audit.read` | All | Read authorized audit/security events |
-| `backup.status.read` | All | Read backup/restore status where supported by plan |
-| `system.health.read` | All | Read non-sensitive Pages/Supabase status |
+| `account.read.self` | CEO, Staff | Own profile/permission view |
+| `merit.read.self` | Staff | Merit rows linked to own profile only |
+| `staff.read.all` | CEO | Directory and staff profile read |
+| `staff.create` | CEO | Create a staff record |
+| `staff.update` | CEO | Edit staff identity fields |
+| `staff.archive` | CEO | Archive or restore while retaining history |
+| `staff.delete` | None | Delete only with no linked account and no merit events |
+| `staff.import` | CEO | Transactional CSV import, up to 500 records |
+| `merit.read.all` | CEO | Read all authorized merit events |
+| `merit.adjust` | CEO | Reason-required adjustment of 0.1–1.0 |
+| `merit.correct` | CEO | Append a compensating correction event |
+| `reports.read` | CEO | Read report events within RLS scope |
+| `reports.export` | CEO | Export visible report rows and write audit event |
+| `settings.manage` | CEO | Configure default score and optional bounds |
+| `audit.read` | CEO | Read audit events |
+| `users.manage` | Owner only | Grant permissions and activate/deactivate non-Owner users |
+| `users.invite` | Owner only | Invite CEO/Staff through authenticated Edge Function |
 
-## 3. Authorization rules
+Owner permissions are implicit in database policy and do not rely on client-supplied permission rows. Default grants for new CEO/Staff profiles are created by a database trigger.
 
-1. No permission means deny; new operations are private until explicitly granted.
-2. RLS/trusted functions derive actor and scope from the authenticated identity; never trust client-supplied user IDs or `isAdmin` flags.
-3. Self permissions resolve through the authenticated account's linked staff ID.
-4. Self-scoped report/export filters are applied before data is returned or serialized.
-5. Hiding a UI control is not authorization; Supabase enforces each request.
-6. Role changes, account-role assignments, grants, exports and resets are audited.
-7. Show effective permissions before saving; require re-authentication for high-risk changes where supported.
-8. Protect the last Owner account from lockout and prevent unauthorized role escalation.
-9. Never log activation tokens, reset links, credentials or sensitive merit reasons unnecessarily.
+## Rules and limits
 
-## 4. Product-owner decisions
-
-- Can Admin grant `roles.manage`, or is that Owner-only?
-- Can managers view all staff or should team/department scope be designed later?
-- Can staff update profile fields beyond account credentials?
-- Should staff see the actor name for each change?
-- Should exports include staff email?
-- What retention period and deletion/anonymization rule applies to merit/audit history?
+- No permission means deny. Role and actor identity are derived from the authenticated profile, never request parameters.
+- Staff self access resolves through the account-to-staff link; manipulating IDs does not grant cross-staff reads.
+- Profiles, permissions, reports and audit data have row-level policies. Direct client writes to staff scores, merit events, permissions and audit events are revoked.
+- The two baseline self permissions do not require an elevated MFA session. Owner/CEO access and any additional granted permission requires TOTP AAL2.
+- Only the Owner may invite users, modify permissions, or activate/deactivate an account. Deactivation does not delete merit/audit history.
+- A staff record with history or a linked login cannot be permanently deleted; archive it instead.
+- No user can delete or rewrite a historical merit event through the application. Correction appends a new event.

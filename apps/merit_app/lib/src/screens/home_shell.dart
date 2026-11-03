@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/merit_repository.dart';
+import 'csv_import_dialog.dart';
 import 'mfa_gate.dart';
 import 'password_setup_page.dart';
+import 'reports_page.dart';
+import 'audit_page.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -19,6 +22,7 @@ class _HomeShellState extends State<HomeShell> {
   List<StaffMember> _staff = const [];
   List<MeritEvent> _events = const [];
   List<Map<String, dynamic>> _profiles = const [];
+  Set<String> _permissions = {};
   int _defaultScore = 50;
   int _selectedPage = 0;
   bool _loading = true;
@@ -27,8 +31,8 @@ class _HomeShellState extends State<HomeShell> {
   String? _loadError;
 
   bool get _isOwner => _profile?['role'] == 'owner';
-  bool get _isExecutive => _profile?['role'] == 'owner' || _profile?['role'] == 'ceo';
   bool get _isStaff => _profile?['role'] == 'staff';
+  bool _hasPermission(String key) => _isOwner || _permissions.contains(key);
 
   @override
   void initState() {
@@ -53,6 +57,7 @@ class _HomeShellState extends State<HomeShell> {
       if (user == null) return;
       final profile = await _repository.loadProfile(user.id);
       _profile = profile;
+      _permissions = _isOwner ? const {} : await _repository.loadPermissions(user.id);
       if (profile['must_set_password'] == true) {
         setState(() {
           _passwordSetupRequired = true;
@@ -60,7 +65,8 @@ class _HomeShellState extends State<HomeShell> {
         });
         return;
       }
-      if (profile['role'] == 'owner' || profile['role'] == 'ceo') {
+      final elevated = _permissions.any((permission) => !{'account.read.self', 'merit.read.self'}.contains(permission));
+      if (profile['role'] == 'owner' || profile['role'] == 'ceo' || elevated) {
         final aal = Supabase.instance.client.auth.mfa.getAuthenticatorAssuranceLevel();
         if (aal.currentLevel?.name != 'aal2') {
           setState(() {
@@ -81,9 +87,11 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _loadData() async {
-    final staff = await _repository.loadStaff();
-    final events = await _repository.loadEvents();
-    final defaultScore = await _repository.defaultScoreTenths();
+    final canReadStaff = _hasPermission('staff.read.all') || _hasPermission('merit.read.self');
+    final canReadEvents = _hasPermission('merit.read.all') || _hasPermission('merit.read.self');
+    final staff = canReadStaff ? await _repository.loadStaff() : <StaffMember>[];
+    final events = canReadEvents ? await _repository.loadEvents() : <MeritEvent>[];
+    final defaultScore = _hasPermission('staff.create') || _hasPermission('staff.import') ? await _repository.defaultScoreTenths() : 50;
     final profiles = _isOwner ? await _repository.loadProfiles() : const <Map<String, dynamic>>[];
     _staff = staff;
     _events = events;
@@ -97,11 +105,23 @@ class _HomeShellState extends State<HomeShell> {
       _loadError = null;
     });
     try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+      _profile = await _repository.loadProfile(user.id);
+      _permissions = _isOwner ? const {} : await _repository.loadPermissions(user.id);
+      final elevated = _permissions.any((permission) => !{'account.read.self', 'merit.read.self'}.contains(permission));
+      if ((_profile?['role'] == 'owner' || _profile?['role'] == 'ceo' || elevated) && Supabase.instance.client.auth.mfa.getAuthenticatorAssuranceLevel().currentLevel?.name != 'aal2') {
+        _mfaRequired = true;
+        return;
+      }
       await _loadData();
     } catch (_) {
       _loadError = 'Data tidak dapat dimuat. Periksa sambungan dan cuba lagi.';
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() {
+        if (_navItems.isNotEmpty) _selectedPage = _selectedPage.clamp(0, _navItems.length - 1).toInt();
+        _loading = false;
+      });
     }
   }
 
@@ -120,18 +140,18 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   List<_NavItem> get _navItems {
-    if (_isStaff) {
-      return const [
-        _NavItem('Merit Saya', Icons.person_outline),
-        _NavItem('Sejarah', Icons.history),
-      ];
+    final items = <_NavItem>[];
+    if (_isStaff && _hasPermission('merit.read.self')) {
+      items.add(const _NavItem('Merit Saya', Icons.person_outline, 'self'));
+      items.add(const _NavItem('Sejarah saya', Icons.history, 'self-events'));
     }
-    final items = <_NavItem>[
-      const _NavItem('Gambaran', Icons.grid_view_outlined),
-      const _NavItem('Staff', Icons.groups_outlined),
-      const _NavItem('Aktiviti Merit', Icons.receipt_long_outlined),
-    ];
-    if (_isOwner) items.add(const _NavItem('Pengguna', Icons.manage_accounts_outlined));
+    if (_hasPermission('staff.read.all') && _hasPermission('merit.read.all')) items.add(const _NavItem('Gambaran', Icons.grid_view_outlined, 'overview'));
+    if (_hasPermission('staff.read.all') || _hasPermission('staff.create') || _hasPermission('staff.import')) items.add(const _NavItem('Staff', Icons.groups_outlined, 'staff'));
+    if (_hasPermission('merit.read.all')) items.add(const _NavItem('Aktiviti Merit', Icons.receipt_long_outlined, 'events'));
+    if (_hasPermission('reports.read')) items.add(const _NavItem('Laporan', Icons.bar_chart_outlined, 'reports'));
+    if (_hasPermission('users.manage')) items.add(const _NavItem('Pengguna', Icons.manage_accounts_outlined, 'users'));
+    if (_hasPermission('settings.manage')) items.add(const _NavItem('Tetapan', Icons.tune_outlined, 'settings'));
+    if (_hasPermission('audit.read')) items.add(const _NavItem('Audit sistem', Icons.fact_check_outlined, 'audit'));
     return items;
   }
 
@@ -146,6 +166,7 @@ class _HomeShellState extends State<HomeShell> {
     if (_profile == null) return _FailurePage(message: 'Profil akaun tidak dijumpai.', onRetry: _loadProfile);
 
     final width = MediaQuery.sizeOf(context).width;
+    if (_navItems.isEmpty) return const Scaffold(body: Center(child: _EmptyState(icon: Icons.lock_outline, title: 'Akses belum diberikan', detail: 'Hubungi pemantau sistem untuk mengaktifkan kebenaran akaun ini.')));
     final wide = width >= 1040;
     final narrow = width < 700;
     return Scaffold(
@@ -201,14 +222,25 @@ class _HomeShellState extends State<HomeShell> {
     if (MediaQuery.sizeOf(context).width < 700) Navigator.of(context).maybePop();
   }
 
+  void _selectRoute(String route) {
+    final index = _navItems.indexWhere((item) => item.route == route);
+    if (index >= 0) _selectPage(index);
+  }
+
   Widget _buildPage() {
-    if (_isStaff) {
-      return _selectedPage == 0 ? _staffSelfPage() : _eventsPage();
-    }
-    if (_selectedPage == 0) return _overviewPage();
-    if (_selectedPage == 1) return _staffPage();
-    if (_selectedPage == 2) return _eventsPage();
-    return _usersPage();
+    final route = _navItems[_selectedPage].route;
+    return switch (route) {
+      'overview' => _overviewPage(),
+      'staff' => _staffPage(),
+      'self' => _staffSelfPage(),
+      'self-events' => _eventsPage(),
+      'events' => _eventsPage(),
+      'reports' => ReportsPage(repository: _repository, canExport: _hasPermission('reports.export')),
+      'users' => _usersPage(),
+      'settings' => _settingsPage(),
+      'audit' => AuditPage(repository: _repository),
+      _ => const _EmptyState(icon: Icons.lock_outline, title: 'Tiada halaman tersedia', detail: 'Hubungi pemantau sistem untuk akses.'),
+    };
   }
 
   Widget _overviewPage() {
@@ -221,10 +253,10 @@ class _HomeShellState extends State<HomeShell> {
       padding: EdgeInsets.fromLTRB(width < 700 ? 18 : 32, 18, width < 700 ? 18 : 32, 30),
       children: [
         _PageHeading(title: 'Direktori staff & merit', subtitle: 'Semak skor semasa dan rekod perubahan merit.', actions: [
-          if (_isOwner || _isExecutive)
+          if (_isOwner)
             OutlinedButton.icon(onPressed: _openInvite, icon: const Icon(Icons.mail_outline), label: const Text('Jemput pengguna')),
           const SizedBox(width: 8),
-          if (_isOwner || _isExecutive)
+          if (_hasPermission('staff.create'))
             FilledButton.icon(onPressed: _openAddStaff, icon: const Icon(Icons.person_add_alt_1), label: const Text('Tambah staff')),
         ]),
         const SizedBox(height: 22),
@@ -237,10 +269,18 @@ class _HomeShellState extends State<HomeShell> {
         _DirectoryCard(
           staff: active.where((item) => '${item.code} ${item.name} ${item.department ?? ''}'.toLowerCase().contains(_search.text.toLowerCase())).take(8).toList(),
           events: _events,
-          canAdjust: _isExecutive,
+          canAdjust: _hasPermission('merit.adjust'),
+          canCorrect: _hasPermission('merit.correct'),
+          canEdit: false,
+          canArchive: false,
+          canDelete: false,
           search: _search,
           onAdjust: _openAdjustment,
-          onViewAll: () => _selectPage(_isStaff ? 0 : 1),
+          onCorrect: _openCorrection,
+          onEdit: _openEditStaff,
+          onArchive: _toggleStaffArchived,
+          onDelete: _deleteStaff,
+          onViewAll: () => _selectRoute('staff'),
           onSearchChanged: () => setState(() {}),
           loading: _loading,
         ),
@@ -253,11 +293,12 @@ class _HomeShellState extends State<HomeShell> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(32, 18, 32, 30),
       children: [
-        _PageHeading(title: 'Direktori staff', subtitle: 'Senarai staff dan skor merit semasa.', actions: [
-          if (_isOwner || _isExecutive) FilledButton.icon(onPressed: _openAddStaff, icon: const Icon(Icons.person_add_alt_1), label: const Text('Tambah staff')),
+        _PageHeading(title: 'Direktori staff', subtitle: 'Senarai staff, status dan skor merit semasa.', actions: [
+          if (_hasPermission('staff.import')) OutlinedButton.icon(onPressed: _openCsvImport, icon: const Icon(Icons.upload_file_outlined), label: const Text('Import CSV')),
+          if (_hasPermission('staff.create')) FilledButton.icon(onPressed: _openAddStaff, icon: const Icon(Icons.person_add_alt_1), label: const Text('Tambah staff')),
         ]),
         const SizedBox(height: 20),
-        _DirectoryCard(staff: staff, events: _events, canAdjust: _isExecutive, search: _search, onAdjust: _openAdjustment, onViewAll: () {}, onSearchChanged: () => setState(() {}), loading: _loading),
+        _DirectoryCard(staff: staff, events: _events, canAdjust: _hasPermission('merit.adjust'), canCorrect: _hasPermission('merit.correct'), canEdit: _hasPermission('staff.update'), canArchive: _hasPermission('staff.archive'), canDelete: _hasPermission('staff.delete'), search: _search, onAdjust: _openAdjustment, onCorrect: _openCorrection, onEdit: _openEditStaff, onArchive: _toggleStaffArchived, onDelete: _deleteStaff, onViewAll: () {}, onSearchChanged: () => setState(() {}), loading: _loading),
       ],
     );
   }
@@ -287,7 +328,7 @@ class _HomeShellState extends State<HomeShell> {
         children: [
           _PageHeading(title: _isStaff ? 'Sejarah merit' : 'Aktiviti merit', subtitle: 'Rekod perubahan merit yang dibenarkan untuk akaun ini.'),
           const SizedBox(height: 20),
-          _EventsCard(events: _events, canSeeAllStaff: _isExecutive),
+          _EventsCard(events: _events, canSeeAllStaff: _hasPermission('merit.read.all')),
         ],
       );
 
@@ -295,12 +336,12 @@ class _HomeShellState extends State<HomeShell> {
         padding: const EdgeInsets.fromLTRB(32, 18, 32, 30),
         children: [
           _PageHeading(title: 'Pengguna & jemputan', subtitle: 'Akses tertutup. Hanya Owner boleh menghantar jemputan dan menetapkan peranan.', actions: [
-            FilledButton.icon(onPressed: _openInvite, icon: const Icon(Icons.mail_outline), label: const Text('Jemput pengguna')),
+          FilledButton.icon(onPressed: _openInvite, icon: const Icon(Icons.mail_outline), label: const Text('Jemput pengguna')),
           ]),
           const SizedBox(height: 20),
           Card(child: _profiles.isEmpty
               ? const _EmptyState(icon: Icons.people_outline, title: 'Belum ada pengguna tambahan', detail: 'Ceo dan staff boleh ditambah melalui jemputan e-mel.')
-              : Column(children: _profiles.map((profile) => _ProfileRow(profile: profile)).toList())),
+              : Column(children: _profiles.map((profile) => _UserAccessRow(profile: profile, onPermissions: () => _editUserPermissions(profile), onToggleActive: () => _toggleUserActive(profile))).toList())),
           const SizedBox(height: 14),
           const _InfoBanner(text: 'Pendaftaran awam ditutup. E-mel jemputan dihantar oleh Supabase Auth menggunakan SMTP yang disediakan pemilik sistem.'),
         ],
@@ -310,6 +351,61 @@ class _HomeShellState extends State<HomeShell> {
     final created = await showDialog<bool>(context: context, builder: (_) => _AddStaffDialog(defaultScoreTenths: _defaultScore, repository: _repository));
     if (created == true) await _refresh();
   }
+
+  Future<void> _openEditStaff(StaffMember staff) async {
+    final updated = await showDialog<bool>(context: context, builder: (_) => _AddStaffDialog(defaultScoreTenths: _defaultScore, repository: _repository, staff: staff));
+    if (updated == true) await _refresh();
+  }
+
+  Future<void> _openCsvImport() async {
+    final imported = await showDialog<bool>(context: context, builder: (_) => CsvImportDialog(repository: _repository));
+    if (imported == true) await _refresh();
+  }
+
+  Future<void> _toggleStaffArchived(StaffMember staff) async {
+    final archive = !staff.archived;
+    final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+      title: Text(archive ? 'Arkibkan staff?' : 'Pulihkan staff?'),
+      content: Text(archive ? 'Rekod dan sejarah merit ${staff.name} kekal disimpan. Akaun staff tidak dipadam.' : 'Rekod ${staff.name} akan kembali ke senarai aktif.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(archive ? 'Arkibkan' : 'Pulihkan'))],
+    ));
+    if (confirmed != true) return;
+    try { await _repository.setStaffArchived(staff.id, archive); await _refresh(); }
+    on MeritRepositoryException catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message))); }
+  }
+
+  Future<void> _deleteStaff(StaffMember staff) async {
+    final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('Padam rekod staff?'),
+      content: Text('Padam ${staff.name} hanya dibenarkan jika tiada akaun terpaut dan tiada sejarah merit. Rekod yang mempunyai sejarah perlu diarkibkan.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Padam rekod'))],
+    ));
+    if (confirmed != true) return;
+    try { await _repository.deleteStaffWithoutHistory(staff.id); await _refresh(); }
+    on MeritRepositoryException catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message))); }
+  }
+
+  Future<void> _editUserPermissions(Map<String, dynamic> profile) async {
+    final existing = (profile['user_permissions'] as List<dynamic>? ?? const []).map((item) => (item as Map<String, dynamic>)['permission_key'] as String).toSet();
+    final updated = await showDialog<Set<String>>(context: context, builder: (_) => _PermissionsDialog(profile: profile, selected: existing));
+    if (updated == null) return;
+    try { await _repository.setUserPermissions(profile['user_id'] as String, updated); await _refresh(); }
+    on MeritRepositoryException catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message))); }
+  }
+
+  Future<void> _toggleUserActive(Map<String, dynamic> profile) async {
+    final active = profile['is_active'] != true;
+    final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+      title: Text(active ? 'Aktifkan akaun?' : 'Nyahaktifkan akaun?'),
+      content: Text(active ? 'Pengguna ini boleh log masuk semula.' : 'Sesi pengguna akan hilang akses data sebaik perubahan disimpan.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(active ? 'Aktifkan' : 'Nyahaktifkan'))],
+    ));
+    if (confirmed != true) return;
+    try { await _repository.setUserActive(profile['user_id'] as String, active); await _refresh(); }
+    on MeritRepositoryException catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message))); }
+  }
+
+  Widget _settingsPage() => _SettingsPage(repository: _repository, onSaved: _refresh);
 
   Future<void> _openAdjustment(StaffMember staff) async {
     final change = await showDialog<_AdjustmentInput>(context: context, builder: (_) => _AdjustmentDialog(staff: staff));
@@ -324,6 +420,19 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
+  Future<void> _openCorrection(StaffMember staff) async {
+    final correction = await showDialog<_CorrectionInput>(context: context, builder: (_) => _CorrectionDialog(staff: staff));
+    if (correction == null) return;
+    try {
+      await _repository.correctMerit(staffId: staff.id, scoreTenths: correction.scoreTenths, reason: correction.reason);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pembetulan direkodkan dalam sejarah merit.')));
+      await _refresh();
+    } on MeritRepositoryException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
   Future<void> _openInvite() async {
     final invited = await showDialog<bool>(context: context, builder: (_) => _InviteDialog(repository: _repository, staff: _staff, profiles: _profiles));
     if (invited == true) await _refresh();
@@ -331,9 +440,10 @@ class _HomeShellState extends State<HomeShell> {
 }
 
 class _NavItem {
-  const _NavItem(this.label, this.icon);
+  const _NavItem(this.label, this.icon, this.route);
   final String label;
   final IconData icon;
+  final String route;
 }
 
 class _Navigation extends StatelessWidget {
@@ -444,12 +554,20 @@ class _StatsRow extends StatelessWidget {
 }
 
 class _DirectoryCard extends StatelessWidget {
-  const _DirectoryCard({required this.staff, required this.events, required this.canAdjust, required this.search, required this.onAdjust, required this.onViewAll, required this.onSearchChanged, required this.loading});
+  const _DirectoryCard({required this.staff, required this.events, required this.canAdjust, required this.canCorrect, required this.canEdit, required this.canArchive, required this.canDelete, required this.search, required this.onAdjust, required this.onCorrect, required this.onEdit, required this.onArchive, required this.onDelete, required this.onViewAll, required this.onSearchChanged, required this.loading});
   final List<StaffMember> staff;
   final List<MeritEvent> events;
   final bool canAdjust;
+  final bool canCorrect;
+  final bool canEdit;
+  final bool canArchive;
+  final bool canDelete;
   final TextEditingController search;
   final ValueChanged<StaffMember> onAdjust;
+  final ValueChanged<StaffMember> onCorrect;
+  final ValueChanged<StaffMember> onEdit;
+  final ValueChanged<StaffMember> onArchive;
+  final ValueChanged<StaffMember> onDelete;
   final VoidCallback onViewAll;
   final VoidCallback onSearchChanged;
   final bool loading;
@@ -470,7 +588,7 @@ class _DirectoryCard extends StatelessWidget {
           else if (staff.isEmpty)
             const _EmptyState(icon: Icons.groups_outlined, title: 'Belum ada rekod staff', detail: 'Tambah rekod pertama untuk mula mengurus merit.')
           else if (narrow)
-            Column(children: staff.map((item) => _StaffCard(staff: item, latest: _latestFor(item, events), canAdjust: canAdjust, onAdjust: onAdjust)).toList())
+            Column(children: staff.map((item) => _StaffCard(staff: item, latest: _latestFor(item, events), canAdjust: canAdjust, canCorrect: canCorrect, canEdit: canEdit, canArchive: canArchive, canDelete: canDelete, onAdjust: onAdjust, onCorrect: onCorrect, onEdit: onEdit, onArchive: onArchive, onDelete: onDelete)).toList())
           else
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -485,7 +603,13 @@ class _DirectoryCard extends StatelessWidget {
                     DataCell(Text(item.department ?? '—')),
                     DataCell(Text(formatMerit(item.scoreTenths), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
                     DataCell(latest == null ? const Text('Belum ada perubahan') : _DeltaPill(delta: latest.deltaTenths)),
-                    DataCell(canAdjust ? OutlinedButton(onPressed: () => onAdjust(item), child: const Text('Pelarasan')) : const Text('—')),
+                    DataCell(Wrap(spacing: 4, children: [
+                      if (canAdjust) OutlinedButton(onPressed: () => onAdjust(item), child: const Text('Pelarasan')),
+                      if (canCorrect) IconButton(tooltip: 'Betulkan skor', onPressed: () => onCorrect(item), icon: const Icon(Icons.edit_note_outlined, size: 18)),
+                      if (canEdit) IconButton(tooltip: 'Edit staff', onPressed: () => onEdit(item), icon: const Icon(Icons.edit_outlined, size: 18)),
+                      if (canArchive) IconButton(tooltip: item.archived ? 'Pulihkan staff' : 'Arkibkan staff', onPressed: () => onArchive(item), icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 18)),
+                      if (canDelete) IconButton(tooltip: 'Padam staff jika belum ada ledger', onPressed: () => onDelete(item), icon: const Icon(Icons.delete_outline, size: 18)),
+                    ])),
                   ]);
                 }).toList(),
               ),
@@ -504,11 +628,19 @@ MeritEvent? _latestFor(StaffMember staff, List<MeritEvent> events) {
 }
 
 class _StaffCard extends StatelessWidget {
-  const _StaffCard({required this.staff, required this.latest, required this.canAdjust, required this.onAdjust});
+  const _StaffCard({required this.staff, required this.latest, required this.canAdjust, required this.canCorrect, required this.canEdit, required this.canArchive, required this.canDelete, required this.onAdjust, required this.onCorrect, required this.onEdit, required this.onArchive, required this.onDelete});
   final StaffMember staff;
   final MeritEvent? latest;
   final bool canAdjust;
+  final bool canCorrect;
+  final bool canEdit;
+  final bool canArchive;
+  final bool canDelete;
   final ValueChanged<StaffMember> onAdjust;
+  final ValueChanged<StaffMember> onCorrect;
+  final ValueChanged<StaffMember> onEdit;
+  final ValueChanged<StaffMember> onArchive;
+  final ValueChanged<StaffMember> onDelete;
   @override
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -519,7 +651,7 @@ class _StaffCard extends StatelessWidget {
           const SizedBox(height: 5),
           Text('${staff.code}  •  ${staff.department ?? 'Tiada jabatan'}', style: const TextStyle(color: Color(0xFF667894), fontSize: 12)),
           const SizedBox(height: 10),
-          Row(children: [if (latest != null) _DeltaPill(delta: latest!.deltaTenths), const Spacer(), if (canAdjust) OutlinedButton(onPressed: () => onAdjust(staff), child: const Text('Pelarasan'))]),
+          Row(children: [if (latest != null) _DeltaPill(delta: latest!.deltaTenths), const Spacer(), if (canCorrect) IconButton(tooltip: 'Betulkan skor', onPressed: () => onCorrect(staff), icon: const Icon(Icons.edit_note_outlined)), if (canEdit) IconButton(tooltip: 'Edit staff', onPressed: () => onEdit(staff), icon: const Icon(Icons.edit_outlined)), if (canArchive) IconButton(tooltip: staff.archived ? 'Pulihkan staff' : 'Arkibkan staff', onPressed: () => onArchive(staff), icon: Icon(staff.archived ? Icons.unarchive_outlined : Icons.archive_outlined)), if (canDelete) IconButton(tooltip: 'Padam rekod staff', onPressed: () => onDelete(staff), icon: const Icon(Icons.delete_outline)), if (canAdjust) OutlinedButton(onPressed: () => onAdjust(staff), child: const Text('Pelarasan'))]),
         ]),
       );
 }
@@ -565,16 +697,141 @@ class _EventsCard extends StatelessWidget {
   }
 }
 
-class _ProfileRow extends StatelessWidget {
-  const _ProfileRow({required this.profile});
+class _UserAccessRow extends StatelessWidget {
+  const _UserAccessRow({required this.profile, required this.onPermissions, required this.onToggleActive});
   final Map<String, dynamic> profile;
+  final VoidCallback onPermissions;
+  final VoidCallback onToggleActive;
   @override
   Widget build(BuildContext context) => ListTile(
         leading: CircleAvatar(child: Text((profile['display_name'] as String).characters.first.toUpperCase())),
         title: Text(profile['display_name'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(profile['email'] as String),
-        trailing: Chip(label: Text(_roleLabel(profile['role'] as String))),
+        subtitle: Text('${profile['email']}  ·  ${(profile['user_permissions'] as List<dynamic>? ?? const []).length} kebenaran${profile['must_set_password'] == true ? '  ·  belum aktifkan kata laluan' : ''}'),
+        trailing: Wrap(spacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          Chip(label: Text(profile['is_active'] == true ? _roleLabel(profile['role'] as String) : 'Tidak aktif')),
+          IconButton(tooltip: 'Tetapkan kebenaran', onPressed: onPermissions, icon: const Icon(Icons.tune_outlined)),
+          IconButton(tooltip: profile['is_active'] == true ? 'Nyahaktifkan akaun' : 'Aktifkan akaun', onPressed: onToggleActive, icon: Icon(profile['is_active'] == true ? Icons.person_off_outlined : Icons.person_outline)),
+        ]),
       );
+}
+
+class _PermissionsDialog extends StatefulWidget {
+  const _PermissionsDialog({required this.profile, required this.selected});
+  final Map<String, dynamic> profile;
+  final Set<String> selected;
+  @override
+  State<_PermissionsDialog> createState() => _PermissionsDialogState();
+}
+
+class _PermissionsDialogState extends State<_PermissionsDialog> {
+  late final Set<String> _selected = {...widget.selected};
+  static const _permissions = <(String, String)>[
+    ('staff.read.all', 'Lihat semua rekod staff'),
+    ('staff.create', 'Tambah staff'),
+    ('staff.update', 'Edit staff'),
+    ('staff.archive', 'Arkib/pulihkan staff'),
+    ('staff.delete', 'Padam staff tanpa sejarah merit'),
+    ('staff.import', 'Import CSV'),
+    ('merit.read.all', 'Lihat semua aktiviti merit'),
+    ('merit.adjust', 'Tambah/kurang merit'),
+    ('merit.correct', 'Buat pembetulan merit'),
+    ('reports.read', 'Lihat laporan'),
+    ('reports.export', 'Eksport laporan'),
+    ('settings.manage', 'Ubah tetapan merit'),
+    ('audit.read', 'Lihat audit sistem'),
+  ];
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: Text('Kebenaran ${widget.profile['display_name']}'),
+        content: SizedBox(width: 480, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Kebenaran diperiksa semula pada pangkalan data. Akses laporan staff kekal terhad mengikut rekod pautan mereka.'),
+          const SizedBox(height: 8),
+          ..._permissions.map((item) => CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(item.$2),
+            value: _selected.contains(item.$1),
+            onChanged: (value) => setState(() { value == true ? _selected.add(item.$1) : _selected.remove(item.$1); }),
+          )),
+          const _InfoBanner(text: 'Akaun dengan akses fungsi pengurusan akan diminta mengaktifkan MFA TOTP sebelum data boleh dibuka.'),
+        ]))),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(context, _selected), child: const Text('Simpan kebenaran'))],
+      );
+}
+
+class _SettingsPage extends StatefulWidget {
+  const _SettingsPage({required this.repository, required this.onSaved});
+  final MeritRepository repository;
+  final Future<void> Function() onSaved;
+  @override
+  State<_SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<_SettingsPage> {
+  final _default = TextEditingController();
+  final _floor = TextEditingController();
+  final _ceiling = TextEditingController();
+  bool _loading = true;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() { _default.dispose(); _floor.dispose(); _ceiling.dispose(); super.dispose(); }
+
+  Future<void> _load() async {
+    try {
+      final values = await widget.repository.loadSettings();
+      _default.text = formatMerit(values.defaultScoreTenths);
+      _floor.text = values.floorTenths == null ? '' : formatMerit(values.floorTenths!);
+      _ceiling.text = values.ceilingTenths == null ? '' : formatMerit(values.ceilingTenths!);
+    } catch (_) { _error = 'Tetapan tidak dapat dimuat.'; }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _save() async {
+    final defaultValue = parseScoreTenths(_default.text);
+    final floorValue = _floor.text.trim().isEmpty ? null : parseScoreTenths(_floor.text);
+    final ceilingValue = _ceiling.text.trim().isEmpty ? null : parseScoreTenths(_ceiling.text);
+    if (defaultValue == null || (_floor.text.trim().isNotEmpty && floorValue == null) || (_ceiling.text.trim().isNotEmpty && ceilingValue == null)) {
+      setState(() => _error = 'Gunakan nombor merit dengan maksimum satu tempat perpuluhan.');
+      return;
+    }
+    setState(() { _saving = true; _error = null; });
+    try {
+      await widget.repository.updateSettings(defaultScoreTenths: defaultValue, floorTenths: floorValue, ceilingTenths: ceilingValue);
+      await widget.onSaved();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tetapan merit disimpan.')));
+    } on MeritRepositoryException catch (error) { if (mounted) setState(() => _error = error.message); }
+    finally { if (mounted) setState(() => _saving = false); }
+  }
+
+  @override
+  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(28), children: [
+    Text('Tetapan merit', style: Theme.of(context).textTheme.headlineMedium),
+    const SizedBox(height: 5),
+    const Text('Skor default digunakan untuk staff baharu. Had skor pilihan dikuatkuasakan pada pangkalan data.', style: TextStyle(color: Color(0xFF667894))),
+    const SizedBox(height: 20),
+    Card(child: Padding(padding: const EdgeInsets.all(20), child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (_loading) const Center(child: CircularProgressIndicator()) else ...[
+        TextField(controller: _default, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Skor default staff baharu', suffixText: 'merit')),
+        const SizedBox(height: 12),
+        TextField(controller: _floor, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Had minimum (pilihan)', hintText: 'Tidak ditetapkan')),
+        const SizedBox(height: 12),
+        TextField(controller: _ceiling, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Had maksimum (pilihan)', hintText: 'Tidak ditetapkan')),
+        const SizedBox(height: 16),
+        if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318)))),
+        Align(alignment: Alignment.centerRight, child: FilledButton.icon(onPressed: _saving ? null : _save, icon: const Icon(Icons.save_outlined), label: Text(_saving ? 'Menyimpan…' : 'Simpan tetapan'))),
+      ],
+    ])))),
+    const SizedBox(height: 14),
+    const _InfoBanner(text: 'Semua perubahan tetapan dan kebenaran direkodkan dalam audit. Skor sedia ada tidak berubah apabila skor default dikemas kini.'),
+  ]);
 }
 
 class _PageHeading extends StatelessWidget {
@@ -636,9 +893,10 @@ String _roleLabel(String role) => switch (role) {
     };
 
 class _AddStaffDialog extends StatefulWidget {
-  const _AddStaffDialog({required this.defaultScoreTenths, required this.repository});
+  const _AddStaffDialog({required this.defaultScoreTenths, required this.repository, this.staff});
   final int defaultScoreTenths;
   final MeritRepository repository;
+  final StaffMember? staff;
   @override
   State<_AddStaffDialog> createState() => _AddStaffDialogState();
 }
@@ -654,7 +912,11 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
   @override
   void initState() {
     super.initState();
-    _score.text = formatMerit(widget.defaultScoreTenths);
+    final staff = widget.staff;
+    _score.text = formatMerit(staff?.scoreTenths ?? widget.defaultScoreTenths);
+    _code.text = staff?.code ?? '';
+    _name.text = staff?.name ?? '';
+    _department.text = staff?.department ?? '';
   }
   @override
   void dispose() { _code.dispose(); _name.dispose(); _department.dispose(); _score.dispose(); super.dispose(); }
@@ -663,9 +925,14 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
     if (!_form.currentState!.validate()) return;
     setState(() { _busy = true; _error = null; });
     try {
-      final scoreTenths = parseScoreTenths(_score.text);
-      if (scoreTenths == null) throw const MeritRepositoryException('Gunakan skor sah dengan maksimum satu tempat perpuluhan.');
-      await widget.repository.createStaff(code: _code.text, name: _name.text, department: _department.text, startingScoreTenths: scoreTenths);
+      final staff = widget.staff;
+      if (staff == null) {
+        final scoreTenths = parseScoreTenths(_score.text);
+        if (scoreTenths == null) throw const MeritRepositoryException('Gunakan skor sah dengan maksimum satu tempat perpuluhan.');
+        await widget.repository.createStaff(code: _code.text, name: _name.text, department: _department.text, startingScoreTenths: scoreTenths);
+      } else {
+        await widget.repository.updateStaff(staff, code: _code.text, name: _name.text, department: _department.text);
+      }
       if (mounted) Navigator.pop(context, true);
     } on MeritRepositoryException catch (error) {
       setState(() => _error = error.message);
@@ -676,18 +943,20 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Tambah staff'),
+        title: Text(widget.staff == null ? 'Tambah staff' : 'Edit rekod staff'),
         content: SizedBox(width: 420, child: Form(key: _form, child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextFormField(controller: _code, decoration: const InputDecoration(labelText: 'Kod staff'), validator: _required),
           const SizedBox(height: 10),
           TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Nama penuh'), validator: _required),
           const SizedBox(height: 10),
           TextFormField(controller: _department, decoration: const InputDecoration(labelText: 'Jabatan (pilihan)')),
-          const SizedBox(height: 10),
-          TextFormField(controller: _score, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Skor permulaan'), validator: (value) => parseScoreTenths(value ?? '') == null ? 'Gunakan skor sah dengan maksimum satu tempat perpuluhan.' : null),
+          if (widget.staff == null) ...[
+            const SizedBox(height: 10),
+            TextFormField(controller: _score, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Skor permulaan'), validator: (value) => parseScoreTenths(value ?? '') == null ? 'Gunakan skor sah dengan maksimum satu tempat perpuluhan.' : null),
+          ],
           if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318)))),
         ]))),
-        actions: [TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Batal')), FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'Menyimpan…' : 'Simpan staff'))],
+        actions: [TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Batal')), FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'Menyimpan…' : widget.staff == null ? 'Simpan staff' : 'Simpan perubahan'))],
       );
 }
 
@@ -729,6 +998,44 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
       actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')), FilledButton(onPressed: _reason.text.trim().isEmpty ? null : () => Navigator.pop(context, _AdjustmentInput(_direction * _step, _reason.text.trim())), child: const Text('Sahkan perubahan'))],
     );
   }
+}
+
+class _CorrectionInput {
+  const _CorrectionInput(this.scoreTenths, this.reason);
+  final int scoreTenths;
+  final String reason;
+}
+
+class _CorrectionDialog extends StatefulWidget {
+  const _CorrectionDialog({required this.staff});
+  final StaffMember staff;
+  @override
+  State<_CorrectionDialog> createState() => _CorrectionDialogState();
+}
+
+class _CorrectionDialogState extends State<_CorrectionDialog> {
+  final _score = TextEditingController();
+  final _reason = TextEditingController();
+  @override
+  void initState() { super.initState(); _score.text = formatMerit(widget.staff.scoreTenths); }
+  @override
+  void dispose() { _score.dispose(); _reason.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Betulkan skor merit'),
+    content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text('${widget.staff.code}  ·  ${widget.staff.name}', style: const TextStyle(color: Color(0xFF667894))),
+      const SizedBox(height: 12),
+      TextField(controller: _score, onChanged: (_) => setState(() {}), autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: InputDecoration(labelText: 'Skor yang betul', helperText: 'Skor semasa ${formatMerit(widget.staff.scoreTenths)}')),
+      const SizedBox(height: 12),
+      TextField(controller: _reason, onChanged: (_) => setState(() {}), minLines: 2, maxLines: 4, maxLength: 500, decoration: const InputDecoration(labelText: 'Sebab pembetulan (wajib)', alignLabelWithHint: true)),
+      const Text('Pembetulan menambah rekod baru; sejarah asal kekal.', style: TextStyle(fontSize: 12, color: Color(0xFF667894))),
+    ])),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+      FilledButton(onPressed: parseScoreTenths(_score.text) == null || _reason.text.trim().isEmpty ? null : () => Navigator.pop(context, _CorrectionInput(parseScoreTenths(_score.text)!, _reason.text.trim())), child: const Text('Simpan pembetulan')),
+    ],
+  );
 }
 
 class _InviteDialog extends StatefulWidget {

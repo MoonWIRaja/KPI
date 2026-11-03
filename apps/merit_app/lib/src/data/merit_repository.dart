@@ -39,6 +39,7 @@ class MeritEvent {
     required this.afterTenths,
     required this.reason,
     required this.createdAt,
+    this.actorName,
     this.staffName,
     this.staffCode,
   });
@@ -51,6 +52,7 @@ class MeritEvent {
   final int afterTenths;
   final String reason;
   final DateTime createdAt;
+  final String? actorName;
   final String? staffName;
   final String? staffCode;
 
@@ -65,6 +67,7 @@ class MeritEvent {
       afterTenths: row['score_after_tenths'] as int,
       reason: row['reason'] as String,
       createdAt: DateTime.parse(row['created_at'] as String),
+      actorName: row['actor_display_name'] as String?,
       staffName: staff?['full_name'] as String?,
       staffCode: staff?['staff_code'] as String?,
     );
@@ -95,18 +98,60 @@ class MeritRepository {
   Future<List<MeritEvent>> loadEvents({int limit = 100}) async {
     final rows = await _client
         .from('merit_events')
-        .select('id, staff_id, event_type, delta_tenths, score_before_tenths, score_after_tenths, reason, created_at, staff(full_name, staff_code)')
+        .select('id, staff_id, actor_display_name, event_type, delta_tenths, score_before_tenths, score_after_tenths, reason, created_at, staff(full_name, staff_code)')
         .order('created_at', ascending: false)
         .limit(limit);
     return rows.map((row) => MeritEvent.fromMap(row)).toList();
   }
 
+  Future<List<MeritEvent>> loadReportEvents({DateTime? from, DateTime? to}) async {
+    final result = <MeritEvent>[];
+    var offset = 0;
+    const pageSize = 1000;
+    while (true) {
+      var query = _client
+          .from('merit_events')
+          .select('id, staff_id, actor_display_name, event_type, delta_tenths, score_before_tenths, score_after_tenths, reason, created_at, staff(full_name, staff_code)')
+          .order('created_at', ascending: false);
+      if (from != null) query = query.gte('created_at', from.toUtc().toIso8601String());
+      if (to != null) query = query.lt('created_at', to.add(const Duration(days: 1)).toUtc().toIso8601String());
+      final rows = await query.range(offset, offset + pageSize - 1);
+      result.addAll(rows.map((row) => MeritEvent.fromMap(row)));
+      if (result.length > 10000) throw const MeritRepositoryException('Laporan melebihi 10,000 baris. Kecilkan julat tarikh dan cuba lagi.');
+      if (rows.length < pageSize) return result;
+      offset += pageSize;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> loadProfiles() async {
     final rows = await _client
         .from('profiles')
-        .select('user_id, email, display_name, role, staff_id, is_active, created_at')
+        .select('user_id, email, display_name, role, staff_id, is_active, must_set_password, created_at, user_permissions(permission_key)')
         .order('created_at');
     return rows;
+  }
+
+  Future<List<Map<String, dynamic>>> loadAuditEvents({int limit = 300}) async {
+    final rows = await _client
+        .from('audit_events')
+        .select('id, actor_id, action, target_type, target_id, metadata, created_at')
+        .order('created_at', ascending: false)
+        .limit(limit);
+    return rows;
+  }
+
+  Future<Set<String>> loadPermissions(String userId) async {
+    final rows = await _client.from('user_permissions').select('permission_key').eq('user_id', userId);
+    return rows.map((row) => row['permission_key'] as String).toSet();
+  }
+
+  Future<({int defaultScoreTenths, int? floorTenths, int? ceilingTenths})> loadSettings() async {
+    final row = await _client.from('organization_settings').select().eq('id', true).single();
+    return (
+      defaultScoreTenths: row['default_starting_score_tenths'] as int,
+      floorTenths: row['floor_tenths'] as int?,
+      ceilingTenths: row['ceiling_tenths'] as int?,
+    );
   }
 
   Future<int> defaultScoreTenths() async {
@@ -131,6 +176,105 @@ class MeritRepository {
       if (error.code == '23505') throw const MeritRepositoryException('Kod staff itu telah digunakan.');
       throw const MeritRepositoryException('Rekod staff tidak dapat disimpan. Semak akses dan input.');
     }
+  }
+
+  Future<int> importStaff(List<Map<String, dynamic>> rows) async {
+    try {
+      final count = await _client.rpc('import_staff', params: {'rows_input': rows});
+      return count as int;
+    } on PostgrestException catch (error) {
+      if (error.code == '23505') throw const MeritRepositoryException('Kod staff dalam fail telah wujud. Tiada baris diimport.');
+      if (error.message.contains('Not authorized')) throw const MeritRepositoryException('Akaun ini tiada kebenaran import CSV.');
+      throw const MeritRepositoryException('CSV tidak dapat diimport. Semak baris pendua, nilai merit dan had skor.');
+    }
+  }
+
+  Future<void> updateStaff(StaffMember staff, {required String code, required String name, String? department}) async {
+    try {
+      await _client.rpc('update_staff', params: {
+        'target_staff_id': staff.id,
+        'staff_code_input': code.trim(),
+        'full_name_input': name.trim(),
+        'department_input': department?.trim(),
+      });
+    } on PostgrestException catch (error) {
+      if (error.code == '23505') throw const MeritRepositoryException('Kod staff itu telah digunakan.');
+      throw const MeritRepositoryException('Rekod staff tidak dapat dikemas kini. Semak kebenaran dan input.');
+    }
+  }
+
+  Future<void> setStaffArchived(String staffId, bool archived) async {
+    try {
+      await _client.rpc('set_staff_archived', params: {'target_staff_id': staffId, 'archived_input': archived});
+    } on PostgrestException {
+      throw const MeritRepositoryException('Status staff tidak dapat dikemas kini.');
+    }
+  }
+
+  Future<void> deleteStaffWithoutHistory(String staffId) async {
+    try {
+      await _client.rpc('delete_staff_without_history', params: {'target_staff_id': staffId});
+    } on PostgrestException catch (error) {
+      if (error.message.contains('merit history')) throw const MeritRepositoryException('Staff yang mempunyai sejarah merit perlu diarkibkan, bukan dipadam.');
+      if (error.message.contains('linked')) throw const MeritRepositoryException('Nyahaktifkan akaun staff dan arkibkan rekod ini.');
+      throw const MeritRepositoryException('Rekod staff tidak dapat dipadam.');
+    }
+  }
+
+  Future<void> correctMerit({required String staffId, required int scoreTenths, required String reason}) async {
+    try {
+      await _client.rpc('correct_merit', params: {
+        'target_staff_id': staffId,
+        'new_score_tenths': scoreTenths,
+        'reason_input': reason.trim(),
+        'request_id_input': _uuidV4(),
+      });
+    } on PostgrestException catch (error) {
+      if (error.message.contains('minimum')) throw const MeritRepositoryException('Skor pembetulan di bawah minimum yang ditetapkan.');
+      if (error.message.contains('maximum')) throw const MeritRepositoryException('Skor pembetulan melebihi maksimum yang ditetapkan.');
+      throw const MeritRepositoryException('Pembetulan tidak dapat disimpan. Semak kebenaran dan nilai.');
+    }
+  }
+
+  Future<void> updateSettings({required int defaultScoreTenths, int? floorTenths, int? ceilingTenths}) async {
+    try {
+      await _client.rpc('update_organization_settings', params: {
+        'default_score_input': defaultScoreTenths,
+        'floor_input': floorTenths,
+        'ceiling_input': ceilingTenths,
+      });
+    } on PostgrestException catch (error) {
+      if (error.message.contains('minimum')) throw const MeritRepositoryException('Skor default mesti sama atau lebih tinggi daripada minimum.');
+      if (error.message.contains('maximum')) throw const MeritRepositoryException('Skor default mesti sama atau lebih rendah daripada maksimum.');
+      throw const MeritRepositoryException('Tetapan merit tidak dapat disimpan. Semak nilai dan kebenaran.');
+    }
+  }
+
+  Future<void> setUserPermissions(String userId, Set<String> permissionKeys) async {
+    try {
+      await _client.rpc('set_user_permissions', params: {
+        'target_user_id': userId,
+        'permission_keys_input': permissionKeys.toList(),
+      });
+    } on PostgrestException {
+      throw const MeritRepositoryException('Kebenaran pengguna tidak dapat dikemas kini.');
+    }
+  }
+
+  Future<void> setUserActive(String userId, bool active) async {
+    try {
+      await _client.rpc('set_user_active', params: {'target_user_id': userId, 'active_input': active});
+    } on PostgrestException {
+      throw const MeritRepositoryException('Status akaun tidak dapat dikemas kini.');
+    }
+  }
+
+  Future<void> recordReportExport({DateTime? from, DateTime? to, required int rows}) async {
+    await _client.rpc('record_report_export', params: {
+      'from_input': from?.toUtc().toIso8601String(),
+      'to_input': to?.add(const Duration(days: 1)).toUtc().toIso8601String(),
+      'rows_input': rows,
+    });
   }
 
   Future<void> adjustMerit({

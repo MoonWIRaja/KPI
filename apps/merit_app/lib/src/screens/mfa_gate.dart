@@ -112,8 +112,8 @@ class _MfaGateState extends State<MfaGate> {
                           Text(enrolling ? 'Aktifkan pengesahan dua langkah' : 'Sahkan log masuk', style: Theme.of(context).textTheme.titleLarge),
                           const SizedBox(height: 10),
                           Text(enrolling
-                              ? 'Akaun Owner dan CEO wajib menggunakan kod authenticator. Tambah kunci ini secara manual dalam aplikasi authenticator anda.'
-                              : 'Masukkan kod semasa daripada aplikasi authenticator anda untuk membuka sistem.'),
+                              ? 'Akaun pentadbir dan akaun yang diberi kebenaran pengurusan perlu menggunakan kod authenticator. Tambah kunci ini secara manual dalam aplikasi authenticator anda.'
+                              : 'Masukkan kod semasa daripada aplikasi authenticator anda untuk membuka fungsi yang dilindungi.'),
                           if (enrolling) ...[
                             const SizedBox(height: 18),
                             const Text('Kunci setup — simpan dengan selamat dan jangan kongsikan.'),

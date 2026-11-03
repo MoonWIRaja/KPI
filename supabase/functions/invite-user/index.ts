@@ -1,8 +1,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const publishableKeys = JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS') ?? '{}') as Record<string, string>;
+const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}') as Record<string, string>;
+const anonKey = publishableKeys.default ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+const serviceRoleKey = secretKeys.default ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const siteUrl = Deno.env.get('SITE_URL') ?? '';
 const allowedOrigins = new Set(
   (Deno.env.get('CORS_ORIGINS') ?? siteUrl)

@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../data/merit_repository.dart';
+import '../widgets/thinking_orbs_loader.dart';
 
 class AuditPage extends StatefulWidget {
   const AuditPage({required this.repository, super.key});
@@ -30,7 +31,7 @@ class _AuditPageState extends State<AuditPage> {
       final events = await widget.repository.loadAuditEvents();
       if (mounted) setState(() => _events = events);
     } catch (_) {
-      if (mounted) _error = 'Audit tidak dapat dimuat atau akaun tiada kebenaran.';
+      if (mounted) _error = 'Audit log could not be loaded, or your account does not have permission.';
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -38,7 +39,7 @@ class _AuditPageState extends State<AuditPage> {
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(28),
+        padding: EdgeInsets.fromLTRB(MediaQuery.sizeOf(context).width < 700 ? 18 : 28, 18, MediaQuery.sizeOf(context).width < 700 ? 18 : 28, 30),
         children: [
           Row(
             children: [
@@ -46,17 +47,17 @@ class _AuditPageState extends State<AuditPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Audit sistem', style: Theme.of(context).textTheme.headlineMedium),
+                    Text('System audit', style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 4),
                     const Text(
-                      'Aktiviti pentadbiran dan eksport yang direkodkan server.',
+                      'Server-recorded administrative actions and exports.',
                       style: TextStyle(color: Color(0xFF667894)),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                tooltip: 'Segarkan',
+                tooltip: 'Refresh',
                 onPressed: _loading ? null : _load,
                 icon: const Icon(Icons.refresh),
               ),
@@ -67,7 +68,7 @@ class _AuditPageState extends State<AuditPage> {
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: ThinkingOrbsLoader()),
               ),
             )
           else if (_error != null)
@@ -81,7 +82,7 @@ class _AuditPageState extends State<AuditPage> {
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(22),
-                child: Center(child: Text('Belum ada aktiviti audit.')),
+                child: Center(child: Text('There are no audit events yet.')),
               ),
             )
           else
@@ -93,23 +94,23 @@ class _AuditPageState extends State<AuditPage> {
                         leading: const Icon(Icons.receipt_long_outlined, color: Color(0xFF245CEB)),
                         title: Text(event['action'] as String, style: const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text(
-                          '${event['target_type']}${event['target_id'] == null ? '' : ' · ${event['target_id']}'}\n'
-                          'Akaun: ${event['actor_id'] ?? 'tidak diketahui'}  ·  '
+                          '${event['target_type']}${event['target_id'] == null ? '' : ' Â· ${event['target_id']}'}\n'
+                          'Account: ${event['actor_id'] ?? 'Unknown'}  ·  '
                           '${formatDate(DateTime.parse(event['created_at'] as String))}',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         trailing: IconButton(
-                          tooltip: 'Metadata audit',
+                          tooltip: 'Audit metadata',
                           onPressed: () => showDialog<void>(
                             context: context,
                             builder: (dialogContext) => AlertDialog(
-                              title: const Text('Butiran audit'),
+                              title: const Text('Audit details'),
                               content: SelectableText((event['metadata'] ?? const {}).toString()),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(dialogContext),
-                                  child: const Text('Tutup'),
+                                  child: const Text('Close'),
                                 ),
                               ],
                             ),

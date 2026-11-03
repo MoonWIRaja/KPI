@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -82,7 +82,7 @@ class MeritRepository {
   Future<Map<String, dynamic>> loadProfile(String userId) async {
     final row = await _client.from('profiles').select().eq('user_id', userId).maybeSingle();
     if (row == null || row['is_active'] != true) {
-      throw const MeritRepositoryException('Akaun ini belum diaktifkan. Hubungi pemantau sistem.');
+      throw const MeritRepositoryException('This account has not been activated. Contact the system owner.');
     }
     return row;
   }
@@ -116,7 +116,7 @@ class MeritRepository {
       if (to != null) query = query.lt('created_at', to.add(const Duration(days: 1)).toUtc().toIso8601String());
       final rows = await query.order('created_at', ascending: false).range(offset, offset + pageSize - 1);
       result.addAll(rows.map((row) => MeritEvent.fromMap(row)));
-      if (result.length > 10000) throw const MeritRepositoryException('Laporan melebihi 10,000 baris. Kecilkan julat tarikh dan cuba lagi.');
+      if (result.length > 10000) throw const MeritRepositoryException('The report exceeds 10,000 rows. Narrow the date range and try again.');
       if (rows.length < pageSize) return result;
       offset += pageSize;
     }
@@ -172,8 +172,8 @@ class MeritRepository {
         'starting_score_tenths_input': startingScoreTenths,
       });
     } on PostgrestException catch (error) {
-      if (error.code == '23505') throw const MeritRepositoryException('Kod staff itu telah digunakan.');
-      throw const MeritRepositoryException('Rekod staff tidak dapat disimpan. Semak akses dan input.');
+      if (error.code == '23505') throw const MeritRepositoryException('That staff code is already in use.');
+      throw const MeritRepositoryException('Staff record could not be saved. Check access and input.');
     }
   }
 
@@ -182,9 +182,9 @@ class MeritRepository {
       final count = await _client.rpc('import_staff', params: {'rows_input': rows});
       return count as int;
     } on PostgrestException catch (error) {
-      if (error.code == '23505') throw const MeritRepositoryException('Kod staff dalam fail telah wujud. Tiada baris diimport.');
-      if (error.message.contains('Not authorized')) throw const MeritRepositoryException('Akaun ini tiada kebenaran import CSV.');
-      throw const MeritRepositoryException('CSV tidak dapat diimport. Semak baris pendua, nilai merit dan had skor.');
+      if (error.code == '23505') throw const MeritRepositoryException('A staff code in the file already exists. No rows were imported.');
+      if (error.message.contains('Not authorized')) throw const MeritRepositoryException('This account does not have permission to import CSV.');
+      throw const MeritRepositoryException('CSV import failed. Check for duplicate rows, merit values, and score limits.');
     }
   }
 
@@ -197,8 +197,8 @@ class MeritRepository {
         'department_input': department?.trim(),
       });
     } on PostgrestException catch (error) {
-      if (error.code == '23505') throw const MeritRepositoryException('Kod staff itu telah digunakan.');
-      throw const MeritRepositoryException('Rekod staff tidak dapat dikemas kini. Semak kebenaran dan input.');
+      if (error.code == '23505') throw const MeritRepositoryException('That staff code is already in use.');
+      throw const MeritRepositoryException('Staff record could not be updated. Check permissions and input.');
     }
   }
 
@@ -206,7 +206,7 @@ class MeritRepository {
     try {
       await _client.rpc('set_staff_archived', params: {'target_staff_id': staffId, 'archived_input': archived});
     } on PostgrestException {
-      throw const MeritRepositoryException('Status staff tidak dapat dikemas kini.');
+      throw const MeritRepositoryException('Staff status could not be updated.');
     }
   }
 
@@ -214,9 +214,9 @@ class MeritRepository {
     try {
       await _client.rpc('delete_staff_without_history', params: {'target_staff_id': staffId});
     } on PostgrestException catch (error) {
-      if (error.message.contains('merit history')) throw const MeritRepositoryException('Staff yang mempunyai sejarah merit perlu diarkibkan, bukan dipadam.');
-      if (error.message.contains('linked')) throw const MeritRepositoryException('Nyahaktifkan akaun staff dan arkibkan rekod ini.');
-      throw const MeritRepositoryException('Rekod staff tidak dapat dipadam.');
+      if (error.message.contains('merit history')) throw const MeritRepositoryException('Staff with merit history must be archived instead of deleted.');
+      if (error.message.contains('linked')) throw const MeritRepositoryException('Deactivate the staff account and archive this record.');
+      throw const MeritRepositoryException('Staff record could not be deleted.');
     }
   }
 
@@ -229,9 +229,9 @@ class MeritRepository {
         'request_id_input': _uuidV4(),
       });
     } on PostgrestException catch (error) {
-      if (error.message.contains('minimum')) throw const MeritRepositoryException('Skor pembetulan di bawah minimum yang ditetapkan.');
-      if (error.message.contains('maximum')) throw const MeritRepositoryException('Skor pembetulan melebihi maksimum yang ditetapkan.');
-      throw const MeritRepositoryException('Pembetulan tidak dapat disimpan. Semak kebenaran dan nilai.');
+      if (error.message.contains('minimum')) throw const MeritRepositoryException('The corrected score is below the configured minimum.');
+      if (error.message.contains('maximum')) throw const MeritRepositoryException('The corrected score exceeds the configured maximum.');
+      throw const MeritRepositoryException('Correction could not be saved. Check permissions and values.');
     }
   }
 
@@ -243,9 +243,9 @@ class MeritRepository {
         'ceiling_input': ceilingTenths,
       });
     } on PostgrestException catch (error) {
-      if (error.message.contains('minimum')) throw const MeritRepositoryException('Skor default mesti sama atau lebih tinggi daripada minimum.');
-      if (error.message.contains('maximum')) throw const MeritRepositoryException('Skor default mesti sama atau lebih rendah daripada maksimum.');
-      throw const MeritRepositoryException('Tetapan merit tidak dapat disimpan. Semak nilai dan kebenaran.');
+      if (error.message.contains('minimum')) throw const MeritRepositoryException('The default score must be at or above the minimum.');
+      if (error.message.contains('maximum')) throw const MeritRepositoryException('The default score must be at or below the maximum.');
+      throw const MeritRepositoryException('Merit settings could not be saved. Check values and permissions.');
     }
   }
 
@@ -256,7 +256,7 @@ class MeritRepository {
         'permission_keys_input': permissionKeys.toList(),
       });
     } on PostgrestException {
-      throw const MeritRepositoryException('Kebenaran pengguna tidak dapat dikemas kini.');
+      throw const MeritRepositoryException('User permissions could not be updated.');
     }
   }
 
@@ -264,7 +264,7 @@ class MeritRepository {
     try {
       await _client.rpc('set_user_active', params: {'target_user_id': userId, 'active_input': active});
     } on PostgrestException {
-      throw const MeritRepositoryException('Status akaun tidak dapat dikemas kini.');
+      throw const MeritRepositoryException('Account status could not be updated.');
     }
   }
 
@@ -291,13 +291,13 @@ class MeritRepository {
     } on PostgrestException catch (error) {
       final message = error.message;
       if (message.contains('below the configured minimum')) {
-        throw const MeritRepositoryException('Perubahan ini melepasi nilai minimum yang ditetapkan.');
+        throw const MeritRepositoryException('This adjustment would go below the configured minimum.');
       }
       if (message.contains('above the configured maximum')) {
-        throw const MeritRepositoryException('Perubahan ini melepasi nilai maksimum yang ditetapkan.');
+        throw const MeritRepositoryException('This adjustment would exceed the configured maximum.');
       }
-      if (message.contains('Not authorized')) throw const MeritRepositoryException('Akaun ini tiada kebenaran untuk mengubah merit.');
-      throw const MeritRepositoryException('Perubahan merit tidak dapat disimpan. Segarkan data dan cuba lagi.');
+      if (message.contains('Not authorized')) throw const MeritRepositoryException('This account does not have permission to adjust merit.');
+      throw const MeritRepositoryException('Merit adjustment could not be saved. Refresh the data and try again.');
     }
   }
 
@@ -319,9 +319,9 @@ class MeritRepository {
       if (details is Map && details['error'] is String) {
         throw MeritRepositoryException(details['error'] as String);
       }
-      throw const MeritRepositoryException('Jemputan tidak berjaya. Semak SMTP dan cuba lagi.');
+      throw const MeritRepositoryException('Invitation failed. Check SMTP configuration and try again.');
     } catch (_) {
-      throw const MeritRepositoryException('Jemputan tidak berjaya. Semak SMTP dan cuba lagi.');
+      throw const MeritRepositoryException('Invitation failed. Check SMTP configuration and try again.');
     }
   }
 }

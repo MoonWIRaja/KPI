@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PasswordSetupPage extends StatefulWidget {
@@ -32,11 +32,11 @@ class _PasswordSetupPageState extends State<PasswordSetupPage> {
       if (!widget.isRecovery) await client.rpc('complete_password_setup');
       await client.auth.signOut();
     } on AuthException {
-      setState(() => _error = 'Kata laluan tidak dapat dikemas kini. Semak polisi kata laluan dan cuba lagi.');
+      setState(() => _error = 'Password could not be updated. Check the password policy and try again.');
     } on PostgrestException {
-      setState(() => _error = 'Status jemputan tidak dapat disahkan. Hubungi pemantau sistem.');
+      setState(() => _error = 'Invitation status could not be verified. Contact the system owner.');
     } catch (_) {
-      setState(() => _error = 'Kata laluan tidak dapat dikemas kini. Cuba lagi sebentar nanti.');
+      setState(() => _error = 'Password could not be updated. Please try again shortly.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -57,18 +57,18 @@ class _PasswordSetupPageState extends State<PasswordSetupPage> {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       const Icon(Icons.lock_reset_outlined, size: 34, color: Color(0xFF245CEB)),
                       const SizedBox(height: 18),
-                      Text(widget.isRecovery ? 'Tetapkan kata laluan baharu' : 'Aktifkan akaun anda', style: Theme.of(context).textTheme.titleLarge),
+                      Text(widget.isRecovery ? 'Set a new password' : 'Activate your account', style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 8),
-                      const Text('Gunakan sekurang-kurangnya 12 aksara. Jangan guna kata laluan yang sama dengan akaun lain.'),
+                      const Text('Use at least 12 characters. Do not reuse a password from another account.'),
                       const SizedBox(height: 18),
-                      TextFormField(controller: _password, obscureText: true, autofillHints: const [AutofillHints.newPassword], decoration: const InputDecoration(labelText: 'Kata laluan baharu'), validator: (value) => value == null || value.length < 12 ? 'Kata laluan minimum 12 aksara.' : null),
+                      TextFormField(controller: _password, obscureText: true, autofillHints: const [AutofillHints.newPassword], decoration: const InputDecoration(labelText: 'New password'), validator: (value) => value == null || value.length < 12 ? 'Password must be at least 12 characters.' : null),
                       const SizedBox(height: 12),
-                      TextFormField(controller: _confirm, obscureText: true, onFieldSubmitted: (_) => _save(), decoration: const InputDecoration(labelText: 'Ulang kata laluan'), validator: (value) => value != _password.text ? 'Kata laluan tidak sepadan.' : null),
+                      TextFormField(controller: _confirm, obscureText: true, onFieldSubmitted: (_) => _save(), decoration: const InputDecoration(labelText: 'Confirm password'), validator: (value) => value != _password.text ? 'Passwords do not match.' : null),
                       if (_error != null) ...[const SizedBox(height: 12), Text(_error!, style: const TextStyle(color: Color(0xFFB42318)))],
                       const SizedBox(height: 18),
-                      FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'Mengemas kini…' : 'Simpan kata laluan')),
+                      FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'Updating...' : 'Save password')),
                       const SizedBox(height: 8),
-                      const Text('Selepas disimpan, log masuk semula menggunakan kata laluan baharu.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Color(0xFF667894))),
+                      const Text('After saving, sign in again with your new password.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Color(0xFF667894))),
                     ]),
                   ),
                 ),

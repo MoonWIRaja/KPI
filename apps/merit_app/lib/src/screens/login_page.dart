@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../widgets/merit_brand.dart';
+import '../widgets/thinking_orbs_loader.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -39,9 +40,9 @@ class _LoginPageState extends State<LoginPage> {
         password: _password.text,
       );
     } on AuthException {
-      setState(() => _error = 'E-mel atau kata laluan tidak sah. Semak maklumat dan cuba lagi.');
+      setState(() => _error = 'Invalid email or password. Check your details and try again.');
     } catch (_) {
-      setState(() => _error = 'Tidak dapat log masuk sekarang. Cuba lagi sebentar nanti.');
+      setState(() => _error = 'Unable to sign in right now. Please try again shortly.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -50,7 +51,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _requestReset() async {
     final email = _email.text.trim();
     if (email.isEmpty || !email.contains('@')) {
-      setState(() => _error = 'Masukkan e-mel dahulu untuk meminta pautan pemulihan.');
+      setState(() => _error = 'Enter your email first to request a recovery link.');
       return;
     }
     setState(() {
@@ -63,9 +64,9 @@ class _LoginPageState extends State<LoginPage> {
         email,
         redirectTo: Uri.base.replace(query: '', fragment: '').toString(),
       );
-      setState(() => _notice = 'Jika akaun itu wujud, arahan pemulihan akan dihantar melalui e-mel.');
+      setState(() => _notice = 'If an account exists, recovery instructions will be sent by email.');
     } catch (_) {
-      setState(() => _error = 'Permintaan tidak dapat dihantar. Cuba lagi atau hubungi pemantau sistem.');
+      setState(() => _error = 'The request could not be sent. Try again or contact the system owner.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -90,17 +91,17 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       const MeritBrand(compact: true),
                       const SizedBox(height: 35),
-                      Text('Log masuk', style: Theme.of(context).textTheme.headlineMedium),
+                      Text('Sign in', style: Theme.of(context).textTheme.headlineMedium),
                       const SizedBox(height: 8),
-                      const Text('Akses untuk akaun yang dijemput sahaja.'),
+                      const Text('Access is limited to invited accounts.'),
                       const SizedBox(height: 24),
                       TextFormField(
                         controller: _email,
                         keyboardType: TextInputType.emailAddress,
                         autofillHints: const [AutofillHints.username, AutofillHints.email],
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(labelText: 'E-mel', prefixIcon: Icon(Icons.mail_outline)),
-                        validator: (value) => value == null || !value.trim().contains('@') ? 'Masukkan e-mel yang sah.' : null,
+                        decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+                        validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
                       ),
                       const SizedBox(height: 14),
                       TextFormField(
@@ -109,19 +110,19 @@ class _LoginPageState extends State<LoginPage> {
                         autofillHints: const [AutofillHints.password],
                         onFieldSubmitted: (_) => _signIn(),
                         decoration: InputDecoration(
-                          labelText: 'Kata laluan',
+                          labelText: 'Password',
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
-                            tooltip: _showPassword ? 'Sembunyikan kata laluan' : 'Tunjukkan kata laluan',
+                            tooltip: _showPassword ? 'Hide password' : 'Show password',
                             onPressed: () => setState(() => _showPassword = !_showPassword),
                             icon: Icon(_showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                           ),
                         ),
-                        validator: (value) => value == null || value.isEmpty ? 'Masukkan kata laluan.' : null,
+                        validator: (value) => value == null || value.isEmpty ? 'Enter your password.' : null,
                       ),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: TextButton(onPressed: _busy ? null : _requestReset, child: const Text('Lupa kata laluan?')),
+                        child: TextButton(onPressed: _busy ? null : _requestReset, child: const Text('Forgot password?')),
                       ),
                       if (_error != null) _MessageBox(text: _error!, isError: true),
                       if (_notice != null) _MessageBox(text: _notice!, isError: false),
@@ -129,12 +130,12 @@ class _LoginPageState extends State<LoginPage> {
                       FilledButton.icon(
                         onPressed: _busy ? null : _signIn,
                         icon: _busy
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                            ? const ThinkingOrbsLoader(size: 18, label: 'Signing in')
                             : const Icon(Icons.arrow_forward),
-                        label: Text(_busy ? 'Sedang diproses' : 'Log masuk'),
+                        label: Text(_busy ? 'Signing in...' : 'Sign in'),
                       ),
                       const SizedBox(height: 18),
-                      const Text('Tiada pendaftaran awam. Hubungi pemantau sistem untuk jemputan.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF667894), fontSize: 12)),
+                      const Text('Public sign-up is disabled. Contact the system owner for an invitation.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF667894), fontSize: 12)),
                     ],
                   ),
                 ),

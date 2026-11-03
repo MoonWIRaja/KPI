@@ -7,6 +7,7 @@ import 'mfa_gate.dart';
 import 'password_setup_page.dart';
 import 'reports_page.dart';
 import 'audit_page.dart';
+import '../widgets/thinking_orbs_loader.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -80,7 +81,7 @@ class _HomeShellState extends State<HomeShell> {
     } on MeritRepositoryException catch (error) {
       _loadError = error.message;
     } catch (_) {
-      _loadError = 'Data akaun tidak dapat dimuat. Cuba semula atau hubungi pemantau sistem.';
+      _loadError = 'Account data could not be loaded. Try again or contact the system owner.';
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -116,7 +117,7 @@ class _HomeShellState extends State<HomeShell> {
       }
       await _loadData();
     } catch (_) {
-      _loadError = 'Data tidak dapat dimuat. Periksa sambungan dan cuba lagi.';
+      _loadError = 'Data could not be loaded. Check your connection and try again.';
     } finally {
       if (mounted) setState(() {
         if (_navItems.isNotEmpty) _selectedPage = _selectedPage.clamp(0, _navItems.length - 1).toInt();
@@ -133,7 +134,7 @@ class _HomeShellState extends State<HomeShell> {
     try {
       await _loadData();
     } catch (_) {
-      _loadError = 'Pengesahan berjaya, tetapi data tidak dapat dimuat.';
+      _loadError = 'Verification succeeded, but data could not be loaded.';
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -142,16 +143,16 @@ class _HomeShellState extends State<HomeShell> {
   List<_NavItem> get _navItems {
     final items = <_NavItem>[];
     if (_isStaff && _hasPermission('merit.read.self')) {
-      items.add(const _NavItem('Merit Saya', Icons.person_outline, 'self'));
-      items.add(const _NavItem('Sejarah saya', Icons.history, 'self-events'));
+      items.add(const _NavItem('My Merit', Icons.person_outline, 'self', mobileLabel: 'Merit'));
+      items.add(const _NavItem('My History', Icons.history, 'self-events', mobileLabel: 'History'));
     }
-    if (_hasPermission('staff.read.all') && _hasPermission('merit.read.all')) items.add(const _NavItem('Gambaran', Icons.grid_view_outlined, 'overview'));
+    if (_hasPermission('staff.read.all') && _hasPermission('merit.read.all')) items.add(const _NavItem('Overview', Icons.grid_view_outlined, 'overview'));
     if (_hasPermission('staff.read.all') || _hasPermission('staff.create') || _hasPermission('staff.import')) items.add(const _NavItem('Staff', Icons.groups_outlined, 'staff'));
-    if (_hasPermission('merit.read.all')) items.add(const _NavItem('Aktiviti Merit', Icons.receipt_long_outlined, 'events'));
-    if (_hasPermission('reports.read')) items.add(const _NavItem('Laporan', Icons.bar_chart_outlined, 'reports'));
-    if (_hasPermission('users.manage')) items.add(const _NavItem('Pengguna', Icons.manage_accounts_outlined, 'users'));
-    if (_hasPermission('settings.manage')) items.add(const _NavItem('Tetapan', Icons.tune_outlined, 'settings'));
-    if (_hasPermission('audit.read')) items.add(const _NavItem('Audit sistem', Icons.fact_check_outlined, 'audit'));
+    if (_hasPermission('merit.read.all')) items.add(const _NavItem('Merit Activity', Icons.receipt_long_outlined, 'events', mobileLabel: 'Activity'));
+    if (_hasPermission('reports.read')) items.add(const _NavItem('Reports', Icons.bar_chart_outlined, 'reports'));
+    if (_hasPermission('users.manage')) items.add(const _NavItem('Users', Icons.manage_accounts_outlined, 'users'));
+    if (_hasPermission('settings.manage')) items.add(const _NavItem('Settings', Icons.tune_outlined, 'settings'));
+    if (_hasPermission('audit.read')) items.add(const _NavItem('Audit Log', Icons.fact_check_outlined, 'audit', mobileLabel: 'Audit'));
     return items;
   }
 
@@ -163,10 +164,10 @@ class _HomeShellState extends State<HomeShell> {
     if (_loadError != null && _profile == null) {
       return _FailurePage(message: _loadError!, onRetry: _loadProfile);
     }
-    if (_profile == null) return _FailurePage(message: 'Profil akaun tidak dijumpai.', onRetry: _loadProfile);
+    if (_profile == null) return _FailurePage(message: 'Account profile could not be found.', onRetry: _loadProfile);
 
     final width = MediaQuery.sizeOf(context).width;
-    if (_navItems.isEmpty) return const Scaffold(body: Center(child: _EmptyState(icon: Icons.lock_outline, title: 'Akses belum diberikan', detail: 'Hubungi pemantau sistem untuk mengaktifkan kebenaran akaun ini.')));
+    if (_navItems.isEmpty) return const Scaffold(body: Center(child: _EmptyState(icon: Icons.lock_outline, title: 'Access not granted', detail: 'Contact the system owner to enable permissions for this account.')));
     final wide = width >= 1040;
     final narrow = width < 700;
     return Scaffold(
@@ -181,37 +182,35 @@ class _HomeShellState extends State<HomeShell> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                 decoration: BoxDecoration(color: const Color(0xFFEAF8F1), borderRadius: BorderRadius.circular(20)),
-                child: const Row(children: [Icon(Icons.circle, size: 7, color: Color(0xFF1A9B68)), SizedBox(width: 7), Text('AKSES TERHAD', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF46715E)))]),
+              child: const Row(children: [Icon(Icons.circle, size: 7, color: Color(0xFF1A9B68)), SizedBox(width: 7), Text('INVITE ONLY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF46715E)))]),
               ),
             ],
           ],
         ),
         actions: [
           if (_loading)
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)))
+            const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: ThinkingOrbsLoader(size: 22, label: 'Refreshing data'))
           else
-            IconButton(tooltip: 'Segarkan data', onPressed: _refresh, icon: const Icon(Icons.refresh)),
+            IconButton(tooltip: 'Refresh data', onPressed: _refresh, icon: const Icon(Icons.refresh)),
           const SizedBox(width: 5),
           _AccountMenu(profile: _profile!, onSignOut: () => Supabase.instance.client.auth.signOut()),
           const SizedBox(width: 16),
         ],
       ),
-      drawer: narrow ? Drawer(child: _Navigation(items: _navItems, selected: _selectedPage, onSelected: _selectPage)) : null,
-      body: Row(
+      body: Stack(
         children: [
-          if (wide) SizedBox(width: 224, child: _Navigation(items: _navItems, selected: _selectedPage, onSelected: _selectPage)),
-          Expanded(
-            child: Column(
-              children: [
-                if (narrow)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Builder(builder: (context) => IconButton(tooltip: 'Buka menu', onPressed: () => Scaffold.of(context).openDrawer(), icon: const Icon(Icons.menu))),
-                  ),
-                Expanded(child: _loadError != null ? _FailurePage(message: _loadError!, onRetry: _refresh) : _buildPage()),
-              ],
-            ),
+          Row(
+            children: [
+              if (wide) SizedBox(width: 224, child: _Navigation(items: _navItems, selected: _selectedPage, onSelected: _selectPage)),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: narrow ? 86 : 0),
+                  child: _loadError != null ? _FailurePage(message: _loadError!, onRetry: _refresh) : _buildPage(),
+                ),
+              ),
+            ],
           ),
+          if (narrow) _mobileNavigation(),
         ],
       ),
     );
@@ -219,7 +218,6 @@ class _HomeShellState extends State<HomeShell> {
 
   void _selectPage(int index) {
     setState(() => _selectedPage = index.clamp(0, _navItems.length - 1).toInt());
-    if (MediaQuery.sizeOf(context).width < 700) Navigator.of(context).maybePop();
   }
 
   void _selectRoute(String route) {
@@ -239,8 +237,77 @@ class _HomeShellState extends State<HomeShell> {
       'users' => _usersPage(),
       'settings' => _settingsPage(),
       'audit' => AuditPage(repository: _repository),
-      _ => const _EmptyState(icon: Icons.lock_outline, title: 'Tiada halaman tersedia', detail: 'Hubungi pemantau sistem untuk akses.'),
+      _ => const _EmptyState(icon: Icons.lock_outline, title: 'Page unavailable', detail: 'Contact the system owner for access.'),
     };
+  }
+
+  Widget _mobileNavigation() => Positioned(
+        left: 12,
+        right: 12,
+        bottom: 8,
+        child: SafeArea(
+          top: false,
+          child: Container(
+            height: 68,
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .97),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFFE3E9F2)),
+              boxShadow: const [BoxShadow(color: Color(0x180F1D36), blurRadius: 22, offset: Offset(0, 7))],
+            ),
+            child: Row(
+              children: [
+                for (var index = 0; index < _visibleMobileNavItems.length; index++)
+                  Expanded(
+                    child: Semantics(
+                      button: true,
+                      selected: index == _selectedPage,
+                      label: _navItems[_visibleMobileNavItems[index]].label,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => _selectPage(_visibleMobileNavItems[index]),
+                        child: AnimatedContainer(
+                          duration: MediaQuery.disableAnimationsOf(context)
+                              ? Duration.zero
+                              : const Duration(milliseconds: 180),
+                          curve: Curves.easeOutCubic,
+                          decoration: BoxDecoration(
+                            color: _visibleMobileNavItems[index] == _selectedPage ? const Color(0xFFEEF3FF) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(_navItems[_visibleMobileNavItems[index]].icon, size: 20, color: _visibleMobileNavItems[index] == _selectedPage ? const Color(0xFF245CEB) : const Color(0xFF667894)),
+                              const SizedBox(height: 3),
+                              Text(
+                                _navItems[_visibleMobileNavItems[index]].mobileLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 9, fontWeight: _visibleMobileNavItems[index] == _selectedPage ? FontWeight.w700 : FontWeight.w500, color: _visibleMobileNavItems[index] == _selectedPage ? const Color(0xFF245CEB) : const Color(0xFF667894)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  List<int> get _visibleMobileNavItems {
+    if (_navItems.length <= 5) return List<int>.generate(_navItems.length, (index) => index);
+    final primary = <int>[];
+    for (final route in ['overview', 'staff', 'self', 'events', 'reports']) {
+      final index = _navItems.indexWhere((item) => item.route == route);
+      if (index >= 0 && !primary.contains(index) && primary.length < 4) primary.add(index);
+    }
+    if (_selectedPage >= 0 && !primary.contains(_selectedPage)) primary.add(_selectedPage);
+    return primary;
   }
 
   Widget _overviewPage() {
@@ -252,18 +319,18 @@ class _HomeShellState extends State<HomeShell> {
     return ListView(
       padding: EdgeInsets.fromLTRB(width < 700 ? 18 : 32, 18, width < 700 ? 18 : 32, 30),
       children: [
-        _PageHeading(title: 'Direktori staff & merit', subtitle: 'Semak skor semasa dan rekod perubahan merit.', actions: [
+          _PageHeading(title: 'Staff & merit', subtitle: 'Review current scores and merit changes.', actions: [
           if (_isOwner)
-            OutlinedButton.icon(onPressed: _openInvite, icon: const Icon(Icons.mail_outline), label: const Text('Jemput pengguna')),
+            OutlinedButton.icon(onPressed: _openInvite, icon: const Icon(Icons.mail_outline), label: const Text('Invite user')),
           const SizedBox(width: 8),
           if (_hasPermission('staff.create'))
-            FilledButton.icon(onPressed: _openAddStaff, icon: const Icon(Icons.person_add_alt_1), label: const Text('Tambah staff')),
+            FilledButton.icon(onPressed: _openAddStaff, icon: const Icon(Icons.person_add_alt_1), label: const Text('Add staff')),
         ]),
         const SizedBox(height: 22),
         _StatsRow(items: [
-          _StatItem('STAFF AKTIF', '${active.length}', 'Rekod aktif dalam sistem', Icons.groups_outlined),
-          _StatItem('PURATA MERIT', average, 'Daripada rekod yang boleh dilihat', Icons.analytics_outlined),
-          _StatItem('PELARASAN TERKINI', '${monthChanges.length}', 'Daripada maksimum 100 rekod terkini', Icons.trending_up),
+          _StatItem('ACTIVE STAFF', '${active.length}', 'Active records in the system', Icons.groups_outlined),
+          _StatItem('AVERAGE MERIT', average, 'Across visible staff records', Icons.analytics_outlined),
+          _StatItem('RECENT CHANGES', '${monthChanges.length}', 'From the latest 100 records', Icons.trending_up),
         ]),
         const SizedBox(height: 22),
         _DirectoryCard(
@@ -291,11 +358,11 @@ class _HomeShellState extends State<HomeShell> {
   Widget _staffPage() {
     final staff = _staff.where((item) => '${item.code} ${item.name} ${item.department ?? ''}'.toLowerCase().contains(_search.text.toLowerCase())).toList();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(32, 18, 32, 30),
+      padding: EdgeInsets.fromLTRB(MediaQuery.sizeOf(context).width < 700 ? 18 : 32, 18, MediaQuery.sizeOf(context).width < 700 ? 18 : 32, 30),
       children: [
-        _PageHeading(title: 'Direktori staff', subtitle: 'Senarai staff, status dan skor merit semasa.', actions: [
+        _PageHeading(title: 'Staff directory', subtitle: 'Staff, status, and current merit scores.', actions: [
           if (_hasPermission('staff.import')) OutlinedButton.icon(onPressed: _openCsvImport, icon: const Icon(Icons.upload_file_outlined), label: const Text('Import CSV')),
-          if (_hasPermission('staff.create')) FilledButton.icon(onPressed: _openAddStaff, icon: const Icon(Icons.person_add_alt_1), label: const Text('Tambah staff')),
+          if (_hasPermission('staff.create')) FilledButton.icon(onPressed: _openAddStaff, icon: const Icon(Icons.person_add_alt_1), label: const Text('Add staff')),
         ]),
         const SizedBox(height: 20),
         _DirectoryCard(staff: staff, events: _events, canAdjust: _hasPermission('merit.adjust'), canCorrect: _hasPermission('merit.correct'), canEdit: _hasPermission('staff.update'), canArchive: _hasPermission('staff.archive'), canDelete: _hasPermission('staff.delete'), search: _search, onAdjust: _openAdjustment, onCorrect: _openCorrection, onEdit: _openEditStaff, onArchive: _toggleStaffArchived, onDelete: _deleteStaff, onViewAll: () {}, onSearchChanged: () => setState(() {}), loading: _loading),
@@ -307,12 +374,12 @@ class _HomeShellState extends State<HomeShell> {
     final ownId = _profile?['staff_id'];
     final own = _staff.where((item) => item.id == ownId).toList();
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.sizeOf(context).width < 700 ? 40 : 24),
       children: [
-        _PageHeading(title: 'Merit saya', subtitle: 'Skor dan sejarah merit akaun anda.'),
+        _PageHeading(title: 'My merit', subtitle: 'Your merit score and history.'),
         const SizedBox(height: 20),
         if (own.isEmpty)
-          const _EmptyState(icon: Icons.person_off_outlined, title: 'Rekod staff belum dipautkan', detail: 'Hubungi pemantau sistem untuk menghubungkan akaun anda kepada rekod staff.'
+          const _EmptyState(icon: Icons.person_off_outlined, title: 'No staff record linked', detail: 'Contact the system owner to link your account to a staff record.'
           )
         else ...[
           _SelfScoreCard(staff: own.single),
@@ -324,26 +391,26 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Widget _eventsPage() => ListView(
-        padding: const EdgeInsets.fromLTRB(32, 18, 32, 30),
+        padding: EdgeInsets.fromLTRB(MediaQuery.sizeOf(context).width < 700 ? 18 : 32, 18, MediaQuery.sizeOf(context).width < 700 ? 18 : 32, 30),
         children: [
-          _PageHeading(title: _isStaff ? 'Sejarah merit' : 'Aktiviti merit', subtitle: 'Rekod perubahan merit yang dibenarkan untuk akaun ini.'),
+          _PageHeading(title: _isStaff ? 'Merit history' : 'Merit activity', subtitle: 'Merit changes available to this account.'),
           const SizedBox(height: 20),
           _EventsCard(events: _events, canSeeAllStaff: _hasPermission('merit.read.all')),
         ],
       );
 
   Widget _usersPage() => ListView(
-        padding: const EdgeInsets.fromLTRB(32, 18, 32, 30),
+        padding: EdgeInsets.fromLTRB(MediaQuery.sizeOf(context).width < 700 ? 18 : 32, 18, MediaQuery.sizeOf(context).width < 700 ? 18 : 32, 30),
         children: [
-          _PageHeading(title: 'Pengguna & jemputan', subtitle: 'Akses tertutup. Hanya Owner boleh menghantar jemputan dan menetapkan peranan.', actions: [
-          FilledButton.icon(onPressed: _openInvite, icon: const Icon(Icons.mail_outline), label: const Text('Jemput pengguna')),
+          _PageHeading(title: 'Users & invitations', subtitle: 'Invite-only access. Only the Owner can invite users and assign roles.', actions: [
+          FilledButton.icon(onPressed: _openInvite, icon: const Icon(Icons.mail_outline), label: const Text('Invite user')),
           ]),
           const SizedBox(height: 20),
           Card(child: _profiles.isEmpty
-              ? const _EmptyState(icon: Icons.people_outline, title: 'Belum ada pengguna tambahan', detail: 'Ceo dan staff boleh ditambah melalui jemputan e-mel.')
+              ? const _EmptyState(icon: Icons.people_outline, title: 'No additional users', detail: 'The CEO and staff can be added by email invitation.')
               : Column(children: _profiles.map((profile) => _UserAccessRow(profile: profile, onPermissions: () => _editUserPermissions(profile), onToggleActive: () => _toggleUserActive(profile))).toList())),
           const SizedBox(height: 14),
-          const _InfoBanner(text: 'Pendaftaran awam ditutup. E-mel jemputan dihantar oleh Supabase Auth menggunakan SMTP yang disediakan pemilik sistem.'),
+          const _InfoBanner(text: 'Public sign-up is disabled. Supabase Auth sends invitations using the SMTP service configured by the system owner.'),
         ],
       );
 
@@ -365,9 +432,9 @@ class _HomeShellState extends State<HomeShell> {
   Future<void> _toggleStaffArchived(StaffMember staff) async {
     final archive = !staff.archived;
     final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
-      title: Text(archive ? 'Arkibkan staff?' : 'Pulihkan staff?'),
-      content: Text(archive ? 'Rekod dan sejarah merit ${staff.name} kekal disimpan. Akaun staff tidak dipadam.' : 'Rekod ${staff.name} akan kembali ke senarai aktif.'),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(archive ? 'Arkibkan' : 'Pulihkan'))],
+      title: Text(archive ? 'Archive staff?' : 'Restore staff?'),
+      content: Text(archive ? '${staff.name}’s record and merit history will be retained. Their account will not be deleted.' : '${staff.name} will return to the active staff list.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(archive ? 'Archive' : 'Restore'))],
     ));
     if (confirmed != true) return;
     try { await _repository.setStaffArchived(staff.id, archive); await _refresh(); }
@@ -376,9 +443,9 @@ class _HomeShellState extends State<HomeShell> {
 
   Future<void> _deleteStaff(StaffMember staff) async {
     final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
-      title: const Text('Padam rekod staff?'),
-      content: Text('Padam ${staff.name} hanya dibenarkan jika tiada akaun terpaut dan tiada sejarah merit. Rekod yang mempunyai sejarah perlu diarkibkan.'),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Padam rekod'))],
+      title: const Text('Delete staff record?'),
+      content: Text('${staff.name} can only be deleted if no account is linked and no merit history exists. Records with history must be archived.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete record'))],
     ));
     if (confirmed != true) return;
     try { await _repository.deleteStaffWithoutHistory(staff.id); await _refresh(); }
@@ -396,9 +463,9 @@ class _HomeShellState extends State<HomeShell> {
   Future<void> _toggleUserActive(Map<String, dynamic> profile) async {
     final active = profile['is_active'] != true;
     final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
-      title: Text(active ? 'Aktifkan akaun?' : 'Nyahaktifkan akaun?'),
-      content: Text(active ? 'Pengguna ini boleh log masuk semula.' : 'Sesi pengguna akan hilang akses data sebaik perubahan disimpan.'),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(active ? 'Aktifkan' : 'Nyahaktifkan'))],
+      title: Text(active ? 'Activate account?' : 'Deactivate account?'),
+      content: Text(active ? 'This user will be able to sign in again.' : 'The user will lose access to data as soon as this change is saved.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(active ? 'Activate' : 'Deactivate'))],
     ));
     if (confirmed != true) return;
     try { await _repository.setUserActive(profile['user_id'] as String, active); await _refresh(); }
@@ -413,7 +480,7 @@ class _HomeShellState extends State<HomeShell> {
     try {
       await _repository.adjustMerit(staffId: staff.id, deltaTenths: change.deltaTenths, reason: change.reason);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pelarasan merit berjaya direkodkan.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Merit adjustment recorded.')));
       await _refresh();
     } on MeritRepositoryException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
@@ -426,7 +493,7 @@ class _HomeShellState extends State<HomeShell> {
     try {
       await _repository.correctMerit(staffId: staff.id, scoreTenths: correction.scoreTenths, reason: correction.reason);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pembetulan direkodkan dalam sejarah merit.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Correction recorded in merit history.')));
       await _refresh();
     } on MeritRepositoryException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
@@ -440,8 +507,9 @@ class _HomeShellState extends State<HomeShell> {
 }
 
 class _NavItem {
-  const _NavItem(this.label, this.icon, this.route);
+  const _NavItem(this.label, this.icon, this.route, {String? mobileLabel}) : mobileLabel = mobileLabel ?? label;
   final String label;
+  final String mobileLabel;
   final IconData icon;
   final String route;
 }
@@ -474,7 +542,7 @@ class _Navigation extends StatelessWidget {
             const Spacer(),
             const Padding(
               padding: EdgeInsets.all(14),
-              child: _InfoBanner(text: 'Akses jemputan sahaja\nData merit dilindungi'),
+              child: _InfoBanner(text: 'Invite-only access\nMerit data is protected'),
             ),
           ],
         ),
@@ -488,11 +556,11 @@ class _AccountMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PopupMenuButton<String>(
-        tooltip: 'Menu akaun',
+        tooltip: 'Account menu',
         onSelected: (value) {
           if (value == 'signout') onSignOut();
         },
-        itemBuilder: (_) => const [PopupMenuItem(value: 'signout', child: ListTile(leading: Icon(Icons.logout), title: Text('Log keluar')))],
+        itemBuilder: (_) => const [PopupMenuItem(value: 'signout', child: ListTile(leading: Icon(Icons.logout), title: Text('Sign out')))],
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 8),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -579,14 +647,14 @@ class _DirectoryCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [Expanded(child: Text('Staff dan skor semasa', style: Theme.of(context).textTheme.titleMedium)), TextButton(onPressed: onViewAll, child: const Text('Lihat semua'))]),
+          Row(children: [Expanded(child: Text('Staff and current scores', style: Theme.of(context).textTheme.titleMedium)), TextButton(onPressed: onViewAll, child: const Text('View all'))]),
           const SizedBox(height: 14),
-          TextField(controller: search, onChanged: (_) => onSearchChanged(), decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Cari kod staff atau nama', isDense: true)),
+          TextField(controller: search, onChanged: (_) => onSearchChanged(), decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search staff code or name', isDense: true)),
           const SizedBox(height: 14),
           if (loading && staff.isEmpty)
-            const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+            const Padding(padding: EdgeInsets.all(24), child: Center(child: ThinkingOrbsLoader()))
           else if (staff.isEmpty)
-            const _EmptyState(icon: Icons.groups_outlined, title: 'Belum ada rekod staff', detail: 'Tambah rekod pertama untuk mula mengurus merit.')
+            const _EmptyState(icon: Icons.groups_outlined, title: 'No staff records yet', detail: 'Add the first record to start tracking merit.')
           else if (narrow)
             Column(children: staff.map((item) => _StaffCard(staff: item, latest: _latestFor(item, events), canAdjust: canAdjust, canCorrect: canCorrect, canEdit: canEdit, canArchive: canArchive, canDelete: canDelete, onAdjust: onAdjust, onCorrect: onCorrect, onEdit: onEdit, onArchive: onArchive, onDelete: onDelete)).toList())
           else
@@ -594,7 +662,7 @@ class _DirectoryCard extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F7FA)),
-                columns: const [DataColumn(label: Text('KOD STAFF')), DataColumn(label: Text('NAMA')), DataColumn(label: Text('JABATAN')), DataColumn(label: Text('MERIT')), DataColumn(label: Text('PERUBAHAN TERKINI')), DataColumn(label: Text('TINDAKAN'))],
+                columns: const [DataColumn(label: Text('STAFF CODE')), DataColumn(label: Text('NAME')), DataColumn(label: Text('DEPARTMENT')), DataColumn(label: Text('MERIT')), DataColumn(label: Text('LATEST CHANGE')), DataColumn(label: Text('ACTIONS'))],
                 rows: staff.map((item) {
                   final latest = _latestFor(item, events);
                   return DataRow(cells: [
@@ -602,13 +670,13 @@ class _DirectoryCard extends StatelessWidget {
                     DataCell(Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600))),
                     DataCell(Text(item.department ?? '—')),
                     DataCell(Text(formatMerit(item.scoreTenths), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
-                    DataCell(latest == null ? const Text('Belum ada perubahan') : _DeltaPill(delta: latest.deltaTenths)),
+                    DataCell(latest == null ? const Text('No changes yet') : _DeltaPill(delta: latest.deltaTenths)),
                     DataCell(Wrap(spacing: 4, children: [
-                      if (canAdjust) OutlinedButton(onPressed: () => onAdjust(item), child: const Text('Pelarasan')),
-                      if (canCorrect) IconButton(tooltip: 'Betulkan skor', onPressed: () => onCorrect(item), icon: const Icon(Icons.edit_note_outlined, size: 18)),
+                      if (canAdjust) OutlinedButton(onPressed: () => onAdjust(item), child: const Text('Adjust')),
+                      if (canCorrect) IconButton(tooltip: 'Correct score', onPressed: () => onCorrect(item), icon: const Icon(Icons.edit_note_outlined, size: 18)),
                       if (canEdit) IconButton(tooltip: 'Edit staff', onPressed: () => onEdit(item), icon: const Icon(Icons.edit_outlined, size: 18)),
-                      if (canArchive) IconButton(tooltip: item.archived ? 'Pulihkan staff' : 'Arkibkan staff', onPressed: () => onArchive(item), icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 18)),
-                      if (canDelete) IconButton(tooltip: 'Padam staff jika belum ada ledger', onPressed: () => onDelete(item), icon: const Icon(Icons.delete_outline, size: 18)),
+                      if (canArchive) IconButton(tooltip: item.archived ? 'Restore staff' : 'Archive staff', onPressed: () => onArchive(item), icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 18)),
+                      if (canDelete) IconButton(tooltip: 'Delete staff without merit history', onPressed: () => onDelete(item), icon: const Icon(Icons.delete_outline, size: 18)),
                     ])),
                   ]);
                 }).toList(),
@@ -649,9 +717,9 @@ class _StaffCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [Expanded(child: Text(staff.name, style: const TextStyle(fontWeight: FontWeight.w700))), Text(formatMerit(staff.scoreTenths), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700))]),
           const SizedBox(height: 5),
-          Text('${staff.code}  •  ${staff.department ?? 'Tiada jabatan'}', style: const TextStyle(color: Color(0xFF667894), fontSize: 12)),
+          Text('${staff.code}  •  ${staff.department ?? 'No department'}', style: const TextStyle(color: Color(0xFF667894), fontSize: 12)),
           const SizedBox(height: 10),
-          Row(children: [if (latest != null) _DeltaPill(delta: latest!.deltaTenths), const Spacer(), if (canCorrect) IconButton(tooltip: 'Betulkan skor', onPressed: () => onCorrect(staff), icon: const Icon(Icons.edit_note_outlined)), if (canEdit) IconButton(tooltip: 'Edit staff', onPressed: () => onEdit(staff), icon: const Icon(Icons.edit_outlined)), if (canArchive) IconButton(tooltip: staff.archived ? 'Pulihkan staff' : 'Arkibkan staff', onPressed: () => onArchive(staff), icon: Icon(staff.archived ? Icons.unarchive_outlined : Icons.archive_outlined)), if (canDelete) IconButton(tooltip: 'Padam rekod staff', onPressed: () => onDelete(staff), icon: const Icon(Icons.delete_outline)), if (canAdjust) OutlinedButton(onPressed: () => onAdjust(staff), child: const Text('Pelarasan'))]),
+          Wrap(alignment: WrapAlignment.end, crossAxisAlignment: WrapCrossAlignment.center, spacing: 2, runSpacing: 2, children: [if (latest != null) _DeltaPill(delta: latest!.deltaTenths), if (canCorrect) IconButton(tooltip: 'Correct score', onPressed: () => onCorrect(staff), icon: const Icon(Icons.edit_note_outlined)), if (canEdit) IconButton(tooltip: 'Edit staff', onPressed: () => onEdit(staff), icon: const Icon(Icons.edit_outlined)), if (canArchive) IconButton(tooltip: staff.archived ? 'Restore staff' : 'Archive staff', onPressed: () => onArchive(staff), icon: Icon(staff.archived ? Icons.unarchive_outlined : Icons.archive_outlined)), if (canDelete) IconButton(tooltip: 'Delete staff record', onPressed: () => onDelete(staff), icon: const Icon(Icons.delete_outline)), if (canAdjust) OutlinedButton(onPressed: () => onAdjust(staff), child: const Text('Adjust'))]),
         ]),
       );
 }
@@ -686,7 +754,7 @@ class _EventsCard extends StatelessWidget {
   final bool canSeeAllStaff;
   @override
   Widget build(BuildContext context) {
-    if (events.isEmpty) return const Card(child: _EmptyState(icon: Icons.history, title: 'Belum ada aktiviti', detail: 'Rekod merit akan dipaparkan di sini.'));
+    if (events.isEmpty) return const Card(child: _EmptyState(icon: Icons.history, title: 'No activity yet', detail: 'Merit records will appear here.'));
     return Card(child: Column(children: events.map((event) => ListTile(
       leading: CircleAvatar(backgroundColor: event.deltaTenths >= 0 ? const Color(0xFFE8F7EE) : const Color(0xFFFFEEEE), child: Icon(event.deltaTenths >= 0 ? Icons.arrow_upward : Icons.arrow_downward, color: event.deltaTenths >= 0 ? const Color(0xFF16804A) : const Color(0xFFB42318), size: 18)),
       title: Text(canSeeAllStaff ? '${event.staffName ?? 'Staff'}  •  ${formatDelta(event.deltaTenths)}' : '${formatDelta(event.deltaTenths)}  •  ${formatMerit(event.afterTenths)} merit', style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -706,11 +774,11 @@ class _UserAccessRow extends StatelessWidget {
   Widget build(BuildContext context) => ListTile(
         leading: CircleAvatar(child: Text((profile['display_name'] as String).characters.first.toUpperCase())),
         title: Text(profile['display_name'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('${profile['email']}  ·  ${(profile['user_permissions'] as List<dynamic>? ?? const []).length} kebenaran${profile['must_set_password'] == true ? '  ·  belum aktifkan kata laluan' : ''}'),
+        subtitle: Text('${profile['email']}  ·  ${(profile['user_permissions'] as List<dynamic>? ?? const []).length} permissions${profile['must_set_password'] == true ? '  ·  password not set' : ''}'),
         trailing: Wrap(spacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          Chip(label: Text(profile['is_active'] == true ? _roleLabel(profile['role'] as String) : 'Tidak aktif')),
-          IconButton(tooltip: 'Tetapkan kebenaran', onPressed: onPermissions, icon: const Icon(Icons.tune_outlined)),
-          IconButton(tooltip: profile['is_active'] == true ? 'Nyahaktifkan akaun' : 'Aktifkan akaun', onPressed: onToggleActive, icon: Icon(profile['is_active'] == true ? Icons.person_off_outlined : Icons.person_outline)),
+          Chip(label: Text(profile['is_active'] == true ? _roleLabel(profile['role'] as String) : 'Inactive')),
+          IconButton(tooltip: 'Set permissions', onPressed: onPermissions, icon: const Icon(Icons.tune_outlined)),
+          IconButton(tooltip: profile['is_active'] == true ? 'Deactivate account' : 'Activate account', onPressed: onToggleActive, icon: Icon(profile['is_active'] == true ? Icons.person_off_outlined : Icons.person_outline)),
         ]),
       );
 }
@@ -726,26 +794,26 @@ class _PermissionsDialog extends StatefulWidget {
 class _PermissionsDialogState extends State<_PermissionsDialog> {
   late final Set<String> _selected = {...widget.selected};
   static const _permissions = <(String, String)>[
-    ('staff.read.all', 'Lihat semua rekod staff'),
-    ('staff.create', 'Tambah staff'),
+    ('staff.read.all', 'View all staff records'),
+    ('staff.create', 'Add staff'),
     ('staff.update', 'Edit staff'),
-    ('staff.archive', 'Arkib/pulihkan staff'),
-    ('staff.delete', 'Padam staff tanpa sejarah merit'),
+    ('staff.archive', 'Archive or restore staff'),
+    ('staff.delete', 'Delete staff without merit history'),
     ('staff.import', 'Import CSV'),
-    ('merit.read.all', 'Lihat semua aktiviti merit'),
-    ('merit.adjust', 'Tambah/kurang merit'),
-    ('merit.correct', 'Buat pembetulan merit'),
-    ('reports.read', 'Lihat laporan'),
-    ('reports.export', 'Eksport laporan'),
-    ('settings.manage', 'Ubah tetapan merit'),
-    ('audit.read', 'Lihat audit sistem'),
+    ('merit.read.all', 'View all merit activity'),
+    ('merit.adjust', 'Adjust merit'),
+    ('merit.correct', 'Correct merit'),
+    ('reports.read', 'View reports'),
+    ('reports.export', 'Export reports'),
+    ('settings.manage', 'Change merit settings'),
+    ('audit.read', 'View audit log'),
   ];
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text('Kebenaran ${widget.profile['display_name']}'),
+        title: Text('Permissions for ${widget.profile['display_name']}'),
         content: SizedBox(width: 480, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Kebenaran diperiksa semula pada pangkalan data. Akses laporan staff kekal terhad mengikut rekod pautan mereka.'),
+          const Text('Permissions are enforced again by the database. Staff report access remains limited to linked records.'),
           const SizedBox(height: 8),
           ..._permissions.map((item) => CheckboxListTile(
             contentPadding: EdgeInsets.zero,
@@ -753,9 +821,9 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
             value: _selected.contains(item.$1),
             onChanged: (value) => setState(() { value == true ? _selected.add(item.$1) : _selected.remove(item.$1); }),
           )),
-          const _InfoBanner(text: 'Akaun dengan akses fungsi pengurusan akan diminta mengaktifkan MFA TOTP sebelum data boleh dibuka.'),
+          const _InfoBanner(text: 'Accounts with management access must enable TOTP MFA before viewing data.'),
         ]))),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(context, _selected), child: const Text('Simpan kebenaran'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, _selected), child: const Text('Save permissions'))],
       );
 }
 
@@ -790,7 +858,7 @@ class _SettingsPageState extends State<_SettingsPage> {
       _default.text = formatMerit(values.defaultScoreTenths);
       _floor.text = values.floorTenths == null ? '' : formatMerit(values.floorTenths!);
       _ceiling.text = values.ceilingTenths == null ? '' : formatMerit(values.ceilingTenths!);
-    } catch (_) { _error = 'Tetapan tidak dapat dimuat.'; }
+    } catch (_) { _error = 'Settings could not be loaded.'; }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -799,38 +867,38 @@ class _SettingsPageState extends State<_SettingsPage> {
     final floorValue = _floor.text.trim().isEmpty ? null : parseScoreTenths(_floor.text);
     final ceilingValue = _ceiling.text.trim().isEmpty ? null : parseScoreTenths(_ceiling.text);
     if (defaultValue == null || (_floor.text.trim().isNotEmpty && floorValue == null) || (_ceiling.text.trim().isNotEmpty && ceilingValue == null)) {
-      setState(() => _error = 'Gunakan nombor merit dengan maksimum satu tempat perpuluhan.');
+      setState(() => _error = 'Enter a merit value with at most one decimal place.');
       return;
     }
     setState(() { _saving = true; _error = null; });
     try {
       await widget.repository.updateSettings(defaultScoreTenths: defaultValue, floorTenths: floorValue, ceilingTenths: ceilingValue);
       await widget.onSaved();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tetapan merit disimpan.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Merit settings saved.')));
     } on MeritRepositoryException catch (error) { if (mounted) setState(() => _error = error.message); }
     finally { if (mounted) setState(() => _saving = false); }
   }
 
   @override
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(28), children: [
-    Text('Tetapan merit', style: Theme.of(context).textTheme.headlineMedium),
+    Text('Merit settings', style: Theme.of(context).textTheme.headlineMedium),
     const SizedBox(height: 5),
-    const Text('Skor default digunakan untuk staff baharu. Had skor pilihan dikuatkuasakan pada pangkalan data.', style: TextStyle(color: Color(0xFF667894))),
+    const Text('The default score is used for new staff. Optional score limits are enforced by the database.', style: TextStyle(color: Color(0xFF667894))),
     const SizedBox(height: 20),
     Card(child: Padding(padding: const EdgeInsets.all(20), child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (_loading) const Center(child: CircularProgressIndicator()) else ...[
-        TextField(controller: _default, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Skor default staff baharu', suffixText: 'merit')),
+      if (_loading) const Center(child: ThinkingOrbsLoader()) else ...[
+        TextField(controller: _default, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Default score for new staff', suffixText: 'merit')),
         const SizedBox(height: 12),
-        TextField(controller: _floor, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Had minimum (pilihan)', hintText: 'Tidak ditetapkan')),
+        TextField(controller: _floor, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Minimum limit (optional)', hintText: 'Not set')),
         const SizedBox(height: 12),
-        TextField(controller: _ceiling, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Had maksimum (pilihan)', hintText: 'Tidak ditetapkan')),
+        TextField(controller: _ceiling, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Maximum limit (optional)', hintText: 'Not set')),
         const SizedBox(height: 16),
         if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318)))),
-        Align(alignment: Alignment.centerRight, child: FilledButton.icon(onPressed: _saving ? null : _save, icon: const Icon(Icons.save_outlined), label: Text(_saving ? 'Menyimpan…' : 'Simpan tetapan'))),
+        Align(alignment: Alignment.centerRight, child: FilledButton.icon(onPressed: _saving ? null : _save, icon: _saving ? const ThinkingOrbsLoader(size: 18, label: 'Saving settings') : const Icon(Icons.save_outlined), label: Text(_saving ? 'Saving…' : 'Save settings'))),
       ],
     ])))),
     const SizedBox(height: 14),
-    const _InfoBanner(text: 'Semua perubahan tetapan dan kebenaran direkodkan dalam audit. Skor sedia ada tidak berubah apabila skor default dikemas kini.'),
+    const _InfoBanner(text: 'Settings and permission changes are recorded in the audit log. Existing scores are unchanged when the default score is updated.'),
   ]);
 }
 
@@ -875,7 +943,7 @@ class _EmptyState extends StatelessWidget {
 class _LoadingPage extends StatelessWidget {
   const _LoadingPage();
   @override
-  Widget build(BuildContext context) => const Scaffold(body: Center(child: CircularProgressIndicator()));
+  Widget build(BuildContext context) => const Scaffold(body: Center(child: ThinkingOrbsLoader(size: 44)));
 }
 
 class _FailurePage extends StatelessWidget {
@@ -883,11 +951,11 @@ class _FailurePage extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
   @override
-  Widget build(BuildContext context) => Scaffold(body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.cloud_off_outlined, size: 38, color: Color(0xFF667894)), const SizedBox(height: 14), Text(message, textAlign: TextAlign.center), const SizedBox(height: 12), FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Cuba semula'))]))));
+  Widget build(BuildContext context) => Scaffold(body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.cloud_off_outlined, size: 38, color: Color(0xFF667894)), const SizedBox(height: 14), Text(message, textAlign: TextAlign.center), const SizedBox(height: 12), FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Try again'))]))));
 }
 
 String _roleLabel(String role) => switch (role) {
-      'owner' => 'Pemantau sistem',
+      'owner' => 'System owner',
       'ceo' => 'CEO',
       _ => 'Staff',
     };
@@ -943,20 +1011,20 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text(widget.staff == null ? 'Tambah staff' : 'Edit rekod staff'),
+        title: Text(widget.staff == null ? 'Add staff' : 'Edit staff record'),
         content: SizedBox(width: 420, child: Form(key: _form, child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextFormField(controller: _code, decoration: const InputDecoration(labelText: 'Kod staff'), validator: _required),
+          TextFormField(controller: _code, decoration: const InputDecoration(labelText: 'Staff code'), validator: _required),
           const SizedBox(height: 10),
-          TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Nama penuh'), validator: _required),
+          TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Full name'), validator: _required),
           const SizedBox(height: 10),
-          TextFormField(controller: _department, decoration: const InputDecoration(labelText: 'Jabatan (pilihan)')),
+          TextFormField(controller: _department, decoration: const InputDecoration(labelText: 'Department (optional)')),
           if (widget.staff == null) ...[
             const SizedBox(height: 10),
-            TextFormField(controller: _score, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Skor permulaan'), validator: (value) => parseScoreTenths(value ?? '') == null ? 'Gunakan skor sah dengan maksimum satu tempat perpuluhan.' : null),
+            TextFormField(controller: _score, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'Starting merit score'), validator: (value) => parseScoreTenths(value ?? '') == null ? 'Enter a valid score with at most one decimal place.' : null),
           ],
           if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318)))),
         ]))),
-        actions: [TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Batal')), FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'Menyimpan…' : widget.staff == null ? 'Simpan staff' : 'Simpan perubahan'))],
+        actions: [TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')), FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'Saving…' : widget.staff == null ? 'Save staff' : 'Save changes'))],
       );
 }
 
@@ -983,19 +1051,19 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
   Widget build(BuildContext context) {
     final after = widget.staff.scoreTenths + _direction * _step;
     return AlertDialog(
-      title: const Text('Pelarasan merit'),
+      title: const Text('Adjust merit'),
       content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('${widget.staff.code}  •  ${widget.staff.name}', style: const TextStyle(color: Color(0xFF667894))),
         const SizedBox(height: 16),
-        SegmentedButton<int>(segments: const [ButtonSegment(value: 1, label: Text('Tambah'), icon: Icon(Icons.add)), ButtonSegment(value: -1, label: Text('Kurang'), icon: Icon(Icons.remove))], selected: {_direction}, onSelectionChanged: (selection) => setState(() => _direction = selection.first)),
+        SegmentedButton<int>(segments: const [ButtonSegment(value: 1, label: Text('Increase'), icon: Icon(Icons.add)), ButtonSegment(value: -1, label: Text('Decrease'), icon: Icon(Icons.remove))], selected: {_direction}, onSelectionChanged: (selection) => setState(() => _direction = selection.first)),
         const SizedBox(height: 12),
-        DropdownButtonFormField<int>(initialValue: _step, decoration: const InputDecoration(labelText: 'Jumlah perubahan'), items: List.generate(10, (index) { final amount = (index + 1) * 10; return DropdownMenuItem(value: amount, child: Text(formatMerit(amount))); }), onChanged: (value) => setState(() => _step = value ?? 10)),
+        DropdownButtonFormField<int>(initialValue: _step, decoration: const InputDecoration(labelText: 'Change amount'), items: List.generate(10, (index) { final amount = (index + 1) * 10; return DropdownMenuItem(value: amount, child: Text(formatMerit(amount))); }), onChanged: (value) => setState(() => _step = value ?? 10)),
         const SizedBox(height: 12),
-        TextField(controller: _reason, onChanged: (_) => setState(() {}), minLines: 2, maxLines: 4, maxLength: 500, decoration: const InputDecoration(labelText: 'Sebab (wajib)', alignLabelWithHint: true)),
+        TextField(controller: _reason, onChanged: (_) => setState(() {}), minLines: 2, maxLines: 4, maxLength: 500, decoration: const InputDecoration(labelText: 'Reason (required)', alignLabelWithHint: true)),
         const SizedBox(height: 8),
         Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFF3F6FB), borderRadius: BorderRadius.circular(8)), child: Text('${formatMerit(widget.staff.scoreTenths)}  →  ${formatDelta(_direction * _step)}  →  ${formatMerit(after)}', style: const TextStyle(fontWeight: FontWeight.w700))),
       ])),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')), FilledButton(onPressed: _reason.text.trim().isEmpty ? null : () => Navigator.pop(context, _AdjustmentInput(_direction * _step, _reason.text.trim())), child: const Text('Sahkan perubahan'))],
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')), FilledButton(onPressed: _reason.text.trim().isEmpty ? null : () => Navigator.pop(context, _AdjustmentInput(_direction * _step, _reason.text.trim())), child: const Text('Confirm change'))],
     );
   }
 }
@@ -1022,18 +1090,18 @@ class _CorrectionDialogState extends State<_CorrectionDialog> {
   void dispose() { _score.dispose(); _reason.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Betulkan skor merit'),
+    title: const Text('Correct merit score'),
     content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Text('${widget.staff.code}  ·  ${widget.staff.name}', style: const TextStyle(color: Color(0xFF667894))),
       const SizedBox(height: 12),
-      TextField(controller: _score, onChanged: (_) => setState(() {}), autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: InputDecoration(labelText: 'Skor yang betul', helperText: 'Skor semasa ${formatMerit(widget.staff.scoreTenths)}')),
+      TextField(controller: _score, onChanged: (_) => setState(() {}), autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: InputDecoration(labelText: 'Corrected score', helperText: 'Current score: ${formatMerit(widget.staff.scoreTenths)}')),
       const SizedBox(height: 12),
-      TextField(controller: _reason, onChanged: (_) => setState(() {}), minLines: 2, maxLines: 4, maxLength: 500, decoration: const InputDecoration(labelText: 'Sebab pembetulan (wajib)', alignLabelWithHint: true)),
-      const Text('Pembetulan menambah rekod baru; sejarah asal kekal.', style: TextStyle(fontSize: 12, color: Color(0xFF667894))),
+      TextField(controller: _reason, onChanged: (_) => setState(() {}), minLines: 2, maxLines: 4, maxLength: 500, decoration: const InputDecoration(labelText: 'Correction reason (required)', alignLabelWithHint: true)),
+      const Text('A correction adds a new record; the original history is retained.', style: TextStyle(fontSize: 12, color: Color(0xFF667894))),
     ])),
     actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-      FilledButton(onPressed: parseScoreTenths(_score.text) == null || _reason.text.trim().isEmpty ? null : () => Navigator.pop(context, _CorrectionInput(parseScoreTenths(_score.text)!, _reason.text.trim())), child: const Text('Simpan pembetulan')),
+      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+      FilledButton(onPressed: parseScoreTenths(_score.text) == null || _reason.text.trim().isEmpty ? null : () => Navigator.pop(context, _CorrectionInput(parseScoreTenths(_score.text)!, _reason.text.trim())), child: const Text('Save correction')),
     ],
   );
 }
@@ -1072,7 +1140,7 @@ class _InviteDialogState extends State<_InviteDialog> {
     } on MeritRepositoryException catch (error) {
       setState(() => _error = error.message);
     } catch (_) {
-      setState(() => _error = 'Jemputan tidak berjaya. Semak SMTP dan cuba lagi.');
+      setState(() => _error = 'Invitation failed. Check SMTP configuration and try again.');
     } finally { if (mounted) setState(() => _busy = false); }
   }
 
@@ -1083,25 +1151,25 @@ class _InviteDialogState extends State<_InviteDialog> {
     final ceoExists = widget.profiles.any((item) => item['role'] == 'ceo');
     if (_role == 'staff' && _staffId != null && !available.any((item) => item.id == _staffId)) _staffId = null;
     return AlertDialog(
-      title: const Text('Jemput pengguna'),
+      title: const Text('Invite user'),
       content: SizedBox(width: 440, child: Form(key: _form, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Text('Pautan jemputan akan dihantar ke e-mel. SMTP production mesti telah disediakan.'),
+        const Text('An invitation link will be sent by email. Production SMTP must be configured.'),
         const SizedBox(height: 14),
-        TextFormField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'E-mel'), validator: (value) => value == null || !value.trim().contains('@') ? 'Masukkan e-mel yang sah.' : null),
+        TextFormField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email'), validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null),
         const SizedBox(height: 10),
-        TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Nama pengguna'), validator: _required),
+        TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'User name'), validator: _required),
         const SizedBox(height: 10),
-        DropdownButtonFormField<String>(initialValue: _role, decoration: const InputDecoration(labelText: 'Peranan'), items: [if (!ceoExists) const DropdownMenuItem(value: 'ceo', child: Text('CEO')), const DropdownMenuItem(value: 'staff', child: Text('Staff — paparan sendiri'))], onChanged: (value) => setState(() { _role = value ?? 'staff'; _staffId = null; })),
+        DropdownButtonFormField<String>(initialValue: _role, decoration: const InputDecoration(labelText: 'Role'), items: [if (!ceoExists) const DropdownMenuItem(value: 'ceo', child: Text('CEO')), const DropdownMenuItem(value: 'staff', child: Text('Staff — own records only'))], onChanged: (value) => setState(() { _role = value ?? 'staff'; _staffId = null; })),
         if (_role == 'staff') ...[
           const SizedBox(height: 10),
           if (available.isEmpty)
-            const Text('Tambah rekod staff dahulu sebelum menghantar jemputan staff.', style: TextStyle(color: Color(0xFF667894), fontSize: 12))
+            const Text('Add a staff record before sending a staff invitation.', style: TextStyle(color: Color(0xFF667894), fontSize: 12))
           else
-            DropdownButtonFormField<String>(initialValue: _staffId, decoration: const InputDecoration(labelText: 'Pautkan rekod staff'), items: available.map((item) => DropdownMenuItem(value: item.id, child: Text('${item.code} — ${item.name}', overflow: TextOverflow.ellipsis))).toList(), onChanged: (value) => setState(() => _staffId = value), validator: (value) => _role == 'staff' && value == null ? 'Pilih rekod staff.' : null),
+            DropdownButtonFormField<String>(initialValue: _staffId, decoration: const InputDecoration(labelText: 'Link staff record'), items: available.map((item) => DropdownMenuItem(value: item.id, child: Text('${item.code} — ${item.name}', overflow: TextOverflow.ellipsis))).toList(), onChanged: (value) => setState(() => _staffId = value), validator: (value) => _role == 'staff' && value == null ? 'Select a staff record.' : null),
         ],
         if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318)))),
       ]))),
-      actions: [TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Batal')), FilledButton.icon(onPressed: _busy || (_role == 'staff' && available.isEmpty) ? null : _send, icon: const Icon(Icons.send_outlined), label: Text(_busy ? 'Menghantar…' : 'Hantar jemputan'))],
+      actions: [TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')), FilledButton.icon(onPressed: _busy || (_role == 'staff' && available.isEmpty) ? null : _send, icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Sending invitation') : const Icon(Icons.send_outlined), label: Text(_busy ? 'Sending…' : 'Send invitation'))],
     );
   }
 }

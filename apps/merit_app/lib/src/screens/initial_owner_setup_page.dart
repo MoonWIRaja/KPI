@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../widgets/merit_brand.dart';
+import '../widgets/thinking_orbs_loader.dart';
 
 class InitialOwnerSetupPage extends StatefulWidget {
   const InitialOwnerSetupPage({required this.email, required this.onComplete, super.key});
@@ -46,16 +47,16 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
       );
       await widget.onComplete();
     } on AuthException {
-      if (mounted) setState(() => _error = 'Kata laluan tidak memenuhi polisi projek. Semak syarat dan cuba lagi.');
+      if (mounted) setState(() => _error = 'Password does not meet the project policy. Check the requirements and try again.');
     } on PostgrestException catch (error) {
       if (mounted) {
         _error = error.message.contains('not available')
-            ? 'Akaun ini tidak dibenarkan menjadi Owner pertama. Semak e-mel bootstrap dan hubungi operator.'
-            : 'Setup Owner belum tersedia pada Supabase. Pastikan migration setup telah digunakan.';
+            ? 'This account is not authorized to become the first Owner. Check the bootstrap email and contact the operator.'
+            : 'Owner setup is not available on Supabase. Make sure the setup migration has been applied.';
         setState(() {});
       }
     } catch (_) {
-      if (mounted) setState(() => _error = 'Setup tidak berjaya. Semak sambungan dan cuba semula.');
+      if (mounted) setState(() => _error = 'Setup failed. Check the connection and try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -78,13 +79,13 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
                       children: [
                         const MeritBrand(),
                         const SizedBox(height: 24),
-                        Text('Sediakan akaun Admin (Owner)', style: Theme.of(context).textTheme.headlineMedium),
+                        Text('Set up administrator account (Owner)', style: Theme.of(context).textTheme.headlineMedium),
                         const SizedBox(height: 8),
                         const Text(
-                          'Ini setup sekali sahaja untuk pemantau sistem. E-mel ini mesti telah dibenarkan oleh operator Supabase dan disahkan.',
+                          'This is a one-time setup for the system owner. The email must be allow-listed and verified by the Supabase operator.',
                         ),
                         const SizedBox(height: 20),
-                        const Text('Akaun yang sedang log masuk', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                        const Text('Signed-in account', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 5),
                         SelectableText(widget.email, style: const TextStyle(color: Color(0xFF34435D))),
                         const SizedBox(height: 18),
@@ -92,8 +93,8 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
                           controller: _name,
                           textCapitalization: TextCapitalization.words,
                           inputFormatters: [LengthLimitingTextInputFormatter(160)],
-                          decoration: const InputDecoration(labelText: 'Nama pemantau sistem'),
-                          validator: (value) => value == null || value.trim().isEmpty ? 'Masukkan nama.' : null,
+                          decoration: const InputDecoration(labelText: 'System owner name'),
+                          validator: (value) => value == null || value.trim().isEmpty ? 'Enter your name.' : null,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -101,15 +102,15 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
                           obscureText: !_showPassword,
                           autofillHints: const [AutofillHints.newPassword],
                           decoration: InputDecoration(
-                            labelText: 'Kata laluan baharu',
-                            helperText: 'Minimum 12 aksara.',
+                            labelText: 'New password',
+                            helperText: 'At least 12 characters.',
                             suffixIcon: IconButton(
-                              tooltip: _showPassword ? 'Sembunyikan kata laluan' : 'Tunjukkan kata laluan',
+                              tooltip: _showPassword ? 'Hide password' : 'Show password',
                               onPressed: () => setState(() => _showPassword = !_showPassword),
                               icon: Icon(_showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                             ),
                           ),
-                          validator: (value) => value == null || value.length < 12 ? 'Kata laluan minimum 12 aksara.' : null,
+                          validator: (value) => value == null || value.length < 12 ? 'Password must be at least 12 characters.' : null,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -117,8 +118,8 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
                           obscureText: !_showPassword,
                           autofillHints: const [AutofillHints.newPassword],
                           onFieldSubmitted: (_) => _finishSetup(),
-                          decoration: const InputDecoration(labelText: 'Ulang kata laluan baharu'),
-                          validator: (value) => value != _password.text ? 'Kata laluan tidak sepadan.' : null,
+                          decoration: const InputDecoration(labelText: 'Confirm new password'),
+                          validator: (value) => value != _password.text ? 'Passwords do not match.' : null,
                         ),
                         if (_error != null) ...[
                           const SizedBox(height: 12),
@@ -128,19 +129,19 @@ class _InitialOwnerSetupPageState extends State<InitialOwnerSetupPage> {
                         FilledButton.icon(
                           onPressed: _busy ? null : _finishSetup,
                           icon: _busy
-                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                              ? const ThinkingOrbsLoader(size: 18, label: 'Setting up account')
                               : const Icon(Icons.verified_user_outlined),
-                          label: Text(_busy ? 'Menyediakan akaun…' : 'Sediakan akaun Admin'),
+                          label: Text(_busy ? 'Setting up accountâ€¦' : 'Set up administrator account'),
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Selepas setup, anda perlu aktifkan TOTP sebelum membuka data staff.',
+                          'After setup, enable TOTP before viewing staff data.',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
                         ),
                         TextButton(
                           onPressed: _busy ? null : () => Supabase.instance.client.auth.signOut(),
-                          child: const Text('Log keluar'),
+                          child: const Text('Sign out'),
                         ),
                       ],
                     ),

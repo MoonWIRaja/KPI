@@ -6,6 +6,7 @@ import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 
 import '../data/merit_repository.dart';
+import '../widgets/thinking_orbs_loader.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({required this.repository, required this.canExport, super.key});
@@ -20,7 +21,7 @@ class _ReportsPageState extends State<ReportsPage> {
   late DateTime _from;
   late DateTime _to;
   List<MeritEvent> _events = const [];
-  String _direction = 'Semua';
+  String _direction = 'All';
   bool _loading = true;
   bool _exporting = false;
   String? _error;
@@ -40,7 +41,7 @@ class _ReportsPageState extends State<ReportsPage> {
       final events = await widget.repository.loadReportEvents(from: _from, to: _to);
       if (mounted) setState(() { _events = events; _loading = false; });
     } catch (_) {
-      if (mounted) setState(() { _error = 'Laporan tidak dapat dimuat. Semak kebenaran dan sambungan.'; _loading = false; });
+      if (mounted) setState(() { _error = 'Report could not be loaded. Check your permissions and connection.'; _loading = false; });
     }
   }
 
@@ -57,8 +58,8 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   List<MeritEvent> get _visibleEvents => _events.where((event) {
-        if (_direction == 'Kenaikan') return event.deltaTenths > 0;
-        if (_direction == 'Pengurangan') return event.deltaTenths < 0;
+        if (_direction == 'Increase') return event.deltaTenths > 0;
+        if (_direction == 'Decrease') return event.deltaTenths < 0;
         return true;
       }).toList();
 
@@ -66,15 +67,15 @@ class _ReportsPageState extends State<ReportsPage> {
 
   Future<void> _export() async {
     final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
-      title: const Text('Eksport data staff?'),
-      content: const Text('Fail mengandungi nama staff, perubahan merit dan sebab yang direkodkan. Simpan di lokasi yang diluluskan dan jangan hantar kepada pihak tidak berkenaan.'),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Eksport CSV'))],
+      title: const Text('Export staff data?'),
+      content: const Text('The file includes staff names, merit changes, and recorded reasons. Store it in an approved location and do not share it with unauthorized people.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Export CSV'))],
     ));
     if (confirmed != true) return;
     setState(() => _exporting = true);
     try {
       final rows = <List<dynamic>>[
-        ['Tarikh UTC', 'Kod staff', 'Nama staff', 'Peristiwa', 'Perubahan', 'Sebelum', 'Selepas', 'Sebab', 'Dikemaskini oleh'],
+        ['Timestamp (UTC)', 'Staff code', 'Staff name', 'Event', 'Change', 'Before', 'After', 'Reason', 'Updated by'],
         ..._visibleEvents.map((event) => [
           event.createdAt.toUtc().toIso8601String(),
           _safeCell(event.staffCode ?? ''),
@@ -84,7 +85,7 @@ class _ReportsPageState extends State<ReportsPage> {
           event.beforeTenths == null ? '' : formatMerit(event.beforeTenths!),
           formatMerit(event.afterTenths),
           _safeCell(event.reason),
-          _safeCell(event.actorName ?? 'Akaun tidak diketahui'),
+          _safeCell(event.actorName ?? 'Unknown account'),
         ]),
       ];
       final csv = Csv().encode(rows);
@@ -96,9 +97,9 @@ class _ReportsPageState extends State<ReportsPage> {
         mimeType: MimeType.custom,
         customMimeType: 'text/csv; charset=utf-8',
       );
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Laporan CSV berjaya disediakan dan direkodkan.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('CSV report exported and recorded.')));
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Eksport gagal. Semak kebenaran atau cuba lagi.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export failed. Check your permissions or try again.')));
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -110,35 +111,35 @@ class _ReportsPageState extends State<ReportsPage> {
     final total = changes.fold<int>(0, (sum, event) => sum + event.deltaTenths);
     final width = MediaQuery.sizeOf(context).width;
     return ListView(
-      padding: EdgeInsets.fromLTRB(width < 700 ? 18 : 32, 18, width < 700 ? 18 : 32, 30),
+        padding: EdgeInsets.fromLTRB(width < 700 ? 18 : 32, 18, width < 700 ? 18 : 32, 30),
       children: [
-        Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Laporan merit', style: Theme.of(context).textTheme.headlineMedium), const SizedBox(height: 4), const Text('Semak sebab kenaikan dan pengurangan merit dalam tempoh dipilih.', style: TextStyle(color: Color(0xFF667894)))])), if (widget.canExport) OutlinedButton.icon(onPressed: _exporting || _loading ? null : _export, icon: const Icon(Icons.download_outlined), label: Text(_exporting ? 'Mengeksport…' : 'Eksport CSV'))]),
+        Wrap(runSpacing: 8, alignment: WrapAlignment.spaceBetween, children: [Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Merit reports', style: Theme.of(context).textTheme.headlineMedium), const SizedBox(height: 4), const Text('Review reasons for merit increases and decreases within a selected period.', style: TextStyle(color: Color(0xFF667894)))]), if (widget.canExport) OutlinedButton.icon(onPressed: _exporting || _loading ? null : _export, icon: _exporting ? const ThinkingOrbsLoader(size: 18, label: 'Exporting report') : const Icon(Icons.download_outlined), label: Text(_exporting ? 'Exporting…' : 'Export CSV'))]),
         const SizedBox(height: 20),
         Wrap(spacing: 10, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          OutlinedButton.icon(onPressed: () => _chooseDate(true), icon: const Icon(Icons.calendar_today_outlined, size: 16), label: Text('Dari  ${formatDate(_from)}')),
-          OutlinedButton.icon(onPressed: () => _chooseDate(false), icon: const Icon(Icons.event_outlined, size: 16), label: Text('Hingga  ${formatDate(_to)}')),
-          SizedBox(width: 170, child: DropdownButtonFormField<String>(initialValue: _direction, decoration: const InputDecoration(labelText: 'Jenis perubahan', isDense: true), items: const ['Semua', 'Kenaikan', 'Pengurangan'].map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(), onChanged: (value) => setState(() => _direction = value ?? 'Semua'))),
+          OutlinedButton.icon(onPressed: () => _chooseDate(true), icon: const Icon(Icons.calendar_today_outlined, size: 16), label: Text('From  ${formatDate(_from)}')),
+          OutlinedButton.icon(onPressed: () => _chooseDate(false), icon: const Icon(Icons.event_outlined, size: 16), label: Text('To  ${formatDate(_to)}')),
+          SizedBox(width: 170, child: DropdownButtonFormField<String>(initialValue: _direction, decoration: const InputDecoration(labelText: 'Change type', isDense: true), items: const ['All', 'Increase', 'Decrease'].map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(), onChanged: (value) => setState(() => _direction = value ?? 'All'))),
         ]),
         const SizedBox(height: 14),
         Wrap(spacing: 12, runSpacing: 12, children: [
-          _SummaryCard(label: 'PERUBAHAN', value: '${changes.length}', icon: Icons.swap_vert),
-          _SummaryCard(label: 'KENAIKAN', value: '${changes.where((event) => event.deltaTenths > 0).length}', icon: Icons.trending_up),
-          _SummaryCard(label: 'PENGURANGAN', value: '${changes.where((event) => event.deltaTenths < 0).length}', icon: Icons.trending_down),
-          _SummaryCard(label: 'IMBANGAN', value: formatDelta(total), icon: Icons.account_balance_outlined),
+          _SummaryCard(label: 'CHANGES', value: '${changes.length}', icon: Icons.swap_vert),
+          _SummaryCard(label: 'INCREASES', value: '${changes.where((event) => event.deltaTenths > 0).length}', icon: Icons.trending_up),
+          _SummaryCard(label: 'DECREASES', value: '${changes.where((event) => event.deltaTenths < 0).length}', icon: Icons.trending_down),
+          _SummaryCard(label: 'NET CHANGE', value: formatDelta(total), icon: Icons.account_balance_outlined),
         ]),
         const SizedBox(height: 16),
-        if (_loading) const Card(child: Padding(padding: EdgeInsets.all(28), child: Center(child: CircularProgressIndicator())))
+        if (_loading) const Card(child: Padding(padding: EdgeInsets.all(28), child: Center(child: ThinkingOrbsLoader())))
         else if (_error != null) Card(child: Padding(padding: const EdgeInsets.all(20), child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318)))))
-        else if (_visibleEvents.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(24), child: Center(child: Text('Tiada rekod untuk tempoh dan penapis ini.'))))
+        else if (_visibleEvents.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(24), child: Center(child: Text('No records match this date range and filter.'))))
         else Card(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
-          columns: const [DataColumn(label: Text('TARIKH')), DataColumn(label: Text('STAFF')), DataColumn(label: Text('PERUBAHAN')), DataColumn(label: Text('SEBAB')), DataColumn(label: Text('SEBELUM → SELEPAS')), DataColumn(label: Text('DIREKOD OLEH'))],
+          columns: const [DataColumn(label: Text('DATE')), DataColumn(label: Text('STAFF')), DataColumn(label: Text('CHANGE')), DataColumn(label: Text('REASON')), DataColumn(label: Text('BEFORE → AFTER')), DataColumn(label: Text('RECORDED BY'))],
           rows: _visibleEvents.map((event) => DataRow(cells: [
             DataCell(Text(formatDate(event.createdAt))),
             DataCell(Text('${event.staffCode ?? '—'}  ${event.staffName ?? ''}')),
-            DataCell(Text(event.type == 'opening' ? 'Mula ${formatMerit(event.afterTenths)}' : formatDelta(event.deltaTenths), style: TextStyle(color: event.deltaTenths < 0 ? const Color(0xFFB42318) : const Color(0xFF16804A), fontWeight: FontWeight.w700))),
+            DataCell(Text(event.type == 'opening' ? 'Starting score ${formatMerit(event.afterTenths)}' : formatDelta(event.deltaTenths), style: TextStyle(color: event.deltaTenths < 0 ? const Color(0xFFB42318) : const Color(0xFF16804A), fontWeight: FontWeight.w700))),
             DataCell(SizedBox(width: 300, child: Text(event.reason, maxLines: 2, overflow: TextOverflow.ellipsis))),
             DataCell(Text(event.beforeTenths == null ? '— → ${formatMerit(event.afterTenths)}' : '${formatMerit(event.beforeTenths!)} → ${formatMerit(event.afterTenths)}')),
-            DataCell(Text(event.actorName ?? 'Akaun tidak diketahui')),
+            DataCell(Text(event.actorName ?? 'Unknown account')),
           ])).toList(),
         ))),
       ],

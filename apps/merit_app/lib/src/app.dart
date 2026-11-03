@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +8,7 @@ import 'screens/home_shell.dart';
 import 'screens/initial_owner_setup_page.dart';
 import 'screens/login_page.dart';
 import 'screens/password_setup_page.dart';
+import 'widgets/thinking_orbs_loader.dart';
 
 class MeritTrackerApp extends StatelessWidget {
   const MeritTrackerApp({required this.configured, super.key});
@@ -143,7 +144,7 @@ class _FirstRunGateState extends State<_FirstRunGate> {
   Widget build(BuildContext context) => switch (_state) {
         'first-run' => const FirstRunSetupPage(),
         'login' => const LoginPage(),
-        _ => const Scaffold(body: Center(child: CircularProgressIndicator())),
+        _ => const Scaffold(body: Center(child: ThinkingOrbsLoader(size: 44))),
       };
 }
 
@@ -189,7 +190,7 @@ class _AuthenticatedAccountGateState extends State<_AuthenticatedAccountGate> {
         'owner-setup' => InitialOwnerSetupPage(email: widget.email, onComplete: _resolve),
         'unlinked' => _AccountPendingPage(onSignOut: () => Supabase.instance.client.auth.signOut()),
         'setup-unavailable' => _AccountSetupUnavailablePage(onRetry: _resolve),
-        _ => const Scaffold(body: Center(child: CircularProgressIndicator())),
+        _ => const Scaffold(body: Center(child: ThinkingOrbsLoader(size: 44))),
       };
 }
 
@@ -200,9 +201,9 @@ class _AccountPendingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _AccountMessagePage(
-        title: 'Akaun belum dipautkan',
-        message: 'Hubungi Owner untuk jemputan atau akses. Pendaftaran akaun awam ditutup.',
-        actionLabel: 'Log keluar',
+        title: 'Account not linked',
+        message: 'Contact the system owner for an invitation or access. Public account registration is disabled.',
+        actionLabel: 'Sign out',
         onAction: onSignOut,
       );
 }
@@ -214,9 +215,9 @@ class _AccountSetupUnavailablePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _AccountMessagePage(
-        title: 'Setup Supabase belum tersedia',
-        message: 'Pastikan migration aplikasi telah digunakan pada project Supabase dan cuba semula.',
-        actionLabel: 'Cuba lagi',
+        title: 'Supabase setup is unavailable',
+        message: 'Make sure the application migrations have been applied to the Supabase project, then try again.',
+        actionLabel: 'Try again',
         onAction: onRetry,
         showSignOut: true,
       );
@@ -267,11 +268,11 @@ class _AccountMessagePageState extends State<_AccountMessagePage> {
                       const SizedBox(height: 8),
                       Text(widget.message),
                       const SizedBox(height: 18),
-                      FilledButton(onPressed: _busy ? null : _act, child: Text(_busy ? 'Sila tunggu…' : widget.actionLabel)),
+                      FilledButton(onPressed: _busy ? null : _act, child: Text(_busy ? 'Please wait...' : widget.actionLabel)),
                       if (widget.showSignOut)
                         TextButton(
                           onPressed: _busy ? null : () => Supabase.instance.client.auth.signOut(),
-                          child: const Text('Log keluar'),
+                          child: const Text('Sign out'),
                         ),
                     ],
                   ),
@@ -302,13 +303,13 @@ class _ConfigurationRequired extends StatelessWidget {
                 children: [
                   const _BrandMark(),
                   const SizedBox(height: 24),
-                  Text('Sambungan belum disediakan', style: Theme.of(context).textTheme.titleLarge),
+                  Text('Connection not configured', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 10),
-                  const Text('Konfigurasikan Supabase URL dan publishable key sebagai nilai build GitHub Actions. Jangan masukkan service-role key di aplikasi.'),
+                  const Text('Configure the Supabase URL and publishable key as GitHub Actions build values. Never put a service-role key in the app.'),
                   const SizedBox(height: 18),
                   const SelectableText('SUPABASE_URL\nSUPABASE_PUBLISHABLE_KEY'),
                   const SizedBox(height: 10),
-                  const Text('Tetapan ini ialah maklumat client yang boleh dilihat pengguna laman. RLS mesti melindungi semua data. Akaun baharu tetap invite-only.'),
+                  const Text('These client values are visible to site visitors. Row-level security must protect all data. New accounts remain invite-only.'),
                 ],
               ),
             ),

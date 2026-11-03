@@ -6,6 +6,7 @@ import 'csv_import_dialog.dart';
 import 'mfa_gate.dart';
 import 'reports_page.dart';
 import 'audit_page.dart';
+import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
 
 class HomeShell extends StatefulWidget {
@@ -571,11 +572,7 @@ class _AccountMenu extends StatelessWidget {
 
 class _BrandMark extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 34, height: 34, alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFF172033), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.workspace_premium_rounded, color: Color(0xFFFFD166), size: 20)),
-        const SizedBox(width: 9),
-        Text('Merit Tracker', style: Theme.of(context).textTheme.titleMedium),
-      ]);
+  Widget build(BuildContext context) => const MeritBrand(compact: true);
 }
 
 class _StatItem {

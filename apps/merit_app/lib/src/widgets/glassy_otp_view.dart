@@ -245,7 +245,7 @@ class _GlassyOtpViewState extends State<GlassyOtpView> with SingleTickerProvider
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF172033),
+                  color: _successColor,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: _successColor, width: 2.2),
                   boxShadow: [

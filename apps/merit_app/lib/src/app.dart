@@ -8,6 +8,7 @@ import 'screens/home_shell.dart';
 import 'screens/initial_owner_setup_page.dart';
 import 'screens/login_page.dart';
 import 'screens/password_setup_page.dart';
+import 'widgets/merit_brand.dart';
 import 'widgets/thinking_orbs_loader.dart';
 
 class MeritTrackerApp extends StatelessWidget {
@@ -337,20 +338,5 @@ class _BrandMark extends StatelessWidget {
   const _BrandMark();
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(color: const Color(0xFF172033), borderRadius: BorderRadius.circular(9)),
-          child: const Icon(Icons.workspace_premium_rounded, color: Color(0xFFFFD166), size: 21),
-        ),
-        const SizedBox(width: 10),
-        Text('Merit Tracker', style: Theme.of(context).textTheme.titleMedium),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => const MeritBrand(compact: true);
 }

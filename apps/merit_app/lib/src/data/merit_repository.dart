@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -84,7 +84,24 @@ class MeritRepository {
     if (row == null || row['is_active'] != true) {
       throw const MeritRepositoryException('This account has not been activated. Contact the system owner.');
     }
-    return row;
+    final user = _client.auth.currentUser;
+    final avatarUrl = user?.userMetadata?['avatar_data_url'] as String?;
+    return {
+      ...row,
+      if (avatarUrl != null && avatarUrl.isNotEmpty) 'avatar_url': avatarUrl,
+    };
+  }
+
+  Future<void> updateAvatarDataUrl(String? dataUrl) async {
+    try {
+      await _client.auth.updateUser(
+        UserAttributes(data: {'avatar_data_url': dataUrl ?? ''}),
+      );
+    } on AuthException catch (error) {
+      throw MeritRepositoryException(error.message);
+    } catch (_) {
+      throw const MeritRepositoryException('Profile image could not be saved.');
+    }
   }
 
   Future<List<StaffMember>> loadStaff() async {

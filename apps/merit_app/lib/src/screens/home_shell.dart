@@ -119,8 +119,16 @@ class _HomeShellState extends State<HomeShell> {
       items.add(const _NavItem('My Merit', Icons.person_outline, 'self', mobileLabel: 'Merit'));
       items.add(const _NavItem('My History', Icons.history, 'self-events', mobileLabel: 'History'));
     }
-    if (_hasPermission('staff.read.all') || _hasPermission('staff.create') || _hasPermission('staff.import')) {
-      items.add(const _NavItem('Staff Board', Icons.groups_outlined, 'staff', mobileLabel: 'Staff'));
+    if (_hasPermission('staff.read.all')) {
+      items.add(const _NavItem('Dashboard', Icons.dashboard_outlined, 'dashboard', mobileLabel: 'Dashboard'));
+    }
+    if (_hasPermission('staff.read.all') ||
+        _hasPermission('staff.create') ||
+        _hasPermission('staff.update') ||
+        _hasPermission('staff.archive') ||
+        _hasPermission('staff.delete') ||
+        _hasPermission('staff.import')) {
+      items.add(const _NavItem('Staff', Icons.badge_outlined, 'staff', mobileLabel: 'Staff'));
     }
     if (_hasPermission('reports.read')) {
       items.add(const _NavItem('Reports', Icons.bar_chart_outlined, 'reports'));
@@ -247,7 +255,8 @@ class _HomeShellState extends State<HomeShell> {
   Widget _buildPage() {
     final route = _navItems[_selectedPage].route;
     return switch (route) {
-      'staff' => _staffPage(),
+      'dashboard' => _dashboardPage(),
+      'staff' => _staffRegistrationPage(),
       'self' => _staffSelfPage(),
       'self-events' => _eventsPage(),
       'reports' => ReportsPage(
@@ -380,15 +389,17 @@ class _HomeShellState extends State<HomeShell> {
   List<int> get _visibleMobileNavItems {
     if (_navItems.length <= 5) return List<int>.generate(_navItems.length, (index) => index);
     final primary = <int>[];
-    for (final route in ['staff', 'self', 'reports', 'audit', 'settings']) {
+    for (final route in ['dashboard', 'staff', 'self', 'reports', 'audit', 'settings']) {
       final index = _navItems.indexWhere((item) => item.route == route);
-      if (index >= 0 && !primary.contains(index) && primary.length < 4) primary.add(index);
+      if (index >= 0 && !primary.contains(index) && primary.length < 5) primary.add(index);
     }
-    if (_selectedPage >= 0 && !primary.contains(_selectedPage)) primary.add(_selectedPage);
+    if (_selectedPage >= 0 && !primary.contains(_selectedPage)) {
+      primary[primary.length - 1] = _selectedPage;
+    }
     return primary;
   }
 
-  Widget _staffPage() {
+  Widget _dashboardPage() {
     final active = _staff.where((staff) => !staff.archived).toList();
     final average = active.isEmpty
         ? '5.0'
@@ -397,6 +408,44 @@ class _HomeShellState extends State<HomeShell> {
     final monthChanges = _events
         .where((event) => event.type == 'adjustment' && event.createdAt.toLocal().isAfter(firstOfMonth))
         .toList();
+    final staff = active
+        .where((item) =>
+            '${item.code} ${item.name} ${item.department ?? ''}'.toLowerCase().contains(_search.text.toLowerCase()))
+        .toList();
+    final width = MediaQuery.sizeOf(context).width;
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(width < 700 ? 18 : 32, 18, width < 700 ? 18 : 32, 30),
+      children: [
+        const _PageHeading(
+          title: 'Dashboard',
+          subtitle: 'Select any staff name to add or deduct merit points (0.1 – 1.0).',
+        ),
+        const SizedBox(height: 18),
+        _StatsRow(
+          items: [
+            _StatItem('Active staff', '${active.length}', 'Active records', Icons.groups_outlined),
+            _StatItem('Average merit', average, 'Default start ${formatMerit(_defaultScore)}', Icons.analytics_outlined),
+            _StatItem('Monthly changes', '${monthChanges.length}', 'This month', Icons.trending_up),
+          ],
+        ),
+        const SizedBox(height: 18),
+        _DashboardMeritCard(
+          staff: staff,
+          events: _events,
+          canAdjust: _hasPermission('merit.adjust'),
+          canCorrect: _hasPermission('merit.correct'),
+          search: _search,
+          onAdjust: _openAdjustment,
+          onCorrect: _openCorrection,
+          onSearchChanged: () => setState(() {}),
+          loading: _loading,
+        ),
+      ],
+    );
+  }
+
+  Widget _staffRegistrationPage() {
     final staff = _staff
         .where((item) =>
             '${item.code} ${item.name} ${item.department ?? ''}'.toLowerCase().contains(_search.text.toLowerCase()))
@@ -407,15 +456,9 @@ class _HomeShellState extends State<HomeShell> {
       padding: EdgeInsets.fromLTRB(width < 700 ? 18 : 32, 18, width < 700 ? 18 : 32, 30),
       children: [
         _PageHeading(
-          title: 'Staff Board',
-          subtitle: 'Click any staff name to adjust merit (+0.1 to +1.0 or -0.1 to -1.0). Default starting score: ${formatMerit(_defaultScore)}.',
+          title: 'Staff Registration',
+          subtitle: 'Register new staff, edit details, or import CSV. Default starting merit: ${formatMerit(_defaultScore)}.',
           actions: [
-            if (_isOwner)
-              OutlinedButton.icon(
-                onPressed: _openInvite,
-                icon: const Icon(Icons.mail_outline, size: 18),
-                label: const Text('Invite user'),
-              ),
             if (_hasPermission('staff.import'))
               OutlinedButton.icon(
                 onPressed: _openCsvImport,
@@ -431,25 +474,12 @@ class _HomeShellState extends State<HomeShell> {
           ],
         ),
         const SizedBox(height: 18),
-        _StatsRow(
-          items: [
-            _StatItem('Active staff', '${active.length}', 'Active records', Icons.groups_outlined),
-            _StatItem('Average merit', average, 'Default start ${formatMerit(_defaultScore)}', Icons.analytics_outlined),
-            _StatItem('Monthly changes', '${monthChanges.length}', 'This month', Icons.trending_up),
-          ],
-        ),
-        const SizedBox(height: 18),
-        _DirectoryCard(
+        _StaffRosterCard(
           staff: staff,
-          events: _events,
-          canAdjust: _hasPermission('merit.adjust'),
-          canCorrect: _hasPermission('merit.correct'),
           canEdit: _hasPermission('staff.update'),
           canArchive: _hasPermission('staff.archive'),
           canDelete: _hasPermission('staff.delete'),
           search: _search,
-          onAdjust: _openAdjustment,
-          onCorrect: _openCorrection,
           onEdit: _openEditStaff,
           onArchive: _toggleStaffArchived,
           onDelete: _deleteStaff,
@@ -1202,21 +1232,15 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
-class _DirectoryCard extends StatelessWidget {
-  const _DirectoryCard({
+class _DashboardMeritCard extends StatelessWidget {
+  const _DashboardMeritCard({
     required this.staff,
     required this.events,
     required this.canAdjust,
     required this.canCorrect,
-    required this.canEdit,
-    required this.canArchive,
-    required this.canDelete,
     required this.search,
     required this.onAdjust,
     required this.onCorrect,
-    required this.onEdit,
-    required this.onArchive,
-    required this.onDelete,
     required this.onSearchChanged,
     required this.loading,
   });
@@ -1224,12 +1248,159 @@ class _DirectoryCard extends StatelessWidget {
   final List<MeritEvent> events;
   final bool canAdjust;
   final bool canCorrect;
+  final TextEditingController search;
+  final ValueChanged<StaffMember> onAdjust;
+  final ValueChanged<StaffMember> onCorrect;
+  final VoidCallback onSearchChanged;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < 820;
+    return Surface3DCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('Staff Merit Board', style: Theme.of(context).textTheme.titleMedium),
+              ),
+              if (canAdjust)
+                const Text(
+                  'Tap staff name to adjust merit',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: search,
+            onChanged: (_) => onSearchChanged(),
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'Search staff code or name',
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (loading && staff.isEmpty)
+            const Padding(padding: EdgeInsets.all(24), child: Center(child: ThinkingOrbsLoader()))
+          else if (staff.isEmpty)
+            const _EmptyState(
+              icon: Icons.groups_outlined,
+              title: 'No active staff yet',
+              detail: 'Go to the Staff tab to register staff records.',
+            )
+          else if (narrow)
+            Column(
+              children: staff
+                  .map(
+                    (item) => _DashboardStaffCard(
+                      staff: item,
+                      latest: _latestFor(item, events),
+                      canAdjust: canAdjust,
+                      canCorrect: canCorrect,
+                      onAdjust: onAdjust,
+                      onCorrect: onCorrect,
+                    ),
+                  )
+                  .toList(),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                showCheckboxColumn: false,
+                headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F7FA)),
+                columns: const [
+                  DataColumn(label: Text('STAFF CODE')),
+                  DataColumn(label: Text('NAME')),
+                  DataColumn(label: Text('DEPARTMENT')),
+                  DataColumn(label: Text('MERIT')),
+                  DataColumn(label: Text('LATEST CHANGE')),
+                  DataColumn(label: Text('ACTION')),
+                ],
+                rows: staff.map((item) {
+                  final latest = _latestFor(item, events);
+                  return DataRow(
+                    onSelectChanged: canAdjust ? (_) => onAdjust(item) : null,
+                    cells: [
+                      DataCell(Text(item.code, style: const TextStyle(fontWeight: FontWeight.w700))),
+                      DataCell(
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              item.name,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: canAdjust ? const Color(0xFF245CEB) : const Color(0xFF141C2E),
+                              ),
+                            ),
+                            if (canAdjust) ...[
+                              const SizedBox(width: 6),
+                              const Icon(Icons.touch_app_outlined, size: 15, color: Color(0xFF245CEB)),
+                            ],
+                          ],
+                        ),
+                      ),
+                      DataCell(Text(item.department ?? '—')),
+                      DataCell(
+                        Text(
+                          formatMerit(item.scoreTenths),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      DataCell(latest == null ? const Text('No changes yet') : _DeltaPill(delta: latest.deltaTenths)),
+                      DataCell(
+                        Wrap(
+                          spacing: 4,
+                          children: [
+                            if (canAdjust)
+                              FilledButton.tonal(
+                                onPressed: () => onAdjust(item),
+                                child: const Text('Adjust merit'),
+                              ),
+                            if (canCorrect)
+                              IconButton(
+                                tooltip: 'Correct score',
+                                onPressed: () => onCorrect(item),
+                                icon: const Icon(Icons.edit_note_outlined, size: 18),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StaffRosterCard extends StatelessWidget {
+  const _StaffRosterCard({
+    required this.staff,
+    required this.canEdit,
+    required this.canArchive,
+    required this.canDelete,
+    required this.search,
+    required this.onEdit,
+    required this.onArchive,
+    required this.onDelete,
+    required this.onSearchChanged,
+    required this.loading,
+  });
+  final List<StaffMember> staff;
   final bool canEdit;
   final bool canArchive;
   final bool canDelete;
   final TextEditingController search;
-  final ValueChanged<StaffMember> onAdjust;
-  final ValueChanged<StaffMember> onCorrect;
   final ValueChanged<StaffMember> onEdit;
   final ValueChanged<StaffMember> onArchive;
   final ValueChanged<StaffMember> onDelete;
@@ -1244,148 +1415,153 @@ class _DirectoryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text('Staff directory & merit scores', style: Theme.of(context).textTheme.titleMedium),
-                ),
-                if (canAdjust)
-                  const Text(
-                    'Click staff name to adjust merit',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: search,
-              onChanged: (_) => onSearchChanged(),
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Search staff code or name',
-                isDense: true,
+          Row(
+            children: [
+              Expanded(
+                child: Text('Registered Staff Roster (${staff.length})', style: Theme.of(context).textTheme.titleMedium),
               ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: search,
+            onChanged: (_) => onSearchChanged(),
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'Search staff code, name, or department',
+              isDense: true,
             ),
-            const SizedBox(height: 14),
-            if (loading && staff.isEmpty)
-              const Padding(padding: EdgeInsets.all(24), child: Center(child: ThinkingOrbsLoader()))
-            else if (staff.isEmpty)
-              const _EmptyState(
-                icon: Icons.groups_outlined,
-                title: 'No staff records yet',
-                detail: 'Add the first record to start tracking merit.',
-              )
-            else if (narrow)
-              Column(
-                children: staff
-                    .map(
-                      (item) => _StaffCard(
-                        staff: item,
-                        latest: _latestFor(item, events),
-                        canAdjust: canAdjust,
-                        canCorrect: canCorrect,
-                        canEdit: canEdit,
-                        canArchive: canArchive,
-                        canDelete: canDelete,
-                        onAdjust: onAdjust,
-                        onCorrect: onCorrect,
-                        onEdit: onEdit,
-                        onArchive: onArchive,
-                        onDelete: onDelete,
-                      ),
-                    )
-                    .toList(),
-              )
-            else
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  showCheckboxColumn: false,
-                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F7FA)),
-                  columns: const [
-                    DataColumn(label: Text('STAFF CODE')),
-                    DataColumn(label: Text('NAME')),
-                    DataColumn(label: Text('DEPARTMENT')),
-                    DataColumn(label: Text('MERIT')),
-                    DataColumn(label: Text('LATEST CHANGE')),
-                    DataColumn(label: Text('ACTIONS')),
-                  ],
-                  rows: staff.map((item) {
-                    final latest = _latestFor(item, events);
-                    return DataRow(
-                      onSelectChanged: canAdjust ? (_) => onAdjust(item) : null,
-                      cells: [
-                        DataCell(Text(item.code, style: const TextStyle(fontWeight: FontWeight.w700))),
-                        DataCell(
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                item.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: canAdjust ? const Color(0xFF245CEB) : const Color(0xFF141C2E),
-                                ),
+          ),
+          const SizedBox(height: 14),
+          if (loading && staff.isEmpty)
+            const Padding(padding: EdgeInsets.all(24), child: Center(child: ThinkingOrbsLoader()))
+          else if (staff.isEmpty)
+            const _EmptyState(
+              icon: Icons.badge_outlined,
+              title: 'No staff registered yet',
+              detail: 'Click Add staff or Import CSV to register staff members.',
+            )
+          else if (narrow)
+            Column(
+              children: staff
+                  .map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Surface3DCard(
+                        padding: const EdgeInsets.all(14),
+                        borderRadius: 12,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    '${item.code}  •  ${item.department ?? 'No department'}${item.archived ? '  •  Archived' : ''}',
+                                    style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
+                                  ),
+                                ],
                               ),
-                              if (canAdjust) ...[
-                                const SizedBox(width: 6),
-                                const Icon(Icons.touch_app_outlined, size: 15, color: Color(0xFF245CEB)),
-                              ],
-                            ],
+                            ),
+                            if (canEdit)
+                              IconButton(
+                                tooltip: 'Edit staff',
+                                onPressed: () => onEdit(item),
+                                icon: const Icon(Icons.edit_outlined),
+                              ),
+                            if (canArchive)
+                              IconButton(
+                                tooltip: item.archived ? 'Restore staff' : 'Archive staff',
+                                onPressed: () => onArchive(item),
+                                icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined),
+                              ),
+                            if (canDelete)
+                              IconButton(
+                                tooltip: 'Delete staff record',
+                                onPressed: () => onDelete(item),
+                                icon: const Icon(Icons.delete_outline),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                showCheckboxColumn: false,
+                headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F7FA)),
+                columns: const [
+                  DataColumn(label: Text('STAFF CODE')),
+                  DataColumn(label: Text('FULL NAME')),
+                  DataColumn(label: Text('DEPARTMENT')),
+                  DataColumn(label: Text('STATUS')),
+                  DataColumn(label: Text('MANAGE')),
+                ],
+                rows: staff.map((item) {
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(item.code, style: const TextStyle(fontWeight: FontWeight.w700))),
+                      DataCell(Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                      DataCell(Text(item.department ?? '—')),
+                      DataCell(
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: item.archived ? const Color(0xFFF0F3F8) : const Color(0xFFE8F7EE),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            item.archived ? 'Archived' : 'Active',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: item.archived ? const Color(0xFF667894) : const Color(0xFF16804A),
+                            ),
                           ),
                         ),
-                        DataCell(Text(item.department ?? '—')),
-                        DataCell(
-                          Text(
-                            formatMerit(item.scoreTenths),
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                          ),
+                      ),
+                      DataCell(
+                        Wrap(
+                          spacing: 4,
+                          children: [
+                            if (canEdit)
+                              IconButton(
+                                tooltip: 'Edit staff',
+                                onPressed: () => onEdit(item),
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                              ),
+                            if (canArchive)
+                              IconButton(
+                                tooltip: item.archived ? 'Restore staff' : 'Archive staff',
+                                onPressed: () => onArchive(item),
+                                icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 18),
+                              ),
+                            if (canDelete)
+                              IconButton(
+                                tooltip: 'Delete staff without merit history',
+                                onPressed: () => onDelete(item),
+                                icon: const Icon(Icons.delete_outline, size: 18),
+                              ),
+                          ],
                         ),
-                        DataCell(latest == null ? const Text('No changes yet') : _DeltaPill(delta: latest.deltaTenths)),
-                        DataCell(
-                          Wrap(
-                            spacing: 4,
-                            children: [
-                              if (canAdjust)
-                                OutlinedButton(
-                                  onPressed: () => onAdjust(item),
-                                  child: const Text('Adjust'),
-                                ),
-                              if (canCorrect)
-                                IconButton(
-                                  tooltip: 'Correct score',
-                                  onPressed: () => onCorrect(item),
-                                  icon: const Icon(Icons.edit_note_outlined, size: 18),
-                                ),
-                              if (canEdit)
-                                IconButton(
-                                  tooltip: 'Edit staff',
-                                  onPressed: () => onEdit(item),
-                                  icon: const Icon(Icons.edit_outlined, size: 18),
-                                ),
-                              if (canArchive)
-                                IconButton(
-                                  tooltip: item.archived ? 'Restore staff' : 'Archive staff',
-                                  onPressed: () => onArchive(item),
-                                  icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 18),
-                                ),
-                              if (canDelete)
-                                IconButton(
-                                  tooltip: 'Delete staff without merit history',
-                                  onPressed: () => onDelete(item),
-                                  icon: const Icon(Icons.delete_outline, size: 18),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
-                ),
+                      ),
+                    ],
+                  );
+                }).toList(),
               ),
-          ],
-        ),
-      );
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1396,33 +1572,21 @@ MeritEvent? _latestFor(StaffMember staff, List<MeritEvent> events) {
   return null;
 }
 
-class _StaffCard extends StatelessWidget {
-  const _StaffCard({
+class _DashboardStaffCard extends StatelessWidget {
+  const _DashboardStaffCard({
     required this.staff,
     required this.latest,
     required this.canAdjust,
     required this.canCorrect,
-    required this.canEdit,
-    required this.canArchive,
-    required this.canDelete,
     required this.onAdjust,
     required this.onCorrect,
-    required this.onEdit,
-    required this.onArchive,
-    required this.onDelete,
   });
   final StaffMember staff;
   final MeritEvent? latest;
   final bool canAdjust;
   final bool canCorrect;
-  final bool canEdit;
-  final bool canArchive;
-  final bool canDelete;
   final ValueChanged<StaffMember> onAdjust;
   final ValueChanged<StaffMember> onCorrect;
-  final ValueChanged<StaffMember> onEdit;
-  final ValueChanged<StaffMember> onArchive;
-  final ValueChanged<StaffMember> onDelete;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -1461,8 +1625,8 @@ class _StaffCard extends StatelessWidget {
               Wrap(
                 alignment: WrapAlignment.end,
                 crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 2,
-                runSpacing: 2,
+                spacing: 6,
+                runSpacing: 4,
                 children: [
                   if (latest != null) _DeltaPill(delta: latest!.deltaTenths),
                   if (canCorrect)
@@ -1471,28 +1635,10 @@ class _StaffCard extends StatelessWidget {
                       onPressed: () => onCorrect(staff),
                       icon: const Icon(Icons.edit_note_outlined),
                     ),
-                  if (canEdit)
-                    IconButton(
-                      tooltip: 'Edit staff',
-                      onPressed: () => onEdit(staff),
-                      icon: const Icon(Icons.edit_outlined),
-                    ),
-                  if (canArchive)
-                    IconButton(
-                      tooltip: staff.archived ? 'Restore staff' : 'Archive staff',
-                      onPressed: () => onArchive(staff),
-                      icon: Icon(staff.archived ? Icons.unarchive_outlined : Icons.archive_outlined),
-                    ),
-                  if (canDelete)
-                    IconButton(
-                      tooltip: 'Delete staff record',
-                      onPressed: () => onDelete(staff),
-                      icon: const Icon(Icons.delete_outline),
-                    ),
                   if (canAdjust)
-                    OutlinedButton(
+                    FilledButton.tonal(
                       onPressed: () => onAdjust(staff),
-                      child: const Text('Adjust'),
+                      child: const Text('Adjust merit'),
                     ),
                 ],
               ),

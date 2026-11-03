@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/merit_repository.dart';
 import 'csv_import_dialog.dart';
 import 'mfa_gate.dart';
-import 'password_setup_page.dart';
 import 'reports_page.dart';
 import 'audit_page.dart';
 import '../widgets/thinking_orbs_loader.dart';
@@ -28,7 +27,6 @@ class _HomeShellState extends State<HomeShell> {
   int _selectedPage = 0;
   bool _loading = true;
   bool _mfaRequired = false;
-  bool _passwordSetupRequired = false;
   String? _loadError;
 
   bool get _isOwner => _profile?['role'] == 'owner';

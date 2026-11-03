@@ -60,6 +60,11 @@ class MeritTrackerApp extends StatelessWidget {
         ),
       ),
       home: !configured ? const _ConfigurationRequired() : const _AuthGate(),
+      builder: (context, child) => Title(
+        title: 'Merit Tracker',
+        color: const Color(0xFFF7F9FC),
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }
@@ -335,7 +340,7 @@ class _BrandMark extends StatelessWidget {
           height: 36,
           alignment: Alignment.center,
           decoration: BoxDecoration(color: const Color(0xFF172033), borderRadius: BorderRadius.circular(9)),
-          child: const Text('M', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+          child: const Icon(Icons.workspace_premium_rounded, color: Color(0xFFFFD166), size: 21),
         ),
         const SizedBox(width: 10),
         Text('Merit Tracker', style: Theme.of(context).textTheme.titleMedium),

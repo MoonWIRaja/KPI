@@ -1,0 +1,31 @@
+{
+  "name": "Merit Tracker",
+  "short_name": "Merit",
+  "description": "Private staff merit tracking for invited users.",
+  "start_url": "/KPI/",
+  "scope": "/KPI/",
+  "display": "standalone",
+  "background_color": "#f7f9fc",
+  "theme_color": "#f7f9fc",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icons/merit-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/merit-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/merit-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -177,14 +177,13 @@ class _HomeShellState extends State<HomeShell> {
         title: Row(
           children: [
             _BrandMark(),
-            if (wide) ...[
-              const SizedBox(width: 22),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                decoration: BoxDecoration(color: const Color(0xFFEAF8F1), borderRadius: BorderRadius.circular(20)),
-              child: const Row(children: [Icon(Icons.circle, size: 7, color: Color(0xFF1A9B68)), SizedBox(width: 7), Text('INVITE ONLY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF46715E)))]),
-              ),
-            ],
+          if (wide) ...[
+            const SizedBox(width: 22),
+            Tooltip(
+              message: 'Only invited accounts can sign in.',
+              child: Icon(Icons.lock_outline, size: 17, color: const Color(0xFF667894)),
+            ),
+          ],
           ],
         ),
         actions: [
@@ -328,9 +327,9 @@ class _HomeShellState extends State<HomeShell> {
         ]),
         const SizedBox(height: 22),
         _StatsRow(items: [
-          _StatItem('ACTIVE STAFF', '${active.length}', 'Active records in the system', Icons.groups_outlined),
-          _StatItem('AVERAGE MERIT', average, 'Across visible staff records', Icons.analytics_outlined),
-          _StatItem('RECENT CHANGES', '${monthChanges.length}', 'From the latest 100 records', Icons.trending_up),
+          _StatItem('Active staff', '${active.length}', 'Active records', Icons.groups_outlined),
+          _StatItem('Average merit', average, 'Across visible staff', Icons.analytics_outlined),
+          _StatItem('Recent changes', '${monthChanges.length}', 'This month', Icons.trending_up),
         ]),
         const SizedBox(height: 22),
         _DirectoryCard(
@@ -583,7 +582,7 @@ class _AccountMenu extends StatelessWidget {
 class _BrandMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 34, height: 34, alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFF172033), borderRadius: BorderRadius.circular(8)), child: const Text('M', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+        Container(width: 34, height: 34, alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFF172033), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.workspace_premium_rounded, color: Color(0xFFFFD166), size: 20)),
         const SizedBox(width: 9),
         Text('Merit Tracker', style: Theme.of(context).textTheme.titleMedium),
       ]);
@@ -610,11 +609,11 @@ class _StatsRow extends StatelessWidget {
       children: items.map((item) => SizedBox(
         width: narrow ? double.infinity : (MediaQuery.sizeOf(context).width - 320) / 3,
         child: Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(item.label, style: const TextStyle(fontSize: 10, color: Color(0xFF667894), fontWeight: FontWeight.w700, letterSpacing: .3)), Icon(item.icon, size: 18, color: const Color(0xFF245CEB))]),
-          const SizedBox(height: 12),
-          Text(item.value, style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w700, color: Color(0xFF141C2E))),
-          const SizedBox(height: 4),
-          Text(item.detail, style: const TextStyle(fontSize: 11, color: Color(0xFF667894))),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Expanded(child: Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFF53637D), fontWeight: FontWeight.w600))), Icon(item.icon, size: 18, color: const Color(0xFF245CEB))]),
+          const SizedBox(height: 10),
+          Text(item.value, style: const TextStyle(fontSize: 28, height: 1.1, fontWeight: FontWeight.w700, color: Color(0xFF141C2E))),
+          const SizedBox(height: 5),
+          Text(item.detail, style: const TextStyle(fontSize: 12, color: Color(0xFF667894))),
         ]))),
       )).toList(),
     );
@@ -912,7 +911,7 @@ class _PageHeading extends StatelessWidget {
     final heading = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(title, style: Theme.of(context).textTheme.headlineMedium),
       const SizedBox(height: 4),
-      Text(subtitle, style: const TextStyle(color: Color(0xFF667894))),
+      Text(subtitle, style: const TextStyle(color: Color(0xFF667894), height: 1.4)),
     ]);
     if (MediaQuery.sizeOf(context).width < 760) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

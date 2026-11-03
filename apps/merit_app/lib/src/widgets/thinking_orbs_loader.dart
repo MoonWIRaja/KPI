@@ -34,18 +34,15 @@ class _ThinkingOrbsLoaderState extends State<ThinkingOrbsLoader>
     return Semantics(
       label: widget.label,
       liveRegion: true,
-      child: TickerMode(
-        enabled: !reduceMotion,
-        child: ExcludeSemantics(
-          child: SizedBox.square(
-            dimension: widget.size,
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, _) => CustomPaint(
-                painter: _OrbPainter(
-                  phase: reduceMotion ? 0 : _controller.value,
-                  color: color,
-                ),
+      child: ExcludeSemantics(
+        child: SizedBox.square(
+          dimension: widget.size,
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) => CustomPaint(
+              painter: _OrbPainter(
+                phase: reduceMotion || TickerMode.of(context) == false ? 0 : _controller.value,
+                color: color,
               ),
             ),
           ),
@@ -65,17 +62,18 @@ class _OrbPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.shortestSide * .34;
-    final dotRadius = size.shortestSide * .065;
+    final dotRadius = size.shortestSide * .052;
     final paint = Paint()..color = color;
     for (var i = 0; i < 8; i++) {
-      final angle = (i / 8 * math.pi * 2) + phase * math.pi * 2;
-      final depth = .38 + (i / 7 * .62);
+      final angle = (i / 8 * math.pi * 2) - phase * math.pi * 2;
+      final depth = .32 + (i / 7 * .68);
+      final scale = .76 + depth * .24;
       final point = Offset(
         center.dx + math.cos(angle) * radius,
-        center.dy + math.sin(angle) * radius * .72,
+        center.dy + math.sin(angle) * radius,
       );
       paint.color = color.withValues(alpha: .24 + depth * .68);
-      canvas.drawCircle(point, dotRadius * (.65 + depth * .35), paint);
+      canvas.drawCircle(point, dotRadius * scale, paint);
     }
   }
 

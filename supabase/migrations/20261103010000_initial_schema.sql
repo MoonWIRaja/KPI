@@ -46,7 +46,7 @@ create table public.merit_events (
   staff_id uuid not null references public.staff (id) on delete restrict,
   actor_id uuid references auth.users (id) on delete set null,
   event_type text not null check (event_type in ('opening', 'adjustment', 'correction')),
-  delta_tenths integer not null,
+  delta_tenths bigint not null,
   score_before_tenths bigint,
   score_after_tenths bigint not null,
   reason text not null check (length(trim(reason)) between 1 and 500),
@@ -117,7 +117,7 @@ declare
 begin
   if v_actor is null then raise exception 'Authentication required'; end if;
   update public.profiles set must_set_password = false
-  where user_id = v_actor and must_set_password = true;
+  where user_id = v_actor and is_active = true and must_set_password = true;
   if not found then raise exception 'Password setup is not pending'; end if;
   insert into public.audit_events (actor_id, action, target_type, target_id)
   values (v_actor, 'account.password_set', 'profile', v_actor);
@@ -128,7 +128,7 @@ create function public.create_staff(
   staff_code_input text,
   full_name_input text,
   department_input text default null,
-  starting_score_tenths_input integer default null
+  starting_score_tenths_input bigint default null
 )
 returns uuid
 language plpgsql
@@ -173,7 +173,7 @@ create function public.adjust_merit(
   reason_input text,
   request_id_input uuid
 )
-returns table (event_id uuid, score_before_tenths integer, score_after_tenths integer, was_replayed boolean)
+returns table (event_id uuid, score_before_tenths bigint, score_after_tenths bigint, was_replayed boolean)
 language plpgsql
 security definer
 set search_path = ''
@@ -182,9 +182,9 @@ declare
   v_actor uuid := auth.uid();
   v_staff public.staff%rowtype;
   v_existing public.merit_events%rowtype;
-  v_floor integer;
-  v_ceiling integer;
-  v_after integer;
+  v_floor bigint;
+  v_ceiling bigint;
+  v_after bigint;
   v_event_id uuid;
 begin
   if v_actor is null or not public.has_permission('merit.adjust') then raise exception 'Not authorized'; end if;
@@ -256,12 +256,12 @@ grant select on public.organization_settings, public.staff, public.profiles, pub
 grant execute on function public.has_permission(text) to authenticated;
 grant execute on function public.can_read_staff(uuid) to authenticated;
 grant execute on function public.complete_password_setup() to authenticated;
-grant execute on function public.create_staff(text, text, text, integer) to authenticated;
+grant execute on function public.create_staff(text, text, text, bigint) to authenticated;
 grant execute on function public.adjust_merit(uuid, integer, text, uuid) to authenticated;
 revoke execute on function public.has_permission(text) from public, anon;
 revoke execute on function public.can_read_staff(uuid) from public, anon;
 revoke execute on function public.complete_password_setup() from public, anon;
-revoke execute on function public.create_staff(text, text, text, integer) from public, anon;
+revoke execute on function public.create_staff(text, text, text, bigint) from public, anon;
 revoke execute on function public.adjust_merit(uuid, integer, text, uuid) from public, anon;
 
 comment on table public.staff is 'Private employee merit records; access is controlled by RLS.';

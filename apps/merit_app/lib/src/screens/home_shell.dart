@@ -877,20 +877,17 @@ class _ProfileAccountDialogState extends State<_ProfileAccountDialog> {
   Future<void> _pickPhoto() async {
     setState(() => _error = null);
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.image,
-        withData: true,
       );
-      if (result == null || result.files.isEmpty) return;
-      final file = result.files.first;
-      final bytes = file.bytes;
-      if (bytes == null) return;
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
       if (bytes.lengthInBytes > 450 * 1024) {
         setState(() => _error = 'Please choose an image smaller than 450 KB.');
         return;
       }
-      final ext = (file.extension ?? 'png').toLowerCase();
-      final mime = ext == 'jpg' || ext == 'jpeg' ? 'image/jpeg' : 'image/png';
+      final name = file.name.toLowerCase();
+      final mime = name.endsWith('.jpg') || name.endsWith('.jpeg') ? 'image/jpeg' : 'image/png';
       final dataUrl = 'data:$mime;base64,${base64Encode(bytes)}';
       setState(() => _saving = true);
       await widget.repository.updateAvatarDataUrl(dataUrl);

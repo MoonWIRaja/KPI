@@ -2089,34 +2089,6 @@ class _SettingsPageState extends State<_SettingsPage> {
                               ),
                             ),
                           ]),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              const Text('Quick Presets:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-                              ActionChip(
-                                label: const Text('Default 5.0 (0 to 10)'),
-                                onPressed: () {
-                                  setState(() {
-                                    _default.text = '5.0';
-                                    _floor.text = '0.0';
-                                    _ceiling.text = '10.0';
-                                  });
-                                },
-                              ),
-                              ActionChip(
-                                label: const Text('Unbounded (No limits)'),
-                                onPressed: () {
-                                  setState(() {
-                                    _floor.text = '';
-                                    _ceiling.text = '';
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ),

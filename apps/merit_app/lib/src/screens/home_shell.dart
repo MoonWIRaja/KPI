@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -595,7 +596,13 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
-  Widget _settingsPage() => _SettingsPage(repository: _repository, onSaved: _refresh);
+  Widget _settingsPage() => _SettingsPage(
+        repository: _repository,
+        onSaved: _refresh,
+        staff: _staff,
+        events: _events,
+        profiles: _profiles,
+      );
 
   Future<void> _openAdjustment(StaffMember staff) async {
     if (!_hasPermission('merit.adjust')) return;
@@ -1117,6 +1124,7 @@ class _DashboardMeritCard extends StatelessWidget {
                                     DataColumn(label: Text('DEPARTMENT')),
                                     DataColumn(label: Text('MERIT')),
                                     DataColumn(label: Text('LATEST CHANGE')),
+                                    DataColumn(label: Text('ACTION')),
                                   ],
                                   rows: staff.map((item) {
                                     final latest = _latestFor(item, events);
@@ -1150,6 +1158,21 @@ class _DashboardMeritCard extends StatelessWidget {
                                           ),
                                         ),
                                         DataCell(latest == null ? const Text('—') : _DeltaPill(delta: latest.deltaTenths)),
+                                        DataCell(
+                                          canAdjust
+                                              ? FilledButton.tonalIcon(
+                                                  style: FilledButton.styleFrom(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                    visualDensity: VisualDensity.compact,
+                                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                  ),
+                                                  onPressed: () => onAdjust(item),
+                                                  icon: const Icon(Icons.tune_rounded, size: 14),
+                                                  label: const Text('Adjust'),
+                                                )
+                                              : const SizedBox.shrink(),
+                                        ),
                                       ],
                                     );
                                   }).toList(),
@@ -1296,7 +1319,17 @@ class _StaffRosterCard extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF94A3B8)),
+                                      OutlinedButton.icon(
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          visualDensity: VisualDensity.compact,
+                                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        ),
+                                        onPressed: () => onOpenStaff(item),
+                                        icon: const Icon(Icons.tune_rounded, size: 14),
+                                        label: const Text('Manage'),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -1318,6 +1351,7 @@ class _StaffRosterCard extends StatelessWidget {
                                     DataColumn(label: Text('FULL NAME')),
                                     DataColumn(label: Text('DEPARTMENT')),
                                     DataColumn(label: Text('MERIT')),
+                                    DataColumn(label: Text('ACTION')),
                                   ],
                                   rows: staff.map((item) {
                                     return DataRow(
@@ -1339,6 +1373,19 @@ class _StaffRosterCard extends StatelessWidget {
                                           Text(
                                             formatMerit(item.scoreTenths),
                                             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          OutlinedButton.icon(
+                                            style: OutlinedButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                              visualDensity: VisualDensity.compact,
+                                              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                            onPressed: () => onOpenStaff(item),
+                                            icon: const Icon(Icons.tune_rounded, size: 14),
+                                            label: const Text('Manage'),
                                           ),
                                         ),
                                       ],
@@ -1413,8 +1460,18 @@ class _DashboardStaffCard extends StatelessWidget {
                   ),
                   if (latest != null) _DeltaPill(delta: latest!.deltaTenths),
                   if (canAdjust) ...[
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF94A3B8)),
+                    const SizedBox(width: 8),
+                    FilledButton.tonalIcon(
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        visualDensity: VisualDensity.compact,
+                        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () => onAdjust(staff),
+                      icon: const Icon(Icons.tune_rounded, size: 14),
+                      label: const Text('Adjust'),
+                    ),
                   ],
                 ],
               ),
@@ -1839,9 +1896,19 @@ class _ConfirmCardDialog extends StatelessWidget {
 }
 
 class _SettingsPage extends StatefulWidget {
-  const _SettingsPage({required this.repository, required this.onSaved});
+  const _SettingsPage({
+    required this.repository,
+    required this.onSaved,
+    required this.staff,
+    required this.events,
+    required this.profiles,
+  });
   final MeritRepository repository;
   final Future<void> Function() onSaved;
+  final List<StaffMember> staff;
+  final List<MeritEvent> events;
+  final List<Map<String, dynamic>> profiles;
+
   @override
   State<_SettingsPage> createState() => _SettingsPageState();
 }
@@ -1850,9 +1917,21 @@ class _SettingsPageState extends State<_SettingsPage> {
   final _default = TextEditingController();
   final _floor = TextEditingController();
   final _ceiling = TextEditingController();
+  final _orgName = TextEditingController(text: 'MESRC DEVICE');
+  final _unit = TextEditingController(text: 'merit');
   bool _loading = true;
   bool _saving = false;
+  bool _exportingBackup = false;
   String? _error;
+
+  static const _defaultDepts = [
+    'MARKETING',
+    'SALES',
+    'IT & TECH',
+    'OPERATIONS',
+    'HUMAN RESOURCES',
+    'ADMIN & FINANCE',
+  ];
 
   @override
   void initState() {
@@ -1865,6 +1944,8 @@ class _SettingsPageState extends State<_SettingsPage> {
     _default.dispose();
     _floor.dispose();
     _ceiling.dispose();
+    _orgName.dispose();
+    _unit.dispose();
     super.dispose();
   }
 
@@ -1874,6 +1955,8 @@ class _SettingsPageState extends State<_SettingsPage> {
       _default.text = formatMerit(values.defaultScoreTenths);
       _floor.text = values.floorTenths == null ? '' : formatMerit(values.floorTenths!);
       _ceiling.text = values.ceilingTenths == null ? '' : formatMerit(values.ceilingTenths!);
+      _orgName.text = values.organizationName;
+      _unit.text = values.scoreUnit;
     } catch (_) {
       _error = 'Settings could not be loaded.';
     }
@@ -1887,7 +1970,7 @@ class _SettingsPageState extends State<_SettingsPage> {
     if (defaultValue == null ||
         (_floor.text.trim().isNotEmpty && floorValue == null) ||
         (_ceiling.text.trim().isNotEmpty && ceilingValue == null)) {
-      setState(() => _error = 'Enter a merit value with at most one decimal place.');
+      setState(() => _error = 'Enter a valid merit score with at most one decimal place.');
       return;
     }
     setState(() {
@@ -1899,10 +1982,14 @@ class _SettingsPageState extends State<_SettingsPage> {
         defaultScoreTenths: defaultValue,
         floorTenths: floorValue,
         ceilingTenths: ceilingValue,
+        organizationName: _orgName.text.trim(),
+        scoreUnit: _unit.text.trim(),
       );
       await widget.onSaved();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Merit settings saved.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All system settings saved successfully.')),
+        );
       }
     } on MeritRepositoryException catch (error) {
       if (mounted) setState(() => _error = error.message);
@@ -1911,71 +1998,443 @@ class _SettingsPageState extends State<_SettingsPage> {
     }
   }
 
+  Future<void> _downloadBackup() async {
+    setState(() => _exportingBackup = true);
+    try {
+      final backup = {
+        'system': 'Merit Tracker System',
+        'exported_at': DateTime.now().toUtc().toIso8601String(),
+        'organization': _orgName.text.trim(),
+        'score_unit': _unit.text.trim(),
+        'default_starting_score': _default.text,
+        'floor_limit': _floor.text.isEmpty ? null : _floor.text,
+        'ceiling_limit': _ceiling.text.isEmpty ? null : _ceiling.text,
+        'statistics': {
+          'total_staff': widget.staff.length,
+          'total_events': widget.events.length,
+          'total_profiles': widget.profiles.length,
+        },
+        'staff_records': widget.staff
+            .map((s) => {
+                  'id': s.id,
+                  'code': s.code,
+                  'name': s.name,
+                  'department': s.department,
+                  'current_score': formatMerit(s.scoreTenths),
+                })
+            .toList(),
+        'recent_events': widget.events
+            .map((e) => {
+                  'id': e.id,
+                  'staff_id': e.staffId,
+                  'type': e.type,
+                  'delta': formatDelta(e.deltaTenths),
+                  'score_before': e.beforeTenths == null ? null : formatMerit(e.beforeTenths!),
+                  'score_after': formatMerit(e.afterTenths),
+                  'reason': e.reason,
+                  'actor': e.actorName,
+                  'created_at': e.createdAt.toUtc().toIso8601String(),
+                })
+            .toList(),
+      };
+
+      final jsonBytes = Uint8List.fromList(utf8.encode(const JsonEncoder.withIndent('  ').convert(backup)));
+      final dateStr = DateTime.now().toIso8601String().substring(0, 10);
+      await FileSaver.instance.saveFile(
+        name: 'merit-tracker-backup-$dateStr',
+        bytes: jsonBytes,
+        fileExtension: 'json',
+        mimeType: MimeType.custom,
+        customMimeType: 'application/json',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Full database JSON backup downloaded successfully.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Backup export failed. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exportingBackup = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
+    final isMobile = width < 700;
+
     return Padding(
-      padding: EdgeInsets.fromLTRB(width < 700 ? 14 : 24, 14, width < 700 ? 14 : 24, 18),
+      padding: EdgeInsets.fromLTRB(isMobile ? 14 : 24, 14, isMobile ? 14 : 24, 18),
       child: Surface3DCard(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: _loading
-                  ? const Center(child: ThinkingOrbsLoader())
-                  : SingleChildScrollView(
-                      child: Align(
-                        alignment: Alignment.topLeft,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 520),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
+        padding: const EdgeInsets.all(20),
+        child: _loading
+            ? const Center(child: ThinkingOrbsLoader())
+            : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildSectionHeader(
+                      icon: Icons.tune_rounded,
+                      title: 'Merit Scoring Configuration',
+                      subtitle: 'Set initial default merit score and boundary limits for all staff.',
+                    ),
+                    const SizedBox(height: 14),
+                    Surface3DCard(
+                      padding: const EdgeInsets.all(18),
+                      borderRadius: 14,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
                             children: [
-                              TextField(
-                                controller: _default,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                                decoration: const InputDecoration(
-                                  labelText: 'Default starting merit score (e.g. 5.0)',
-                                  suffixText: 'merit',
+                              Expanded(
+                                child: TextField(
+                                  controller: _default,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                                  decoration: InputDecoration(
+                                    labelText: 'Default starting score (e.g. 5.0)',
+                                    suffixText: _unit.text.trim(),
+                                    isDense: true,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 14),
-                              TextField(
-                                controller: _floor,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                                decoration: const InputDecoration(labelText: 'Minimum limit (optional)', hintText: 'Not set'),
-                              ),
-                              const SizedBox(height: 14),
-                              TextField(
-                                controller: _ceiling,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                                decoration: const InputDecoration(labelText: 'Maximum limit (optional)', hintText: 'Not set'),
-                              ),
-                              const SizedBox(height: 18),
-                              if (_error != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  controller: _floor,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Minimum floor (optional)',
+                                    hintText: 'e.g. 0.0',
+                                    isDense: true,
+                                  ),
                                 ),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: FilledButton.icon(
-                                  onPressed: _saving ? null : _save,
-                                  icon: _saving
-                                      ? const ThinkingOrbsLoader(size: 18, label: 'Saving settings')
-                                      : const Icon(Icons.save_outlined),
-                                  label: Text(_saving ? 'Saving…' : 'Save settings'),
+                              ),
+                              if (!isMobile) ...[
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _ceiling,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Maximum ceiling (optional)',
+                                      hintText: 'e.g. 10.0',
+                                      isDense: true,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (isMobile) ...[
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: _ceiling,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                              decoration: const InputDecoration(
+                                labelText: 'Maximum ceiling (optional)',
+                                hintText: 'e.g. 10.0',
+                                isDense: true,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              const Text('Quick Presets:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                              ActionChip(
+                                label: const Text('Default 5.0 (0 to 10)'),
+                                onPressed: () {
+                                  setState(() {
+                                    _default.text = '5.0';
+                                    _floor.text = '0.0';
+                                    _ceiling.text = '10.0';
+                                  });
+                                },
+                              ),
+                              ActionChip(
+                                label: const Text('Unbounded (No limits)'),
+                                onPressed: () {
+                                  setState(() {
+                                    _floor.text = '';
+                                    _ceiling.text = '';
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FilledButton.icon(
+                              onPressed: _saving ? null : _save,
+                              icon: _saving
+                                  ? const ThinkingOrbsLoader(size: 16, label: 'Saving')
+                                  : const Icon(Icons.check_circle_outline, size: 16),
+                              label: Text(_saving ? 'Saving…' : 'Save scoring rules'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSectionHeader(
+                      icon: Icons.business_rounded,
+                      title: 'Organization & System Units',
+                      subtitle: 'Customize organization display name and merit point unit label.',
+                    ),
+                    const SizedBox(height: 14),
+                    Surface3DCard(
+                      padding: const EdgeInsets.all(18),
+                      borderRadius: 14,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: TextField(
+                                  controller: _orgName,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Organization / Company Name',
+                                    isDense: true,
+                                    prefixIcon: Icon(Icons.apartment_rounded, size: 20),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 1,
+                                child: TextField(
+                                  controller: _unit,
+                                  onChanged: (_) => setState(() {}),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Score Unit Label',
+                                    hintText: 'e.g. merit, pts',
+                                    isDense: true,
+                                    prefixIcon: Icon(Icons.stars_rounded, size: 20),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                        ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            'Active Department Tags in System:',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: _defaultDepts.map((d) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Text(d, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF334155))),
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       ),
                     ),
-            ),
-          ],
+                    const SizedBox(height: 24),
+                    _buildSectionHeader(
+                      icon: Icons.verified_user_outlined,
+                      title: 'Evaluation Policy & Reports Cycle',
+                      subtitle: 'Operational policies governing monthly staff merit evaluations and audit logging.',
+                    ),
+                    const SizedBox(height: 14),
+                    Surface3DCard(
+                      padding: const EdgeInsets.all(18),
+                      borderRadius: 14,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildPolicyTile(
+                            icon: Icons.calendar_month_outlined,
+                            title: 'Monthly Evaluation Cycle',
+                            description: 'Evaluations automatically span from the 1st of every month to the end of the month.',
+                            badge: 'Active Cycle',
+                            badgeColor: const Color(0xFF16804A),
+                          ),
+                          const Divider(height: 24, color: Color(0xFFF1F5F9)),
+                          _buildPolicyTile(
+                            icon: Icons.picture_as_pdf_outlined,
+                            title: 'Multi-Format Export Engine',
+                            description: 'PDF report generation for appraisals & CSV export for external spreadsheet auditing.',
+                            badge: 'PDF / CSV',
+                            badgeColor: const Color(0xFF245CEB),
+                          ),
+                          const Divider(height: 24, color: Color(0xFFF1F5F9)),
+                          _buildPolicyTile(
+                            icon: Icons.security_rounded,
+                            title: 'Tamper-Evident Audit Trail',
+                            description: 'Every score addition, deduction, correction, and user permission modification is permanently logged with actor metadata.',
+                            badge: 'Strict Logging',
+                            badgeColor: const Color(0xFF7C3AED),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSectionHeader(
+                      icon: Icons.dns_outlined,
+                      title: 'System Health & Data Backup',
+                      subtitle: 'Live system diagnostic metrics and instant full database JSON backup export.',
+                    ),
+                    const SizedBox(height: 14),
+                    Surface3DCard(
+                      padding: const EdgeInsets.all(18),
+                      borderRadius: 14,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 10,
+                            children: [
+                              _buildMetricCard('Active Staff', '${widget.staff.length}', Icons.groups_outlined, const Color(0xFF245CEB)),
+                              _buildMetricCard('Merit Records', '${widget.events.length}', Icons.history_rounded, const Color(0xFF16804A)),
+                              _buildMetricCard('User Accounts', '${widget.profiles.length}', Icons.manage_accounts_outlined, const Color(0xFF7C3AED)),
+                              _buildMetricCard('Database', 'Connected', Icons.cloud_done_rounded, const Color(0xFF0284C7)),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: _exportingBackup ? null : _downloadBackup,
+                                icon: _exportingBackup
+                                    ? const ThinkingOrbsLoader(size: 16, label: 'Exporting')
+                                    : const Icon(Icons.download_rounded, size: 16),
+                                label: Text(_exportingBackup ? 'Exporting…' : 'Download JSON backup'),
+                              ),
+                              const SizedBox(width: 10),
+                              FilledButton.tonalIcon(
+                                onPressed: () async {
+                                  await widget.onSaved();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('System state refreshed successfully.')),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.refresh_rounded, size: 16),
+                                label: const Text('Refresh state'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 14),
+                        child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318), fontWeight: FontWeight.w600)),
+                      ),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader({required IconData icon, required String title, required String subtitle}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF3FF),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 20, color: const Color(0xFF245CEB)),
         ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF141C2E))),
+              const SizedBox(height: 2),
+              Text(subtitle, style: const TextStyle(fontSize: 12.5, color: Color(0xFF667894))),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPolicyTile({required IconData icon, required String title, required String description, required String badge, required Color badgeColor}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 22, color: const Color(0xFF64748B)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF1E293B))),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withAlpha(25),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(badge, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: badgeColor)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(description, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.3)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      width: 140,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const Spacer(),
+              Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color)),
+        ],
       ),
     );
   }
@@ -2549,7 +3008,7 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
             ),
             const SizedBox(height: 16),
             SizedBox(
-              height: 260,
+              height: 310,
               child: TabBarView(
                 controller: _tabController,
                 children: [
@@ -2582,6 +3041,12 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                               style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
                             ),
                           ),
+                        const SizedBox(height: 14),
+                        OutlinedButton.icon(
+                          onPressed: () => _tabController.animateTo(1),
+                          icon: const Icon(Icons.stars_outlined, size: 16),
+                          label: const Text('Adjust merit points for this staff'),
+                        ),
                       ],
                     ),
                   ),
@@ -2613,7 +3078,54 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                             ],
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            ActionChip(
+                              avatar: const Icon(Icons.remove, size: 14, color: Color(0xFFB42318)),
+                              label: const Text('-0.5', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFB42318))),
+                              backgroundColor: const Color(0xFFFFEEEE),
+                              onPressed: !widget.canCorrectMerit || _busy ? null : () {
+                                final current = widget.staff.scoreTenths;
+                                _score.text = formatMerit(current - 5);
+                                if (_reason.text.isEmpty) _reason.text = 'Deduction of 0.5 merit';
+                              },
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.remove, size: 14, color: Color(0xFFB42318)),
+                              label: const Text('-0.1', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFB42318))),
+                              backgroundColor: const Color(0xFFFFEEEE),
+                              onPressed: !widget.canCorrectMerit || _busy ? null : () {
+                                final current = widget.staff.scoreTenths;
+                                _score.text = formatMerit(current - 1);
+                                if (_reason.text.isEmpty) _reason.text = 'Deduction of 0.1 merit';
+                              },
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.add, size: 14, color: Color(0xFF16804A)),
+                              label: const Text('+0.1', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF16804A))),
+                              backgroundColor: const Color(0xFFE8F7EE),
+                              onPressed: !widget.canCorrectMerit || _busy ? null : () {
+                                final current = widget.staff.scoreTenths;
+                                _score.text = formatMerit(current + 1);
+                                if (_reason.text.isEmpty) _reason.text = 'Addition of 0.1 merit';
+                              },
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.add, size: 14, color: Color(0xFF16804A)),
+                              label: const Text('+0.5', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF16804A))),
+                              backgroundColor: const Color(0xFFE8F7EE),
+                              onPressed: !widget.canCorrectMerit || _busy ? null : () {
+                                final current = widget.staff.scoreTenths;
+                                _score.text = formatMerit(current + 5);
+                                if (_reason.text.isEmpty) _reason.text = 'Addition of 0.5 merit';
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
                         TextField(
                           controller: _score,
                           enabled: widget.canCorrectMerit && !_busy,

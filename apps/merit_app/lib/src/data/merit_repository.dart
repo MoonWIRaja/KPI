@@ -161,12 +161,20 @@ class MeritRepository {
     return rows.map((row) => row['permission_key'] as String).toSet();
   }
 
-  Future<({int defaultScoreTenths, int? floorTenths, int? ceilingTenths})> loadSettings() async {
+  Future<({
+    int defaultScoreTenths,
+    int? floorTenths,
+    int? ceilingTenths,
+    String organizationName,
+    String scoreUnit,
+  })> loadSettings() async {
     final row = await _client.from('organization_settings').select().eq('id', true).single();
     return (
       defaultScoreTenths: row['default_starting_score_tenths'] as int,
       floorTenths: row['floor_tenths'] as int?,
       ceilingTenths: row['ceiling_tenths'] as int?,
+      organizationName: (row['organization_name'] as String?) ?? 'MESRC DEVICE',
+      scoreUnit: (row['score_unit'] as String?) ?? 'merit',
     );
   }
 
@@ -256,14 +264,30 @@ class MeritRepository {
     }
   }
 
-  Future<void> updateSettings({required int defaultScoreTenths, int? floorTenths, int? ceilingTenths}) async {
+  Future<void> updateSettings({
+    required int defaultScoreTenths,
+    int? floorTenths,
+    int? ceilingTenths,
+    String? organizationName,
+    String? scoreUnit,
+  }) async {
     try {
-      await _client.rpc('update_organization_settings', params: {
+      await _client.rpc('update_organization_settings_v2', params: {
         'default_score_input': defaultScoreTenths,
         'floor_input': floorTenths,
         'ceiling_input': ceilingTenths,
+        'org_name_input': organizationName ?? 'MESRC DEVICE',
+        'score_unit_input': scoreUnit ?? 'merit',
       });
     } on PostgrestException catch (error) {
+      if (error.code == 'PGRST202' || error.message.contains('not find') || error.message.contains('does not exist')) {
+        await _client.rpc('update_organization_settings', params: {
+          'default_score_input': defaultScoreTenths,
+          'floor_input': floorTenths,
+          'ceiling_input': ceilingTenths,
+        });
+        return;
+      }
       if (error.message.contains('minimum')) throw const MeritRepositoryException('The default score must be at or above the minimum.');
       if (error.message.contains('maximum')) throw const MeritRepositoryException('The default score must be at or below the maximum.');
       throw const MeritRepositoryException('Merit settings could not be saved. Check values and permissions.');

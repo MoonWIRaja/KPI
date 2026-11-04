@@ -102,35 +102,121 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Import staff from CSV'),
-        content: SizedBox(
-          width: 560,
-          child: SingleChildScrollView(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-              const Text('UTF-8 CSV • maximum 2 MB and 500 staff. Duplicate staff codes will cancel the entire import.'),
-              const SizedBox(height: 10),
-              const SelectableText('staff_code,full_name,department,starting_merit\nS001,Staff Name,Operations,5.0'),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(onPressed: _busy ? null : _chooseFile, icon: const Icon(Icons.upload_file_outlined), label: Text(_fileName ?? 'Choose CSV file')),
-              if (_busy) const Padding(padding: EdgeInsets.all(16), child: Center(child: ThinkingOrbsLoader(size: 30))),
-              if (_rows.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text('${_rows.length} valid rows to preview', style: const TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                ..._rows.take(5).map((row) => ListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text('${row['staff_code']} • ${row['full_name']}'), subtitle: Text('${row['department'] ?? 'No department'}  ·  merit ${formatMerit(row['starting_score_tenths'] as int)}'))),
-                if (_rows.length > 5) Text('and ${_rows.length - 5} more', style: const TextStyle(color: Color(0xFF667894))),
-              ],
-              if (_errors.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFFFF1F0), borderRadius: BorderRadius.circular(8)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: _errors.take(8).map((issue) => Padding(padding: const EdgeInsets.only(bottom: 4), child: Text(issue, style: const TextStyle(color: Color(0xFFB42318), fontSize: 12)))).toList())),
-              ],
-            ]),
+  Widget build(BuildContext context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 540),
+          child: Surface3DCard(
+            padding: const EdgeInsets.all(22),
+            borderRadius: 20,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Import staff from CSV',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        onPressed: _busy || _committed ? null : () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'UTF-8 CSV • maximum 2 MB and 500 staff. Duplicate staff codes will cancel the entire import.',
+                    style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F9FC),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFDCE5F2)),
+                    ),
+                    child: const SelectableText(
+                      'staff_code,full_name,department,starting_merit\nS001,Staff Name,Operations,5.0',
+                      style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _chooseFile,
+                    icon: const Icon(Icons.upload_file_outlined),
+                    label: Text(_fileName ?? 'Choose CSV file'),
+                  ),
+                  if (_busy)
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(child: ThinkingOrbsLoader(size: 30)),
+                    ),
+                  if (_rows.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text('${_rows.length} valid rows to preview', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    ..._rows.take(5).map(
+                          (row) => ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text('${row['staff_code']} • ${row['full_name']}'),
+                            subtitle: Text(
+                              '${row['department'] ?? 'No department'}  ·  merit ${formatMerit(row['starting_score_tenths'] as int)}',
+                            ),
+                          ),
+                        ),
+                    if (_rows.length > 5)
+                      Text('and ${_rows.length - 5} more', style: const TextStyle(color: Color(0xFF667894))),
+                  ],
+                  if (_errors.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF1F0),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: _errors
+                            .take(8)
+                            .map(
+                              (issue) => Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Text(issue, style: const TextStyle(color: Color(0xFFB42318), fontSize: 12)),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: _busy || _committed ? null : () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: _busy || _rows.isEmpty || _errors.isNotEmpty ? null : _import,
+                        child: const Text('Confirm import'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        actions: [
-          TextButton(onPressed: _busy || _committed ? null : () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: _busy || _rows.isEmpty || _errors.isNotEmpty ? null : _import, child: const Text('Confirm import')),
-        ],
       );
 }

@@ -510,15 +510,21 @@ class _HomeShellState extends State<HomeShell> {
                         detail: 'Use Invite user to add accounts.',
                       ),
                     )
-                  : ListView.separated(
+                  : ListView.builder(
                       itemCount: _profiles.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEEF2F8)),
                       itemBuilder: (context, index) {
                         final profile = _profiles[index];
-                        return _UserAccessRow(
-                          profile: profile,
-                          onPermissions: () => _editUserPermissions(profile),
-                          onToggleActive: () => _toggleUserActive(profile),
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Surface3DCard(
+                            padding: const EdgeInsets.all(14),
+                            borderRadius: 14,
+                            child: _UserAccessRow(
+                              profile: profile,
+                              onPermissions: () => _editUserPermissions(profile),
+                              onToggleActive: () => _toggleUserActive(profile),
+                            ),
+                          ),
                         );
                       },
                     ),
@@ -554,17 +560,13 @@ class _HomeShellState extends State<HomeShell> {
     final archive = !staff.archived;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(archive ? 'Archive staff?' : 'Restore staff?'),
-        content: Text(
-          archive
-              ? '${staff.name}’s record and merit history will be retained. Their account will not be deleted.'
-              : '${staff.name} will return to the active staff list.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(archive ? 'Archive' : 'Restore')),
-        ],
+      builder: (_) => _ConfirmCardDialog(
+        title: archive ? 'Archive staff?' : 'Restore staff?',
+        message: archive
+            ? '${staff.name}’s record and merit history will be retained. Their account will not be deleted.'
+            : '${staff.name} will return to the active staff list.',
+        confirmLabel: archive ? 'Archive' : 'Restore',
+        destructive: archive,
       ),
     );
     if (confirmed != true) return;
@@ -579,15 +581,11 @@ class _HomeShellState extends State<HomeShell> {
   Future<void> _deleteStaff(StaffMember staff) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete staff record?'),
-        content: Text(
-          '${staff.name} can only be deleted if no account is linked and no merit history exists. Records with history must be archived.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete record')),
-        ],
+      builder: (_) => _ConfirmCardDialog(
+        title: 'Delete staff record?',
+        message: '${staff.name} can only be deleted if no account is linked and no merit history exists. Records with history must be archived.',
+        confirmLabel: 'Delete record',
+        destructive: true,
       ),
     );
     if (confirmed != true) return;
@@ -620,20 +618,13 @@ class _HomeShellState extends State<HomeShell> {
     final active = profile['is_active'] != true;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(active ? 'Activate account?' : 'Deactivate account?'),
-        content: Text(
-          active
-              ? 'This user will be able to sign in again.'
-              : 'The user will lose access to data as soon as this change is saved.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(active ? 'Activate' : 'Deactivate'),
-          ),
-        ],
+      builder: (_) => _ConfirmCardDialog(
+        title: active ? 'Activate account?' : 'Deactivate account?',
+        message: active
+            ? 'This user will be able to sign in again.'
+            : 'The user will lose access to data as soon as this change is saved.',
+        confirmLabel: active ? 'Activate' : 'Deactivate',
+        destructive: !active,
       ),
     );
     if (confirmed != true) return;
@@ -1696,90 +1687,87 @@ class _UserAccessRow extends StatelessWidget {
     final initial = name.isEmpty ? 'U' : name.characters.first.toUpperCase();
 
     if (isMobile) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: const Color(0xFFEEF3FF),
-                  child: Text(
-                    initial,
-                    style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF245CEB)),
-                  ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: const Color(0xFFEEF3FF),
+                child: Text(
+                  initial,
+                  style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF245CEB)),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF141C2E)),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        email,
-                        style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isActive ? const Color(0xFFEEF3FF) : const Color(0xFFF0F3F8),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: isActive ? const Color(0xFFD6E3FF) : const Color(0xFFDCE5F2)),
-                  ),
-                  child: Text(
-                    isActive ? _roleLabel(role) : 'Inactive',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: isActive ? const Color(0xFF245CEB) : const Color(0xFF667894),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF141C2E)),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      email,
+                      style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isActive ? const Color(0xFFEEF3FF) : const Color(0xFFF0F3F8),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: isActive ? const Color(0xFFD6E3FF) : const Color(0xFFDCE5F2)),
+                ),
+                child: Text(
+                  isActive ? _roleLabel(role) : 'Inactive',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: isActive ? const Color(0xFF245CEB) : const Color(0xFF667894),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '$permCount permissions',
-                  style: const TextStyle(color: Color(0xFF667894), fontSize: 11.5),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$permCount permissions',
+                style: const TextStyle(color: Color(0xFF667894), fontSize: 11.5),
+              ),
+              const Spacer(),
+              IconButton(
+                tooltip: 'Set permissions',
+                visualDensity: VisualDensity.compact,
+                onPressed: onPermissions,
+                icon: const Icon(Icons.tune_outlined, size: 20),
+              ),
+              IconButton(
+                tooltip: isActive ? 'Deactivate account' : 'Activate account',
+                visualDensity: VisualDensity.compact,
+                onPressed: onToggleActive,
+                icon: Icon(
+                  isActive ? Icons.person_off_outlined : Icons.person_outline,
+                  size: 20,
+                  color: isActive ? const Color(0xFFB42318) : const Color(0xFF16804A),
                 ),
-                const Spacer(),
-                IconButton(
-                  tooltip: 'Set permissions',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onPermissions,
-                  icon: const Icon(Icons.tune_outlined, size: 20),
-                ),
-                IconButton(
-                  tooltip: isActive ? 'Deactivate account' : 'Activate account',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onToggleActive,
-                  icon: Icon(
-                    isActive ? Icons.person_off_outlined : Icons.person_outline,
-                    size: 20,
-                    color: isActive ? const Color(0xFFB42318) : const Color(0xFF16804A),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
           CircleAvatar(
@@ -1872,34 +1860,141 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
   ];
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-        title: Text('Permissions for ${widget.profile['display_name']}'),
-        content: SizedBox(
-          width: 480,
-          child: SingleChildScrollView(
+  Widget build(BuildContext context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Surface3DCard(
+            padding: const EdgeInsets.all(22),
+            borderRadius: 20,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Permissions',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              widget.profile['display_name'] as String? ?? 'User',
+                              style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Permissions are enforced by database security rules.',
+                    style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
+                  ),
+                  const SizedBox(height: 8),
+                  ..._permissions.map(
+                    (item) => CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(item.$2, style: const TextStyle(fontSize: 13.5)),
+                      value: _selected.contains(item.$1),
+                      onChanged: (value) => setState(() {
+                        value == true ? _selected.add(item.$1) : _selected.remove(item.$1);
+                      }),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, _selected),
+                        child: const Text('Save permissions'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+class _ConfirmCardDialog extends StatelessWidget {
+  const _ConfirmCardDialog({
+    required this.title,
+    required this.message,
+    required this.confirmLabel,
+    this.destructive = false,
+  });
+
+  final String title;
+  final String message;
+  final String confirmLabel;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Surface3DCard(
+            padding: const EdgeInsets.all(22),
+            borderRadius: 20,
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Permissions are enforced by the database.'),
-                const SizedBox(height: 8),
-                ..._permissions.map(
-                  (item) => CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(item.$2),
-                    value: _selected.contains(item.$1),
-                    onChanged: (value) => setState(() {
-                      value == true ? _selected.add(item.$1) : _selected.remove(item.$1);
-                    }),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => Navigator.pop(context, false),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(message, style: const TextStyle(fontSize: 13.5, color: Color(0xFF667894), height: 1.4)),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      style: destructive ? FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318)) : null,
+                      onPressed: () => Navigator.pop(context, true),
+                      child: Text(confirmLabel),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, _selected), child: const Text('Save permissions')),
-        ],
+      );
       );
 }
 
@@ -2176,49 +2271,83 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-        title: Text(widget.staff == null ? 'Add staff' : 'Edit staff record'),
-        content: SizedBox(
-          width: 440,
-          child: Form(
-            key: _form,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(controller: _code, decoration: const InputDecoration(labelText: 'Staff code'), validator: _required),
-                const SizedBox(height: 10),
-                TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Full name'), validator: _required),
-                const SizedBox(height: 10),
-                TextFormField(controller: _department, decoration: const InputDecoration(labelText: 'Department (optional)')),
-                if (widget.staff == null) ...[
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: _score,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                    decoration: InputDecoration(
-                      labelText: 'Starting merit score (default ${formatMerit(widget.defaultScoreTenths)})',
-                      suffixText: 'merit',
+  Widget build(BuildContext context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Surface3DCard(
+            padding: const EdgeInsets.all(22),
+            borderRadius: 20,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.staff == null ? 'Add staff' : 'Edit staff record',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        onPressed: _busy ? null : () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Form(
+                    key: _form,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextFormField(controller: _code, decoration: const InputDecoration(labelText: 'Staff code'), validator: _required),
+                        const SizedBox(height: 10),
+                        TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Full name'), validator: _required),
+                        const SizedBox(height: 10),
+                        TextFormField(controller: _department, decoration: const InputDecoration(labelText: 'Department (optional)')),
+                        if (widget.staff == null) ...[
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: _score,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                            decoration: InputDecoration(
+                              labelText: 'Starting merit score (default ${formatMerit(widget.defaultScoreTenths)})',
+                              suffixText: 'merit',
+                            ),
+                            validator: (value) =>
+                                parseScoreTenths(value ?? '') == null ? 'Enter a valid score (e.g. 5.0).' : null,
+                          ),
+                        ],
+                        if (_error != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
+                          ),
+                      ],
                     ),
-                    validator: (value) =>
-                        parseScoreTenths(value ?? '') == null ? 'Enter a valid score (e.g. 5.0).' : null,
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: _busy ? null : _save,
+                        child: Text(_busy ? 'Saving…' : widget.staff == null ? 'Save staff' : 'Save changes'),
+                      ),
+                    ],
                   ),
                 ],
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
-                  ),
-              ],
+              ),
             ),
           ),
         ),
-        actions: [
-          TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: _busy ? null : _save,
-            child: Text(_busy ? 'Saving…' : widget.staff == null ? 'Save staff' : 'Save changes'),
-          ),
-        ],
       );
 }
 
@@ -2422,51 +2551,87 @@ class _CorrectionDialogState extends State<_CorrectionDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Correct merit score'),
-        content: SizedBox(
-          width: 420,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('${widget.staff.code}  •  ${widget.staff.name}', style: const TextStyle(color: Color(0xFF667894))),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _score,
-                onChanged: (_) => setState(() {}),
-                autofocus: true,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                decoration: InputDecoration(
-                  labelText: 'Corrected score',
-                  helperText: 'Current score: ${formatMerit(widget.staff.scoreTenths)}',
-                ),
+  Widget build(BuildContext context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Surface3DCard(
+            padding: const EdgeInsets.all(22),
+            borderRadius: 20,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Correct Merit Score',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${widget.staff.code}  •  ${widget.staff.name}',
+                              style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _score,
+                    onChanged: (_) => setState(() {}),
+                    autofocus: true,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                    decoration: InputDecoration(
+                      labelText: 'Corrected score',
+                      helperText: 'Current score: ${formatMerit(widget.staff.scoreTenths)}',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _reason,
+                    onChanged: (_) => setState(() {}),
+                    minLines: 2,
+                    maxLines: 4,
+                    maxLength: 500,
+                    decoration: const InputDecoration(labelText: 'Correction reason (required)', alignLabelWithHint: true),
+                  ),
+                  const Text(
+                    'A correction adds a new record; the original history is retained.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: parseScoreTenths(_score.text) == null || _reason.text.trim().isEmpty
+                            ? null
+                            : () => Navigator.pop(context, _CorrectionInput(parseScoreTenths(_score.text)!, _reason.text.trim())),
+                        child: const Text('Save correction'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _reason,
-                onChanged: (_) => setState(() {}),
-                minLines: 2,
-                maxLines: 4,
-                maxLength: 500,
-                decoration: const InputDecoration(labelText: 'Correction reason (required)', alignLabelWithHint: true),
-              ),
-              const Text(
-                'A correction adds a new record; the original history is retained.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
-              ),
-            ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: parseScoreTenths(_score.text) == null || _reason.text.trim().isEmpty
-                ? null
-                : () => Navigator.pop(context, _CorrectionInput(parseScoreTenths(_score.text)!, _reason.text.trim())),
-            child: const Text('Save correction'),
-          ),
-        ],
       );
 }
 
@@ -2529,81 +2694,115 @@ class _InviteDialogState extends State<_InviteDialog> {
     final available = widget.staff.where((item) => !item.archived && !assigned.contains(item.id)).toList();
     final ceoExists = widget.profiles.any((item) => item['role'] == 'ceo');
     if (_role == 'staff' && _staffId != null && !available.any((item) => item.id == _staffId)) _staffId = null;
-    return AlertDialog(
-      title: const Text('Invite user'),
-      content: SizedBox(
-        width: 440,
-        child: Form(
-          key: _form,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'The user will be authorized to receive Email OTP sign-in codes via Google SMTP (support@mesrc.com.my).',
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email'),
-                validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'User name'), validator: _required),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                initialValue: _role,
-                decoration: const InputDecoration(labelText: 'Role'),
-                items: [
-                  if (!ceoExists) const DropdownMenuItem(value: 'ceo', child: Text('CEO')),
-                  const DropdownMenuItem(value: 'staff', child: Text('Staff — own records only')),
-                ],
-                onChanged: (value) => setState(() {
-                  _role = value ?? 'staff';
-                  _staffId = null;
-                }),
-              ),
-              if (_role == 'staff') ...[
-                const SizedBox(height: 10),
-                if (available.isEmpty)
-                  const Text(
-                    'Add a staff record before sending a staff invitation.',
-                    style: TextStyle(color: Color(0xFF667894), fontSize: 12),
-                  )
-                else
-                  DropdownButtonFormField<String>(
-                    initialValue: _staffId,
-                    decoration: const InputDecoration(labelText: 'Link staff record'),
-                    items: available
-                        .map(
-                          (item) => DropdownMenuItem(
-                            value: item.id,
-                            child: Text('${item.code} — ${item.name}', overflow: TextOverflow.ellipsis),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => setState(() => _staffId = value),
-                    validator: (value) => _role == 'staff' && value == null ? 'Select a staff record.' : null,
-                  ),
-              ],
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: Surface3DCard(
+          padding: const EdgeInsets.all(22),
+          borderRadius: 20,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Invite user',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _busy ? null : () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
                 ),
-            ],
+                const SizedBox(height: 6),
+                const Text(
+                  'The user will be authorized to receive Email OTP sign-in codes via Google SMTP (support@mesrc.com.my).',
+                  style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
+                ),
+                const SizedBox(height: 14),
+                Form(
+                  key: _form,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _email,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(labelText: 'Email'),
+                        validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
+                      ),
+                      const SizedBox(height: 10),
+                      TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'User name'), validator: _required),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        initialValue: _role,
+                        decoration: const InputDecoration(labelText: 'Role'),
+                        items: [
+                          if (!ceoExists) const DropdownMenuItem(value: 'ceo', child: Text('CEO')),
+                          const DropdownMenuItem(value: 'staff', child: Text('Staff — own records only')),
+                        ],
+                        onChanged: (value) => setState(() {
+                          _role = value ?? 'staff';
+                          _staffId = null;
+                        }),
+                      ),
+                      if (_role == 'staff') ...[
+                        const SizedBox(height: 10),
+                        if (available.isEmpty)
+                          const Text(
+                            'Add a staff record before sending a staff invitation.',
+                            style: TextStyle(color: Color(0xFF667894), fontSize: 12),
+                          )
+                        else
+                          DropdownButtonFormField<String>(
+                            initialValue: _staffId,
+                            decoration: const InputDecoration(labelText: 'Link staff record'),
+                            items: available
+                                .map(
+                                  (item) => DropdownMenuItem(
+                                    value: item.id,
+                                    child: Text('${item.code} — ${item.name}', overflow: TextOverflow.ellipsis),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) => setState(() => _staffId = value),
+                            validator: (value) => _role == 'staff' && value == null ? 'Select a staff record.' : null,
+                          ),
+                      ],
+                      if (_error != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: _busy || (_role == 'staff' && available.isEmpty) ? null : _send,
+                      icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Sending invitation') : const Icon(Icons.send_outlined),
+                      label: Text(_busy ? 'Sending…' : 'Send invitation'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-      actions: [
-        TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton.icon(
-          onPressed: _busy || (_role == 'staff' && available.isEmpty) ? null : _send,
-          icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Sending invitation') : const Icon(Icons.send_outlined),
-          label: Text(_busy ? 'Sending…' : 'Send invitation'),
-        ),
-      ],
     );
   }
 }

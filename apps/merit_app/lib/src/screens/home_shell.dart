@@ -1995,7 +1995,6 @@ class _ConfirmCardDialog extends StatelessWidget {
           ),
         ),
       );
-      );
 }
 
 class _SettingsPage extends StatefulWidget {

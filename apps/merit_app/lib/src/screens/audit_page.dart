@@ -138,7 +138,6 @@ class _AuditPageState extends State<AuditPage> {
     if (merit != null) {
       final positive = merit.deltaTenths >= 0;
       final isOpening = merit.type == 'opening';
-      final isMobile = MediaQuery.sizeOf(context).width < 650;
 
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -6,6 +6,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../data/merit_repository.dart';
+import '../widgets/app_modal.dart';
 import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
 
@@ -138,7 +139,7 @@ class _ReportsPageState extends State<ReportsPage> {
   Future<void> _previewReport({List<StaffMember>? targetStaff}) async {
     final staffList = targetStaff ?? _selectedStaffList;
     if (staffList.isEmpty) return;
-    await showDialog<void>(
+    await showAppModal<void>(
       context: context,
       builder: (dialogContext) => _ReportPreviewDialog(
         staffList: staffList,
@@ -590,22 +591,13 @@ class _ReportPreviewDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screen = MediaQuery.sizeOf(context);
-    return Dialog(
-      insetPadding: EdgeInsets.symmetric(
-        horizontal: screen.width < 700 ? 12 : 28,
-        vertical: screen.height < 700 ? 12 : 24,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 1120,
-          maxHeight: screen.height * 0.9,
-          minWidth: screen.width < 700 ? screen.width - 24 : 720,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+    return AppModalCard(
+      maxWidth: 1120,
+      scrollable: false,
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
             Container(
               padding: const EdgeInsets.fromLTRB(24, 18, 16, 18),
               decoration: const BoxDecoration(
@@ -774,7 +766,6 @@ class _ReportPreviewDialog extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

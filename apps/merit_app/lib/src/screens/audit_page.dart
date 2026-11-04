@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/merit_repository.dart';
+import '../widgets/app_modal.dart';
 import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
 
@@ -265,77 +266,69 @@ class _AuditPageState extends State<AuditPage> {
           tooltip: 'Details',
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.info_outline, size: 18, color: Color(0xFF667894)),
-          onPressed: () => showDialog<void>(
+          onPressed: () => showAppModal<void>(
             context: context,
-            builder: (dialogContext) => Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: Surface3DCard(
-                  padding: const EdgeInsets.all(22),
-                  borderRadius: 20,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+            builder: (dialogContext) => AppModalCard(
+              maxWidth: 440,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.shield_outlined, color: Color(0xFF245CEB), size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Audit Event Details',
-                              style: Theme.of(dialogContext).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF141C2E),
-                                  ),
-                            ),
-                          ),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            onPressed: () => Navigator.pop(dialogContext),
-                            icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF667894)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEEF3FF),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFD6E3FF)),
-                        ),
+                      const Icon(Icons.shield_outlined, color: Color(0xFF245CEB), size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: Text(
-                          action,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: Color(0xFF245CEB)),
+                          'Audit Event Details',
+                          style: Theme.of(dialogContext).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF141C2E),
+                              ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF7F9FC),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFDCE5F2)),
-                        ),
-                        child: SelectableText(
-                          (sys['metadata'] ?? const {}).toString(),
-                          style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Color(0xFF34435D)),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          child: const Text('Close'),
-                        ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => Navigator.pop(dialogContext),
+                        icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF667894)),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF3FF),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFD6E3FF)),
+                    ),
+                    child: Text(
+                      action,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: Color(0xFF245CEB)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F9FC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFDCE5F2)),
+                    ),
+                    child: SelectableText(
+                      (sys['metadata'] ?? const {}).toString(),
+                      style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Color(0xFF34435D)),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('Close'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

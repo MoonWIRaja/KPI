@@ -13,6 +13,7 @@ import 'audit_page.dart';
 import '../widgets/glassy_otp_view.dart';
 import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
+import '../widgets/app_modal.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -147,7 +148,7 @@ class _HomeShellState extends State<HomeShell> {
 
   Future<void> _openProfileDialog() async {
     if (_profile == null) return;
-    await showDialog<void>(
+    await showAppModal<void>(
       context: context,
       builder: (_) => _ProfileAccountDialog(
         profile: _profile!,
@@ -536,7 +537,7 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _openAddStaff() async {
-    final created = await showDialog<bool>(
+    final created = await showAppModal<bool>(
       context: context,
       builder: (_) => _AddStaffDialog(defaultScoreTenths: _defaultScore, repository: _repository),
     );
@@ -544,7 +545,7 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _openEditStaff(StaffMember staff) async {
-    final updated = await showDialog<bool>(
+    final updated = await showAppModal<bool>(
       context: context,
       builder: (_) => _AddStaffDialog(defaultScoreTenths: _defaultScore, repository: _repository, staff: staff),
     );
@@ -552,13 +553,13 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _openCsvImport() async {
-    final imported = await showDialog<bool>(context: context, builder: (_) => CsvImportDialog(repository: _repository));
+    final imported = await showAppModal<bool>(context: context, builder: (_) => CsvImportDialog(repository: _repository));
     if (imported == true) await _refresh();
   }
 
   Future<void> _toggleStaffArchived(StaffMember staff) async {
     final archive = !staff.archived;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppModal<bool>(
       context: context,
       builder: (_) => _ConfirmCardDialog(
         title: archive ? 'Archive staff?' : 'Restore staff?',
@@ -579,7 +580,7 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _deleteStaff(StaffMember staff) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppModal<bool>(
       context: context,
       builder: (_) => _ConfirmCardDialog(
         title: 'Delete staff record?',
@@ -601,7 +602,7 @@ class _HomeShellState extends State<HomeShell> {
     final existing = (profile['user_permissions'] as List<dynamic>? ?? const [])
         .map((item) => (item as Map<String, dynamic>)['permission_key'] as String)
         .toSet();
-    final updated = await showDialog<Set<String>>(
+    final updated = await showAppModal<Set<String>>(
       context: context,
       builder: (_) => _PermissionsDialog(profile: profile, selected: existing),
     );
@@ -616,7 +617,7 @@ class _HomeShellState extends State<HomeShell> {
 
   Future<void> _toggleUserActive(Map<String, dynamic> profile) async {
     final active = profile['is_active'] != true;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppModal<bool>(
       context: context,
       builder: (_) => _ConfirmCardDialog(
         title: active ? 'Activate account?' : 'Deactivate account?',
@@ -640,7 +641,7 @@ class _HomeShellState extends State<HomeShell> {
 
   Future<void> _openAdjustment(StaffMember staff) async {
     if (!_hasPermission('merit.adjust')) return;
-    final change = await showDialog<_AdjustmentInput>(
+    final change = await showAppModal<_AdjustmentInput>(
       context: context,
       builder: (_) => _AdjustmentDialog(staff: staff),
     );
@@ -662,7 +663,7 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _openCorrection(StaffMember staff) async {
-    final correction = await showDialog<_CorrectionInput>(
+    final correction = await showAppModal<_CorrectionInput>(
       context: context,
       builder: (_) => _CorrectionDialog(staff: staff),
     );
@@ -684,7 +685,7 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _openInvite() async {
-    final invited = await showDialog<bool>(
+    final invited = await showAppModal<bool>(
       context: context,
       builder: (_) => _InviteDialog(repository: _repository, staff: _staff, profiles: _profiles),
     );
@@ -887,37 +888,30 @@ class _ProfileAccountDialogState extends State<_ProfileAccountDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 380),
-          child: Surface3DCard(
-            padding: const EdgeInsets.all(24),
-            borderRadius: 20,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'MY ACCOUNT',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.6,
-                          color: Color(0xFF667894),
-                        ),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF667894)),
-                      ),
-                    ],
+  Widget build(BuildContext context) => AppModalCard(
+        maxWidth: 380,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'MY ACCOUNT',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: Color(0xFF667894),
                   ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF667894)),
+                ),
+              ],
+            ),
                   const SizedBox(height: 6),
                   Stack(
                     alignment: Alignment.bottomRight,
@@ -1102,10 +1096,7 @@ class _ProfileAccountDialogState extends State<_ProfileAccountDialog> {
                   ),
                 ],
               ),
-            ),
-          ),
-        ),
-      );
+            );
 }
 
 class _BrandMark extends StatelessWidget {
@@ -1860,76 +1851,66 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
   ];
 
   @override
-  Widget build(BuildContext context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Surface3DCard(
-            padding: const EdgeInsets.all(22),
-            borderRadius: 20,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
+  Widget build(BuildContext context) => AppModalCard(
+        maxWidth: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Permissions',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              widget.profile['display_name'] as String? ?? 'User',
-                              style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
-                            ),
-                          ],
-                        ),
+                      Text(
+                        'Permissions',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                       ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.profile['display_name'] as String? ?? 'User',
+                        style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Permissions are enforced by database security rules.',
-                    style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
-                  ),
-                  const SizedBox(height: 8),
-                  ..._permissions.map(
-                    (item) => CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(item.$2, style: const TextStyle(fontSize: 13.5)),
-                      value: _selected.contains(item.$1),
-                      onChanged: (value) => setState(() {
-                        value == true ? _selected.add(item.$1) : _selected.remove(item.$1);
-                      }),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(context, _selected),
-                        child: const Text('Save permissions'),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Permissions are enforced by database security rules.',
+              style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
+            ),
+            const SizedBox(height: 8),
+            ..._permissions.map(
+              (item) => CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(item.$2, style: const TextStyle(fontSize: 13.5)),
+                value: _selected.contains(item.$1),
+                onChanged: (value) => setState(() {
+                  value == true ? _selected.add(item.$1) : _selected.remove(item.$1);
+                }),
               ),
             ),
-          ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, _selected),
+                  child: const Text('Save permissions'),
+                ),
+              ],
+            ),
+          ],
         ),
       );
 }
@@ -1948,51 +1929,43 @@ class _ConfirmCardDialog extends StatelessWidget {
   final bool destructive;
 
   @override
-  Widget build(BuildContext context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Surface3DCard(
-            padding: const EdgeInsets.all(22),
-            borderRadius: 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget build(BuildContext context) => AppModalCard(
+        maxWidth: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => Navigator.pop(context, false),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ],
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                Text(message, style: const TextStyle(fontSize: 13.5, color: Color(0xFF667894), height: 1.4)),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      style: destructive ? FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318)) : null,
-                      onPressed: () => Navigator.pop(context, true),
-                      child: Text(confirmLabel),
-                    ),
-                  ],
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => Navigator.pop(context, false),
+                  icon: const Icon(Icons.close_rounded),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 12),
+            Text(message, style: const TextStyle(fontSize: 13.5, color: Color(0xFF667894), height: 1.4)),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                const SizedBox(width: 8),
+                FilledButton(
+                  style: destructive ? FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318)) : null,
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(confirmLabel),
+                ),
+              ],
+            ),
+          ],
         ),
       );
 }
@@ -2270,82 +2243,72 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 460),
-          child: Surface3DCard(
-            padding: const EdgeInsets.all(22),
-            borderRadius: 20,
-            child: SingleChildScrollView(
+  Widget build(BuildContext context) => AppModalCard(
+        maxWidth: 460,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.staff == null ? 'Add staff' : 'Edit staff record',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _busy ? null : () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Form(
+              key: _form,
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.staff == null ? 'Add staff' : 'Edit staff record',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                        ),
+                  TextFormField(controller: _code, decoration: const InputDecoration(labelText: 'Staff code'), validator: _required),
+                  const SizedBox(height: 10),
+                  TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Full name'), validator: _required),
+                  const SizedBox(height: 10),
+                  TextFormField(controller: _department, decoration: const InputDecoration(labelText: 'Department (optional)')),
+                  if (widget.staff == null) ...[
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _score,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                      decoration: InputDecoration(
+                        labelText: 'Starting merit score (default ${formatMerit(widget.defaultScoreTenths)})',
+                        suffixText: 'merit',
                       ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        onPressed: _busy ? null : () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Form(
-                    key: _form,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        TextFormField(controller: _code, decoration: const InputDecoration(labelText: 'Staff code'), validator: _required),
-                        const SizedBox(height: 10),
-                        TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Full name'), validator: _required),
-                        const SizedBox(height: 10),
-                        TextFormField(controller: _department, decoration: const InputDecoration(labelText: 'Department (optional)')),
-                        if (widget.staff == null) ...[
-                          const SizedBox(height: 10),
-                          TextFormField(
-                            controller: _score,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                            decoration: InputDecoration(
-                              labelText: 'Starting merit score (default ${formatMerit(widget.defaultScoreTenths)})',
-                              suffixText: 'merit',
-                            ),
-                            validator: (value) =>
-                                parseScoreTenths(value ?? '') == null ? 'Enter a valid score (e.g. 5.0).' : null,
-                          ),
-                        ],
-                        if (_error != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
-                          ),
-                      ],
+                      validator: (value) =>
+                          parseScoreTenths(value ?? '') == null ? 'Enter a valid score (e.g. 5.0).' : null,
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: _busy ? null : _save,
-                        child: Text(_busy ? 'Saving…' : widget.staff == null ? 'Save staff' : 'Save changes'),
-                      ),
-                    ],
-                  ),
+                  ],
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
+                    ),
                 ],
               ),
             ),
-          ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _busy ? null : _save,
+                  child: Text(_busy ? 'Saving…' : widget.staff == null ? 'Save staff' : 'Save changes'),
+                ),
+              ],
+            ),
+          ],
         ),
       );
 }
@@ -2382,139 +2345,129 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
     final isPositive = _direction > 0;
     final accentColor = isPositive ? const Color(0xFF16804A) : const Color(0xFFB42318);
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500),
-        child: Surface3DCard(
-          padding: const EdgeInsets.all(24),
-          borderRadius: 20,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(widget.staff.name, style: Theme.of(context).textTheme.titleLarge),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${widget.staff.code}  •  Current Merit: ${formatMerit(widget.staff.scoreTenths)}',
-                              style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  SegmentedButton<int>(
-                    segments: const [
-                      ButtonSegment(
-                        value: -1,
-                        label: Text('Deduct (-)'),
-                        icon: Icon(Icons.remove_circle_outline, size: 18),
-                      ),
-                      ButtonSegment(
-                        value: 1,
-                        label: Text('Add (+)'),
-                        icon: Icon(Icons.add_circle_outline, size: 18),
-                      ),
-                    ],
-                    selected: {_direction},
-                    onSelectionChanged: (selection) => setState(() => _direction = selection.first),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Select points (0.1 – 1.0)',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF34435D)),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _steps.map((amount) {
-                      final selected = _step == amount;
-                      final label = '${isPositive ? '+' : '-'}${formatMerit(amount)}';
-                      return ChoiceChip(
-                        label: Text(
-                          label,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: selected ? Colors.white : const Color(0xFF141C2E),
-                          ),
-                        ),
-                        selected: selected,
-                        selectedColor: accentColor,
-                        backgroundColor: const Color(0xFFF5F8FC),
-                        showCheckmark: false,
-                        onSelected: (_) => setState(() => _step = amount),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _reason,
-                    onChanged: (_) => setState(() {}),
-                    minLines: 2,
-                    maxLines: 4,
-                    maxLength: 500,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Reason (required)',
-                      hintText: 'State the reason for this merit adjustment…',
-                      alignLabelWithHint: true,
+    return AppModalCard(
+      maxWidth: 500,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.staff.name, style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${widget.staff.code}  •  Current Merit: ${formatMerit(widget.staff.scoreTenths)}',
+                      style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isPositive ? const Color(0xFFE8F7EE) : const Color(0xFFFFEEEE),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Updated Merit Score', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                        Text(
-                          '${formatMerit(widget.staff.scoreTenths)}  →  ${formatDelta(delta)}  →  ${formatMerit(after)}',
-                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: accentColor),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: accentColor),
-                        onPressed: _reason.text.trim().isEmpty
-                            ? null
-                            : () => Navigator.pop(context, _AdjustmentInput(delta, _reason.text.trim())),
-                        child: Text('Confirm ${formatDelta(delta)}'),
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SegmentedButton<int>(
+            segments: const [
+              ButtonSegment(
+                value: -1,
+                label: Text('Deduct (-)'),
+                icon: Icon(Icons.remove_circle_outline, size: 18),
+              ),
+              ButtonSegment(
+                value: 1,
+                label: Text('Add (+)'),
+                icon: Icon(Icons.add_circle_outline, size: 18),
+              ),
+            ],
+            selected: {_direction},
+            onSelectionChanged: (selection) => setState(() => _direction = selection.first),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Select points (0.1 – 1.0)',
+            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF34435D)),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _steps.map((amount) {
+              final selected = _step == amount;
+              final label = '${isPositive ? '+' : '-'}${formatMerit(amount)}';
+              return ChoiceChip(
+                label: Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: selected ? Colors.white : const Color(0xFF141C2E),
+                  ),
+                ),
+                selected: selected,
+                selectedColor: accentColor,
+                backgroundColor: const Color(0xFFF5F8FC),
+                showCheckmark: false,
+                onSelected: (_) => setState(() => _step = amount),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _reason,
+            onChanged: (_) => setState(() {}),
+            minLines: 2,
+            maxLines: 4,
+            maxLength: 500,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Reason (required)',
+              hintText: 'State the reason for this merit adjustment…',
+              alignLabelWithHint: true,
             ),
-        ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: isPositive ? const Color(0xFFE8F7EE) : const Color(0xFFFFEEEE),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Updated Merit Score', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(
+                  '${formatMerit(widget.staff.scoreTenths)}  →  ${formatDelta(delta)}  →  ${formatMerit(after)}',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: accentColor),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: accentColor),
+                onPressed: _reason.text.trim().isEmpty
+                    ? null
+                    : () => Navigator.pop(context, _AdjustmentInput(delta, _reason.text.trim())),
+                child: Text('Confirm ${formatDelta(delta)}'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -2550,86 +2503,76 @@ class _CorrectionDialogState extends State<_CorrectionDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 440),
-          child: Surface3DCard(
-            padding: const EdgeInsets.all(22),
-            borderRadius: 20,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
+  Widget build(BuildContext context) => AppModalCard(
+        maxWidth: 440,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Correct Merit Score',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${widget.staff.code}  •  ${widget.staff.name}',
-                              style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
-                            ),
-                          ],
-                        ),
+                      Text(
+                        'Correct Merit Score',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                       ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${widget.staff.code}  •  ${widget.staff.name}',
+                        style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _score,
-                    onChanged: (_) => setState(() {}),
-                    autofocus: true,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                    decoration: InputDecoration(
-                      labelText: 'Corrected score',
-                      helperText: 'Current score: ${formatMerit(widget.staff.scoreTenths)}',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _reason,
-                    onChanged: (_) => setState(() {}),
-                    minLines: 2,
-                    maxLines: 4,
-                    maxLength: 500,
-                    decoration: const InputDecoration(labelText: 'Correction reason (required)', alignLabelWithHint: true),
-                  ),
-                  const Text(
-                    'A correction adds a new record; the original history is retained.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: parseScoreTenths(_score.text) == null || _reason.text.trim().isEmpty
-                            ? null
-                            : () => Navigator.pop(context, _CorrectionInput(parseScoreTenths(_score.text)!, _reason.text.trim())),
-                        child: const Text('Save correction'),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _score,
+              onChanged: (_) => setState(() {}),
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+              decoration: InputDecoration(
+                labelText: 'Corrected score',
+                helperText: 'Current score: ${formatMerit(widget.staff.scoreTenths)}',
               ),
             ),
-          ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _reason,
+              onChanged: (_) => setState(() {}),
+              minLines: 2,
+              maxLines: 4,
+              maxLength: 500,
+              decoration: const InputDecoration(labelText: 'Correction reason (required)', alignLabelWithHint: true),
+            ),
+            const Text(
+              'A correction adds a new record; the original history is retained.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: parseScoreTenths(_score.text) == null || _reason.text.trim().isEmpty
+                      ? null
+                      : () => Navigator.pop(context, _CorrectionInput(parseScoreTenths(_score.text)!, _reason.text.trim())),
+                  child: const Text('Save correction'),
+                ),
+              ],
+            ),
+          ],
         ),
       );
 }
@@ -2693,114 +2636,104 @@ class _InviteDialogState extends State<_InviteDialog> {
     final available = widget.staff.where((item) => !item.archived && !assigned.contains(item.id)).toList();
     final ceoExists = widget.profiles.any((item) => item['role'] == 'ceo');
     if (_role == 'staff' && _staffId != null && !available.any((item) => item.id == _staffId)) _staffId = null;
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
-        child: Surface3DCard(
-          padding: const EdgeInsets.all(22),
-          borderRadius: 20,
-          child: SingleChildScrollView(
+    return AppModalCard(
+      maxWidth: 460,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Invite user',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: _busy ? null : () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'The user will be authorized to receive Email OTP sign-in codes via Google SMTP (support@mesrc.com.my).',
+            style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
+          ),
+          const SizedBox(height: 14),
+          Form(
+            key: _form,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Invite user',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      onPressed: _busy ? null : () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+                TextFormField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'User name'), validator: _required),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: _role,
+                  decoration: const InputDecoration(labelText: 'Role'),
+                  items: [
+                    if (!ceoExists) const DropdownMenuItem(value: 'ceo', child: Text('CEO')),
+                    const DropdownMenuItem(value: 'staff', child: Text('Staff — own records only')),
                   ],
+                  onChanged: (value) => setState(() {
+                    _role = value ?? 'staff';
+                    _staffId = null;
+                  }),
                 ),
-                const SizedBox(height: 6),
-                const Text(
-                  'The user will be authorized to receive Email OTP sign-in codes via Google SMTP (support@mesrc.com.my).',
-                  style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
-                ),
-                const SizedBox(height: 14),
-                Form(
-                  key: _form,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextFormField(
-                        controller: _email,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(labelText: 'Email'),
-                        validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'User name'), validator: _required),
-                      const SizedBox(height: 10),
-                      DropdownButtonFormField<String>(
-                        initialValue: _role,
-                        decoration: const InputDecoration(labelText: 'Role'),
-                        items: [
-                          if (!ceoExists) const DropdownMenuItem(value: 'ceo', child: Text('CEO')),
-                          const DropdownMenuItem(value: 'staff', child: Text('Staff — own records only')),
-                        ],
-                        onChanged: (value) => setState(() {
-                          _role = value ?? 'staff';
-                          _staffId = null;
-                        }),
-                      ),
-                      if (_role == 'staff') ...[
-                        const SizedBox(height: 10),
-                        if (available.isEmpty)
-                          const Text(
-                            'Add a staff record before sending a staff invitation.',
-                            style: TextStyle(color: Color(0xFF667894), fontSize: 12),
+                if (_role == 'staff') ...[
+                  const SizedBox(height: 10),
+                  if (available.isEmpty)
+                    const Text(
+                      'Add a staff record before sending a staff invitation.',
+                      style: TextStyle(color: Color(0xFF667894), fontSize: 12),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      initialValue: _staffId,
+                      decoration: const InputDecoration(labelText: 'Link staff record'),
+                      items: available
+                          .map(
+                            (item) => DropdownMenuItem(
+                              value: item.id,
+                              child: Text('${item.code} — ${item.name}', overflow: TextOverflow.ellipsis),
+                            ),
                           )
-                        else
-                          DropdownButtonFormField<String>(
-                            initialValue: _staffId,
-                            decoration: const InputDecoration(labelText: 'Link staff record'),
-                            items: available
-                                .map(
-                                  (item) => DropdownMenuItem(
-                                    value: item.id,
-                                    child: Text('${item.code} — ${item.name}', overflow: TextOverflow.ellipsis),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) => setState(() => _staffId = value),
-                            validator: (value) => _role == 'staff' && value == null ? 'Select a staff record.' : null,
-                          ),
-                      ],
-                      if (_error != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
-                    const SizedBox(width: 8),
-                    FilledButton.icon(
-                      onPressed: _busy || (_role == 'staff' && available.isEmpty) ? null : _send,
-                      icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Sending invitation') : const Icon(Icons.send_outlined),
-                      label: Text(_busy ? 'Sending…' : 'Send invitation'),
+                          .toList(),
+                      onChanged: (value) => setState(() => _staffId = value),
+                      validator: (value) => _role == 'staff' && value == null ? 'Select a staff record.' : null,
                     ),
-                  ],
-                ),
+                ],
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318))),
+                  ),
               ],
             ),
           ),
-        ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: _busy || (_role == 'staff' && available.isEmpty) ? null : _send,
+                icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Sending invitation') : const Icon(Icons.send_outlined),
+                label: Text(_busy ? 'Sending…' : 'Send invitation'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

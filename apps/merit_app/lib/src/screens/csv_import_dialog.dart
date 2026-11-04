@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../data/merit_repository.dart';
+import '../widgets/app_modal.dart';
 import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
 
@@ -103,34 +104,27 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 540),
-          child: Surface3DCard(
-            padding: const EdgeInsets.all(22),
-            borderRadius: 20,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Import staff from CSV',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        onPressed: _busy || _committed ? null : () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ],
+  Widget build(BuildContext context) => AppModalCard(
+        maxWidth: 540,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Import staff from CSV',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                   ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _busy || _committed ? null : () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
                   const SizedBox(height: 12),
                   const Text(
                     'UTF-8 CSV • maximum 2 MB and 500 staff. Duplicate staff codes will cancel the entire import.',
@@ -216,8 +210,5 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
                   ),
                 ],
               ),
-            ),
-          ),
-        ),
-      );
+            );
 }

@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 
 import '../data/merit_repository.dart';
 import '../widgets/app_modal.dart';
-import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
 
 class CsvImportDialog extends StatefulWidget {

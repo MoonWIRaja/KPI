@@ -82,9 +82,10 @@ class _HomeShellState extends State<HomeShell> {
     final canReadEvents = _hasPermission('merit.read.all') || _hasPermission('merit.read.self');
     final staff = canReadStaff ? await _repository.loadStaff() : <StaffMember>[];
     final events = canReadEvents ? await _repository.loadEvents() : <MeritEvent>[];
-    final defaultScore = _hasPermission('staff.create') || _hasPermission('staff.import') || _hasPermission('settings.manage')
+    final defaultScoreFallback = _hasPermission('staff.create') || _hasPermission('staff.import') || _hasPermission('settings.manage')
         ? await _repository.defaultScoreTenths()
         : 50;
+    _defaultScore = defaultScoreFallback;
     final profiles = _isOwner ? await _repository.loadProfiles() : const <Map<String, dynamic>>[];
     try {
       final settings = await _repository.loadSettings();
@@ -413,6 +414,7 @@ class _HomeShellState extends State<HomeShell> {
         onAdjust: _openAdjustment,
         onSearchChanged: () => setState(() {}),
         loading: _loading,
+        scoreUnit: _scoreUnit,
       ),
     );
   }
@@ -436,6 +438,7 @@ class _HomeShellState extends State<HomeShell> {
         onOpenStaff: _openUnifiedStaff,
         onSearchChanged: () => setState(() {}),
         loading: _loading,
+        scoreUnit: _scoreUnit,
       ),
     );
   }
@@ -463,7 +466,11 @@ class _HomeShellState extends State<HomeShell> {
                   const SizedBox(height: 14),
                   Expanded(
                     child: SingleChildScrollView(
-                      child: _EventsCard(events: _events, canSeeAllStaff: false),
+                      child: _EventsCard(
+                        events: _events,
+                        canSeeAllStaff: false,
+                        scoreUnit: _scoreUnit,
+                      ),
                     ),
                   ),
                 ],
@@ -479,7 +486,11 @@ class _HomeShellState extends State<HomeShell> {
       child: Surface3DCard(
         padding: const EdgeInsets.all(18),
         child: SingleChildScrollView(
-          child: _EventsCard(events: _events, canSeeAllStaff: _hasPermission('merit.read.all')),
+          child: _EventsCard(
+            events: _events,
+            canSeeAllStaff: _hasPermission('merit.read.all'),
+            scoreUnit: _scoreUnit,
+          ),
         ),
       ),
     );
@@ -1067,6 +1078,7 @@ class _DashboardMeritCard extends StatelessWidget {
     required this.onAdjust,
     required this.onSearchChanged,
     required this.loading,
+    this.scoreUnit = 'merit',
   });
   final List<StaffMember> staff;
   final List<MeritEvent> events;
@@ -1075,6 +1087,7 @@ class _DashboardMeritCard extends StatelessWidget {
   final ValueChanged<StaffMember> onAdjust;
   final VoidCallback onSearchChanged;
   final bool loading;
+  final String scoreUnit;
 
   @override
   Widget build(BuildContext context) {
@@ -1192,6 +1205,7 @@ class _StaffRosterCard extends StatelessWidget {
     required this.onOpenStaff,
     required this.onSearchChanged,
     required this.loading,
+    this.scoreUnit = 'merit',
   });
   final List<StaffMember> staff;
   final bool canCreate;
@@ -1202,6 +1216,7 @@ class _StaffRosterCard extends StatelessWidget {
   final ValueChanged<StaffMember> onOpenStaff;
   final VoidCallback onSearchChanged;
   final bool loading;
+  final String scoreUnit;
 
   @override
   Widget build(BuildContext context) {
@@ -1295,7 +1310,7 @@ class _StaffRosterCard extends StatelessWidget {
                                                     borderRadius: BorderRadius.circular(6),
                                                   ),
                                                   child: Text(
-                                                    '${formatMerit(item.scoreTenths)} $_scoreUnit',
+                                                    '${formatMerit(item.scoreTenths)} $scoreUnit',
                                                     style: const TextStyle(
                                                       fontSize: 12,
                                                       fontWeight: FontWeight.w700,
@@ -1524,9 +1539,14 @@ class _SelfScoreCard extends StatelessWidget {
 }
 
 class _EventsCard extends StatelessWidget {
-  const _EventsCard({required this.events, required this.canSeeAllStaff});
+  const _EventsCard({
+    required this.events,
+    required this.canSeeAllStaff,
+    this.scoreUnit = 'merit',
+  });
   final List<MeritEvent> events;
   final bool canSeeAllStaff;
+  final String scoreUnit;
   @override
   Widget build(BuildContext context) {
     if (events.isEmpty) {
@@ -1552,7 +1572,7 @@ class _EventsCard extends StatelessWidget {
               title: Text(
                 canSeeAllStaff
                     ? '${event.staffName ?? 'Staff'}  •  ${formatDelta(event.deltaTenths)}'
-                    : '${formatDelta(event.deltaTenths)}  •  ${formatMerit(event.afterTenths)} $_scoreUnit',
+                    : '${formatDelta(event.deltaTenths)}  •  ${formatMerit(event.afterTenths)} $scoreUnit',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               subtitle: Text(

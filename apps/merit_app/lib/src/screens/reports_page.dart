@@ -427,6 +427,85 @@ class _ReportsPageState extends State<ReportsPage> {
     final events = _eventsForStaff(staff.id);
     final adjustments = events.where((e) => e.type == 'adjustment').toList();
     final netDelta = adjustments.fold<int>(0, (sum, e) => sum + e.deltaTenths);
+    final isMobile = MediaQuery.sizeOf(context).width < 650;
+
+    if (isMobile) {
+      return InkWell(
+        onTap: () => _previewReport(targetStaff: [staff]),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Checkbox(
+                    value: selected,
+                    visualDensity: VisualDensity.compact,
+                    onChanged: (value) => setState(() {
+                      if (value == true) {
+                        _selectedStaffIds.add(staff.id);
+                      } else {
+                        _selectedStaffIds.remove(staff.id);
+                      }
+                    }),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      staff.name,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF141C2E)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF3FF),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFD6E3FF)),
+                    ),
+                    child: Text(
+                      'Merit: ${formatMerit(staff.scoreTenths)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        color: Color(0xFF245CEB),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const SizedBox(width: 44),
+                  Expanded(
+                    child: Text(
+                      '${staff.code}  •  ${staff.department ?? 'No department'}  •  ${adjustments.length} changes (${formatDelta(netDelta)})',
+                      style: const TextStyle(color: Color(0xFF667894), fontSize: 11.5),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'View staff report',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _previewReport(targetStaff: [staff]),
+                    icon: const Icon(Icons.open_in_full_rounded, size: 18),
+                  ),
+                  if (widget.canExport)
+                    IconButton(
+                      tooltip: 'Export PDF for ${staff.name}',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _exporting ? null : () => _exportPdf(targetStaff: [staff]),
+                      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: Color(0xFF245CEB)),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return ListTile(
       onTap: () => _previewReport(targetStaff: [staff]),

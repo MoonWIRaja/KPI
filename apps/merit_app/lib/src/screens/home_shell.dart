@@ -1124,7 +1124,6 @@ class _DashboardMeritCard extends StatelessWidget {
                                     DataColumn(label: Text('DEPARTMENT')),
                                     DataColumn(label: Text('MERIT')),
                                     DataColumn(label: Text('LATEST CHANGE')),
-                                    DataColumn(label: Text('ACTION')),
                                   ],
                                   rows: staff.map((item) {
                                     final latest = _latestFor(item, events);
@@ -1158,21 +1157,6 @@ class _DashboardMeritCard extends StatelessWidget {
                                           ),
                                         ),
                                         DataCell(latest == null ? const Text('—') : _DeltaPill(delta: latest.deltaTenths)),
-                                        DataCell(
-                                          canAdjust
-                                              ? FilledButton.tonalIcon(
-                                                  style: FilledButton.styleFrom(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                                    visualDensity: VisualDensity.compact,
-                                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                                  ),
-                                                  onPressed: () => onAdjust(item),
-                                                  icon: const Icon(Icons.tune_rounded, size: 14),
-                                                  label: const Text('Adjust'),
-                                                )
-                                              : const SizedBox.shrink(),
-                                        ),
                                       ],
                                     );
                                   }).toList(),
@@ -1318,18 +1302,6 @@ class _StaffRosterCard extends StatelessWidget {
                                           ],
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      OutlinedButton.icon(
-                                        style: OutlinedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                          visualDensity: VisualDensity.compact,
-                                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        ),
-                                        onPressed: () => onOpenStaff(item),
-                                        icon: const Icon(Icons.tune_rounded, size: 14),
-                                        label: const Text('Manage'),
-                                      ),
                                     ],
                                   ),
                                 ),
@@ -1351,7 +1323,6 @@ class _StaffRosterCard extends StatelessWidget {
                                     DataColumn(label: Text('FULL NAME')),
                                     DataColumn(label: Text('DEPARTMENT')),
                                     DataColumn(label: Text('MERIT')),
-                                    DataColumn(label: Text('ACTION')),
                                   ],
                                   rows: staff.map((item) {
                                     return DataRow(
@@ -1375,19 +1346,7 @@ class _StaffRosterCard extends StatelessWidget {
                                             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
                                           ),
                                         ),
-                                        DataCell(
-                                          OutlinedButton.icon(
-                                            style: OutlinedButton.styleFrom(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                              visualDensity: VisualDensity.compact,
-                                              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                            ),
-                                            onPressed: () => onOpenStaff(item),
-                                            icon: const Icon(Icons.tune_rounded, size: 14),
-                                            label: const Text('Manage'),
-                                          ),
-                                        ),
+
                                       ],
                                     );
                                   }).toList(),
@@ -1459,20 +1418,7 @@ class _DashboardStaffCard extends StatelessWidget {
                     ),
                   ),
                   if (latest != null) _DeltaPill(delta: latest!.deltaTenths),
-                  if (canAdjust) ...[
-                    const SizedBox(width: 8),
-                    FilledButton.tonalIcon(
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        visualDensity: VisualDensity.compact,
-                        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: () => onAdjust(staff),
-                      icon: const Icon(Icons.tune_rounded, size: 14),
-                      label: const Text('Adjust'),
-                    ),
-                  ],
+
                 ],
               ),
             ],

@@ -592,9 +592,8 @@ class _ReportsPageState extends State<ReportsPage> {
                         )
                       : staffRows.isEmpty
                           ? const Center(child: Text('No active staff records found.'))
-                          : ListView.separated(
+                          : ListView.builder(
                               itemCount: staffRows.length,
-                              separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEEF2F8)),
                               itemBuilder: (context, index) => _buildStaffReportRow(context, staffRows[index]),
                             ),
             ),
@@ -645,143 +644,118 @@ class _ReportsPageState extends State<ReportsPage> {
     final netDelta = adjustments.fold<int>(0, (sum, e) => sum + e.deltaTenths);
     final isMobile = MediaQuery.sizeOf(context).width < 650;
 
-    if (isMobile) {
-      return InkWell(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Surface3DCard(
+        padding: const EdgeInsets.all(14),
+        borderRadius: 12,
+        interactive: true,
         onTap: () => _previewReport(targetStaff: [staff]),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Checkbox(
+              value: selected,
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              onChanged: (value) => setState(() {
+                if (value == true) {
+                  _selectedStaffIds.add(staff.id);
+                } else {
+                  _selectedStaffIds.remove(staff.id);
+                }
+              }),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Checkbox(
-                    value: selected,
-                    visualDensity: VisualDensity.compact,
-                    onChanged: (value) => setState(() {
-                      if (value == true) {
-                        _selectedStaffIds.add(staff.id);
-                      } else {
-                        _selectedStaffIds.remove(staff.id);
-                      }
-                    }),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      staff.name,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF141C2E)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEEF3FF),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFD6E3FF)),
-                    ),
-                    child: Text(
-                      'Merit: ${formatMerit(staff.scoreTenths)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        color: Color(0xFF245CEB),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          staff.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: Color(0xFF141C2E),
+                          ),
+                        ),
                       ),
-                    ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEF3FF),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFD6E3FF)),
+                        ),
+                        child: Text(
+                          '${formatMerit(staff.scoreTenths)} merit',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            color: Color(0xFF245CEB),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${staff.code}  â€¢  ${staff.department ?? 'No department'}',
+                          style: const TextStyle(color: Color(0xFF667894), fontSize: 11.5),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: netDelta > 0
+                              ? const Color(0xFFE8F7EE)
+                              : netDelta < 0
+                                  ? const Color(0xFFFFEEEE)
+                                  : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${adjustments.length} changes (${formatDelta(netDelta)})',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: netDelta > 0
+                                ? const Color(0xFF16804A)
+                                : netDelta < 0
+                                    ? const Color(0xFFB42318)
+                                    : const Color(0xFF667894),
+                          ),
+                        ),
+                      ),
+                      if (!isMobile) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          tooltip: 'View staff report',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => _previewReport(targetStaff: [staff]),
+                          icon: const Icon(Icons.open_in_full_rounded, size: 16),
+                        ),
+                        if (widget.canExport)
+                          IconButton(
+                            tooltip: 'Export PDF for ${staff.name}',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: _exporting ? null : () => _exportPdf(targetStaff: [staff]),
+                            icon: const Icon(Icons.picture_as_pdf_outlined, size: 16, color: Color(0xFF245CEB)),
+                          ),
+                      ],
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const SizedBox(width: 44),
-                  Expanded(
-                    child: Text(
-                      '${staff.code}  •  ${staff.department ?? 'No department'}  •  ${adjustments.length} changes (${formatDelta(netDelta)})',
-                      style: const TextStyle(color: Color(0xFF667894), fontSize: 11.5),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'View staff report',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => _previewReport(targetStaff: [staff]),
-                    icon: const Icon(Icons.open_in_full_rounded, size: 18),
-                  ),
-                  if (widget.canExport)
-                    IconButton(
-                      tooltip: 'Export PDF for ${staff.name}',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: _exporting ? null : () => _exportPdf(targetStaff: [staff]),
-                      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: Color(0xFF245CEB)),
-                    ),
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    }
-
-    return ListTile(
-      onTap: () => _previewReport(targetStaff: [staff]),
-      leading: Checkbox(
-        value: selected,
-        onChanged: (value) => setState(() {
-          if (value == true) {
-            _selectedStaffIds.add(staff.id);
-          } else {
-            _selectedStaffIds.remove(staff.id);
-          }
-        }),
-      ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              staff.name,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEEF3FF),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'Merit: ${formatMerit(staff.scoreTenths)}',
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 12.5,
-                color: Color(0xFF245CEB),
-              ),
-            ),
-          ),
-        ],
-      ),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text(
-          '${staff.code}  •  ${staff.department ?? 'No department'}  •  ${adjustments.length} changes (${formatDelta(netDelta)})',
-          style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
-        ),
-      ),
-      trailing: Wrap(
-        spacing: 4,
-        children: [
-          IconButton(
-            tooltip: 'View staff report',
-            onPressed: () => _previewReport(targetStaff: [staff]),
-            icon: const Icon(Icons.open_in_full_rounded, size: 18),
-          ),
-          if (widget.canExport)
-            IconButton(
-              tooltip: 'Export PDF for ${staff.name}',
-              onPressed: _exporting ? null : () => _exportPdf(targetStaff: [staff]),
-              icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: Color(0xFF245CEB)),
-            ),
-        ],
       ),
     );
   }

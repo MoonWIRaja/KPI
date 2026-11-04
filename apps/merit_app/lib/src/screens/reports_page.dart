@@ -105,6 +105,104 @@ class _ReportsPageState extends State<ReportsPage> {
     await _load();
   }
 
+  Future<void> _openFilterModal() async {
+    await showAppModal(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AppModalCard(
+          maxWidth: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Filter Reports',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text('DATE RANGE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF667894))),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _from,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setModalState(() {});
+                          setState(() => _from = picked);
+                          await _load();
+                        }
+                      },
+                      icon: const Icon(Icons.calendar_today_outlined, size: 15),
+                      label: Text('From: ${formatDate(_from)}', style: const TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _to,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setModalState(() {});
+                          setState(() => _to = picked);
+                          await _load();
+                        }
+                      },
+                      icon: const Icon(Icons.event_outlined, size: 15),
+                      label: Text('To: ${formatDate(_to)}', style: const TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text('MERIT MOVEMENT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF667894))),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'All', label: Text('All')),
+                  ButtonSegment(value: 'Increase', label: Text('Increase (+)')),
+                  ButtonSegment(value: 'Decrease', label: Text('Decrease (-)')),
+                ],
+                selected: {_direction},
+                onSelectionChanged: (selected) {
+                  setModalState(() {});
+                  setState(() => _direction = selected.first);
+                },
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Done'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   List<StaffMember> get _filteredStaff {
     final query = _search.text.trim().toLowerCase();
     return widget.staff.where((s) {
@@ -318,89 +416,172 @@ class _ReportsPageState extends State<ReportsPage> {
     final staffRows = _filteredStaff;
     final allFilteredSelected =
         staffRows.isNotEmpty && staffRows.every((s) => _selectedStaffIds.contains(s.id));
+    final isMobile = width < 700;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(width < 700 ? 14 : 24, 14, width < 700 ? 14 : 24, 18),
+      padding: EdgeInsets.fromLTRB(isMobile ? 14 : 24, 14, isMobile ? 14 : 24, 18),
       child: Surface3DCard(
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Wrap(
-              spacing: 10,
-              runSpacing: 8,
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _chooseDate(true),
-                      icon: const Icon(Icons.calendar_today_outlined, size: 16),
-                      label: Text('From  ${formatDate(_from)}'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () => _chooseDate(false),
-                      icon: const Icon(Icons.event_outlined, size: 16),
-                      label: Text('To  ${formatDate(_to)}'),
-                    ),
-                    SizedBox(
-                      width: 145,
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _direction,
-                        decoration: const InputDecoration(labelText: 'Filter', isDense: true),
-                        items: const ['All', 'Increase', 'Decrease']
-                            .map((value) => DropdownMenuItem(value: value, child: Text(value)))
-                            .toList(),
-                        onChanged: (value) => setState(() => _direction = value ?? 'All'),
+            if (isMobile) ...[
+              // Modern compact mobile toolbar
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _search,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        hintText: 'Search staff name or code',
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        suffixIcon: _search.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                onPressed: () => setState(() => _search.clear()),
+                              )
+                            : null,
                       ),
                     ),
-                    SizedBox(
-                      width: 220,
-                      child: TextField(
-                        controller: _search,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.search, size: 18),
-                          hintText: 'Search staff name or code',
-                          isDense: true,
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    tooltip: 'Filters & date range',
+                    onPressed: _openFilterModal,
+                    icon: Badge(
+                      isLabelVisible: _direction != 'All',
+                      child: const Icon(Icons.tune_rounded, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: _openFilterModal,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF3FF),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFD0E1FD)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.calendar_today_outlined, size: 13, color: Color(0xFF245CEB)),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${formatDate(_from)} – ${formatDate(_to)}',
+                            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF245CEB)),
+                          ),
+                          if (_direction != 'All') ...[
+                            const SizedBox(width: 6),
+                            Container(width: 4, height: 4, decoration: const BoxDecoration(color: Color(0xFF245CEB), shape: BoxShape.circle)),
+                            const SizedBox(width: 6),
+                            Text(
+                              _direction,
+                              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF245CEB)),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                    onPressed: staffRows.isEmpty ? null : _toggleSelectAll,
+                    icon: Icon(
+                      allFilteredSelected ? Icons.deselect_outlined : Icons.select_all_outlined,
+                      size: 16,
+                    ),
+                    label: Text(allFilteredSelected ? 'Clear' : 'Select all', style: const TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ] else ...[
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => _chooseDate(true),
+                        icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                        label: Text('From  ${formatDate(_from)}'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _chooseDate(false),
+                        icon: const Icon(Icons.event_outlined, size: 16),
+                        label: Text('To  ${formatDate(_to)}'),
+                      ),
+                      SizedBox(
+                        width: 145,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _direction,
+                          decoration: const InputDecoration(labelText: 'Filter', isDense: true),
+                          items: const ['All', 'Increase', 'Decrease']
+                              .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                              .toList(),
+                          onChanged: (value) => setState(() => _direction = value ?? 'All'),
                         ),
                       ),
-                    ),
-                    TextButton.icon(
-                      onPressed: staffRows.isEmpty ? null : _toggleSelectAll,
-                      icon: Icon(
-                        allFilteredSelected ? Icons.deselect_outlined : Icons.select_all_outlined,
-                        size: 18,
+                      SizedBox(
+                        width: 220,
+                        child: TextField(
+                          controller: _search,
+                          onChanged: (_) => setState(() {}),
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.search, size: 18),
+                            hintText: 'Search staff name or code',
+                            isDense: true,
+                          ),
+                        ),
                       ),
-                      label: Text(allFilteredSelected ? 'Clear selection' : 'Select all'),
-                    ),
-                  ],
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: _selectedStaffIds.isEmpty || _loading ? null : () => _previewReport(),
-                      icon: const Icon(Icons.visibility_outlined, size: 18),
-                      label: Text('Preview (${_selectedStaffIds.length})'),
-                    ),
-                    if (widget.canExport)
-                      FilledButton.icon(
-                        onPressed: _selectedStaffIds.isEmpty || _exporting || _loading ? null : () => _exportPdf(),
-                        icon: _exporting
-                            ? const ThinkingOrbsLoader(size: 18, label: 'Exporting PDF')
-                            : const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                        label: Text(_exporting ? 'Exporting…' : 'Export PDF (${_selectedStaffIds.length})'),
+                      TextButton.icon(
+                        onPressed: staffRows.isEmpty ? null : _toggleSelectAll,
+                        icon: Icon(
+                          allFilteredSelected ? Icons.deselect_outlined : Icons.select_all_outlined,
+                          size: 18,
+                        ),
+                        label: Text(allFilteredSelected ? 'Clear selection' : 'Select all'),
                       ),
-                  ],
-                ),
-              ],
-            ),
+                    ],
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _selectedStaffIds.isEmpty || _loading ? null : () => _previewReport(),
+                        icon: const Icon(Icons.visibility_outlined, size: 18),
+                        label: Text('Preview (${_selectedStaffIds.length})'),
+                      ),
+                      if (widget.canExport)
+                        FilledButton.icon(
+                          onPressed: _selectedStaffIds.isEmpty || _exporting || _loading ? null : () => _exportPdf(),
+                          icon: _exporting
+                              ? const ThinkingOrbsLoader(size: 18, label: 'Exporting PDF')
+                              : const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                          label: Text(_exporting ? 'Exporting…' : 'Export PDF (${_selectedStaffIds.length})'),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 14),
             Expanded(
               child: _loading
@@ -417,6 +598,40 @@ class _ReportsPageState extends State<ReportsPage> {
                               itemBuilder: (context, index) => _buildStaffReportRow(context, staffRows[index]),
                             ),
             ),
+            if (isMobile && _selectedStaffIds.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _loading ? null : () => _previewReport(),
+                        icon: const Icon(Icons.visibility_outlined, size: 16),
+                        label: Text('Preview (${_selectedStaffIds.length})', style: const TextStyle(fontSize: 12.5)),
+                      ),
+                    ),
+                    if (widget.canExport) ...[
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _exporting || _loading ? null : () => _exportPdf(),
+                          icon: _exporting
+                              ? const ThinkingOrbsLoader(size: 16, label: 'Exporting PDF')
+                              : const Icon(Icons.picture_as_pdf_outlined, size: 16),
+                          label: Text(_exporting ? 'Exporting…' : 'Export (${_selectedStaffIds.length})', style: const TextStyle(fontSize: 12.5)),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

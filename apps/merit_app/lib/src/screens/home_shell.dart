@@ -420,17 +420,10 @@ class _HomeShellState extends State<HomeShell> {
         staff: staff,
         canCreate: _hasPermission('staff.create'),
         canImport: _hasPermission('staff.import'),
-        canEdit: _hasPermission('staff.update'),
-        canArchive: _hasPermission('staff.archive'),
-        canDelete: _hasPermission('staff.delete'),
-        canCorrectMerit: _hasPermission('merit.correct'),
         search: _search,
         onAddStaff: _openAddStaff,
         onImportCsv: _openCsvImport,
-        onEdit: _openEditStaff,
-        onArchive: _toggleStaffArchived,
-        onDelete: _deleteStaff,
-        onCorrectMerit: _openCorrection,
+        onOpenStaff: _openUnifiedStaff,
         onSearchChanged: () => setState(() {}),
         loading: _loading,
       ),
@@ -544,10 +537,16 @@ class _HomeShellState extends State<HomeShell> {
     if (created == true) await _refresh();
   }
 
-  Future<void> _openEditStaff(StaffMember staff) async {
+  Future<void> _openUnifiedStaff(StaffMember staff) async {
     final updated = await showAppModal<bool>(
       context: context,
-      builder: (_) => _AddStaffDialog(defaultScoreTenths: _defaultScore, repository: _repository, staff: staff),
+      builder: (_) => _StaffUnifiedDialog(
+        staff: staff,
+        repository: _repository,
+        canEdit: _hasPermission('staff.update'),
+        canCorrectMerit: _hasPermission('merit.correct'),
+        canDelete: _hasPermission('staff.delete'),
+      ),
     );
     if (updated == true) await _refresh();
   }
@@ -555,47 +554,6 @@ class _HomeShellState extends State<HomeShell> {
   Future<void> _openCsvImport() async {
     final imported = await showAppModal<bool>(context: context, builder: (_) => CsvImportDialog(repository: _repository));
     if (imported == true) await _refresh();
-  }
-
-  Future<void> _toggleStaffArchived(StaffMember staff) async {
-    final archive = !staff.archived;
-    final confirmed = await showAppModal<bool>(
-      context: context,
-      builder: (_) => _ConfirmCardDialog(
-        title: archive ? 'Archive staff?' : 'Restore staff?',
-        message: archive
-            ? '${staff.name}’s record and merit history will be retained. Their account will not be deleted.'
-            : '${staff.name} will return to the active staff list.',
-        confirmLabel: archive ? 'Archive' : 'Restore',
-        destructive: archive,
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await _repository.setStaffArchived(staff.id, archive);
-      await _refresh();
-    } on MeritRepositoryException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
-    }
-  }
-
-  Future<void> _deleteStaff(StaffMember staff) async {
-    final confirmed = await showAppModal<bool>(
-      context: context,
-      builder: (_) => _ConfirmCardDialog(
-        title: 'Delete staff record?',
-        message: '${staff.name} can only be deleted if no account is linked and no merit history exists. Records with history must be archived.',
-        confirmLabel: 'Delete record',
-        destructive: true,
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await _repository.deleteStaffWithoutHistory(staff.id);
-      await _refresh();
-    } on MeritRepositoryException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
-    }
   }
 
   Future<void> _editUserPermissions(Map<String, dynamic> profile) async {
@@ -662,27 +620,6 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
-  Future<void> _openCorrection(StaffMember staff) async {
-    final correction = await showAppModal<_CorrectionInput>(
-      context: context,
-      builder: (_) => _CorrectionDialog(staff: staff),
-    );
-    if (correction == null) return;
-    try {
-      await _repository.correctMerit(
-        staffId: staff.id,
-        scoreTenths: correction.scoreTenths,
-        reason: correction.reason,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Correction recorded in merit history.')),
-      );
-      await _refresh();
-    } on MeritRepositoryException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
-    }
-  }
 
   Future<void> _openInvite() async {
     final invited = await showAppModal<bool>(
@@ -1180,7 +1117,6 @@ class _DashboardMeritCard extends StatelessWidget {
                                     DataColumn(label: Text('DEPARTMENT')),
                                     DataColumn(label: Text('MERIT')),
                                     DataColumn(label: Text('LATEST CHANGE')),
-                                    DataColumn(label: Text('ACTION')),
                                   ],
                                   rows: staff.map((item) {
                                     final latest = _latestFor(item, events);
@@ -1214,14 +1150,6 @@ class _DashboardMeritCard extends StatelessWidget {
                                           ),
                                         ),
                                         DataCell(latest == null ? const Text('—') : _DeltaPill(delta: latest.deltaTenths)),
-                                        DataCell(
-                                          canAdjust
-                                              ? FilledButton.tonal(
-                                                  onPressed: () => onAdjust(item),
-                                                  child: const Text('Adjust merit'),
-                                                )
-                                              : const SizedBox.shrink(),
-                                        ),
                                       ],
                                     );
                                   }).toList(),
@@ -1241,34 +1169,20 @@ class _StaffRosterCard extends StatelessWidget {
     required this.staff,
     required this.canCreate,
     required this.canImport,
-    required this.canEdit,
-    required this.canArchive,
-    required this.canDelete,
-    required this.canCorrectMerit,
     required this.search,
     required this.onAddStaff,
     required this.onImportCsv,
-    required this.onEdit,
-    required this.onArchive,
-    required this.onDelete,
-    required this.onCorrectMerit,
+    required this.onOpenStaff,
     required this.onSearchChanged,
     required this.loading,
   });
   final List<StaffMember> staff;
   final bool canCreate;
   final bool canImport;
-  final bool canEdit;
-  final bool canArchive;
-  final bool canDelete;
-  final bool canCorrectMerit;
   final TextEditingController search;
   final VoidCallback onAddStaff;
   final VoidCallback onImportCsv;
-  final ValueChanged<StaffMember> onEdit;
-  final ValueChanged<StaffMember> onArchive;
-  final ValueChanged<StaffMember> onDelete;
-  final ValueChanged<StaffMember> onCorrectMerit;
+  final ValueChanged<StaffMember> onOpenStaff;
   final VoidCallback onSearchChanged;
   final bool loading;
 
@@ -1340,6 +1254,8 @@ class _StaffRosterCard extends StatelessWidget {
                                 child: Surface3DCard(
                                   padding: const EdgeInsets.all(14),
                                   borderRadius: 12,
+                                  interactive: true,
+                                  onTap: () => onOpenStaff(item),
                                   child: Row(
                                     children: [
                                       Expanded(
@@ -1355,7 +1271,7 @@ class _StaffRosterCard extends StatelessWidget {
                                                   ),
                                                 ),
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                                   decoration: BoxDecoration(
                                                     color: const Color(0xFFEEF3FF),
                                                     borderRadius: BorderRadius.circular(6),
@@ -1363,7 +1279,7 @@ class _StaffRosterCard extends StatelessWidget {
                                                   child: Text(
                                                     '${formatMerit(item.scoreTenths)} merit',
                                                     style: const TextStyle(
-                                                      fontSize: 11.5,
+                                                      fontSize: 12,
                                                       fontWeight: FontWeight.w700,
                                                       color: Color(0xFF245CEB),
                                                     ),
@@ -1371,38 +1287,16 @@ class _StaffRosterCard extends StatelessWidget {
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 3),
+                                            const SizedBox(height: 4),
                                             Text(
-                                              '${item.code}  •  ${item.department ?? 'No department'}${item.archived ? '  •  Archived' : ''}',
+                                              '${item.code}  •  ${item.department ?? 'No department'}',
                                               style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      if (canCorrectMerit)
-                                        IconButton(
-                                          tooltip: 'Correct merit score',
-                                          onPressed: () => onCorrectMerit(item),
-                                          icon: const Icon(Icons.edit_note_outlined),
-                                        ),
-                                      if (canEdit)
-                                        IconButton(
-                                          tooltip: 'Edit staff',
-                                          onPressed: () => onEdit(item),
-                                          icon: const Icon(Icons.edit_outlined),
-                                        ),
-                                      if (canArchive)
-                                        IconButton(
-                                          tooltip: item.archived ? 'Restore staff' : 'Archive staff',
-                                          onPressed: () => onArchive(item),
-                                          icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined),
-                                        ),
-                                      if (canDelete)
-                                        IconButton(
-                                          tooltip: 'Delete staff record',
-                                          onPressed: () => onDelete(item),
-                                          icon: const Icon(Icons.delete_outline),
-                                        ),
+                                      const SizedBox(width: 8),
+                                      const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF94A3B8)),
                                     ],
                                   ),
                                 ),
@@ -1424,67 +1318,27 @@ class _StaffRosterCard extends StatelessWidget {
                                     DataColumn(label: Text('FULL NAME')),
                                     DataColumn(label: Text('DEPARTMENT')),
                                     DataColumn(label: Text('MERIT')),
-                                    DataColumn(label: Text('STATUS')),
-                                    DataColumn(label: Text('MANAGE')),
                                   ],
                                   rows: staff.map((item) {
                                     return DataRow(
+                                      onSelectChanged: (_) => onOpenStaff(item),
                                       cells: [
                                         DataCell(Text(item.code, style: const TextStyle(fontWeight: FontWeight.w700))),
-                                        DataCell(Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                                        DataCell(
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF245CEB))),
+                                              const SizedBox(width: 6),
+                                              const Icon(Icons.touch_app_outlined, size: 15, color: Color(0xFF245CEB)),
+                                            ],
+                                          ),
+                                        ),
                                         DataCell(Text(item.department ?? '—')),
                                         DataCell(
                                           Text(
                                             formatMerit(item.scoreTenths),
                                             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: item.archived ? const Color(0xFFF0F3F8) : const Color(0xFFE8F7EE),
-                                              borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                              item.archived ? 'Archived' : 'Active',
-                                              style: TextStyle(
-                                                fontSize: 11.5,
-                                                fontWeight: FontWeight.w700,
-                                                color: item.archived ? const Color(0xFF667894) : const Color(0xFF16804A),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Wrap(
-                                            spacing: 4,
-                                            children: [
-                                              if (canCorrectMerit)
-                                                IconButton(
-                                                  tooltip: 'Correct merit score',
-                                                  onPressed: () => onCorrectMerit(item),
-                                                  icon: const Icon(Icons.edit_note_outlined, size: 18),
-                                                ),
-                                              if (canEdit)
-                                                IconButton(
-                                                  tooltip: 'Edit staff',
-                                                  onPressed: () => onEdit(item),
-                                                  icon: const Icon(Icons.edit_outlined, size: 18),
-                                                ),
-                                              if (canArchive)
-                                                IconButton(
-                                                  tooltip: item.archived ? 'Restore staff' : 'Archive staff',
-                                                  onPressed: () => onArchive(item),
-                                                  icon: Icon(item.archived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 18),
-                                                ),
-                                              if (canDelete)
-                                                IconButton(
-                                                  tooltip: 'Delete staff without merit history',
-                                                  onPressed: () => onDelete(item),
-                                                  icon: const Icon(Icons.delete_outline, size: 18),
-                                                ),
-                                            ],
                                           ),
                                         ),
                                       ],
@@ -1548,24 +1402,20 @@ class _DashboardStaffCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 5),
-              Text(
-                '${staff.code}  •  ${staff.department ?? 'No department'}',
-                style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                alignment: WrapAlignment.end,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 6,
-                runSpacing: 4,
+              const SizedBox(height: 6),
+              Row(
                 children: [
-                  if (latest != null) _DeltaPill(delta: latest!.deltaTenths),
-                  if (canAdjust)
-                    FilledButton.tonal(
-                      onPressed: () => onAdjust(staff),
-                      child: const Text('Adjust merit'),
+                  Expanded(
+                    child: Text(
+                      '${staff.code}  •  ${staff.department ?? 'No department'}',
+                      style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
                     ),
+                  ),
+                  if (latest != null) _DeltaPill(delta: latest!.deltaTenths),
+                  if (canAdjust) ...[
+                    const SizedBox(width: 6),
+                    const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF94A3B8)),
+                  ],
                 ],
               ),
             ],
@@ -2491,38 +2341,162 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
   }
 }
 
-class _CorrectionInput {
-  const _CorrectionInput(this.scoreTenths, this.reason);
-  final int scoreTenths;
-  final String reason;
-}
-
-class _CorrectionDialog extends StatefulWidget {
-  const _CorrectionDialog({required this.staff});
+class _StaffUnifiedDialog extends StatefulWidget {
+  const _StaffUnifiedDialog({
+    required this.staff,
+    required this.repository,
+    required this.canEdit,
+    required this.canCorrectMerit,
+    required this.canDelete,
+  });
   final StaffMember staff;
+  final MeritRepository repository;
+  final bool canEdit;
+  final bool canCorrectMerit;
+  final bool canDelete;
+
   @override
-  State<_CorrectionDialog> createState() => _CorrectionDialogState();
+  State<_StaffUnifiedDialog> createState() => _StaffUnifiedDialogState();
 }
 
-class _CorrectionDialogState extends State<_CorrectionDialog> {
+class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final _code = TextEditingController();
+  final _name = TextEditingController();
+  final _department = TextEditingController();
   final _score = TextEditingController();
   final _reason = TextEditingController();
+
+  bool _busy = false;
+  String? _error;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _code.text = widget.staff.code;
+    _name.text = widget.staff.name;
+    _department.text = widget.staff.department ?? '';
     _score.text = formatMerit(widget.staff.scoreTenths);
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
+    _code.dispose();
+    _name.dispose();
+    _department.dispose();
     _score.dispose();
     _reason.dispose();
     super.dispose();
   }
 
+  Future<void> _confirmDelete() async {
+    final confirmed = await showAppModal<bool>(
+      context: context,
+      builder: (_) => _ConfirmCardDialog(
+        title: 'Delete ${widget.staff.name}?',
+        message: 'This will permanently remove ${widget.staff.name} and all associated merit history from the system. This action cannot be undone.',
+        confirmLabel: 'Delete permanently',
+        destructive: true,
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      await widget.repository.deleteStaff(widget.staff.id);
+      if (mounted) {
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${widget.staff.name} was deleted.')),
+        );
+      }
+    } on MeritRepositoryException catch (e) {
+      setState(() => _error = e.message);
+    } catch (_) {
+      setState(() => _error = 'Staff record could not be deleted.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      bool changed = false;
+
+      // 1. Staff info changes
+      final infoChanged = _code.text.trim() != widget.staff.code ||
+          _name.text.trim() != widget.staff.name ||
+          _department.text.trim() != (widget.staff.department ?? '');
+
+      if (infoChanged) {
+        if (!widget.canEdit) {
+          throw const MeritRepositoryException('You do not have permission to edit staff details.');
+        }
+        if (_code.text.trim().isEmpty) {
+          throw const MeritRepositoryException('Staff code cannot be empty.');
+        }
+        if (_name.text.trim().isEmpty) {
+          throw const MeritRepositoryException('Full name cannot be empty.');
+        }
+        await widget.repository.updateStaff(
+          widget.staff,
+          code: _code.text.trim(),
+          name: _name.text.trim(),
+          department: _department.text.trim().isEmpty ? null : _department.text.trim(),
+        );
+        changed = true;
+      }
+
+      // 2. Merit score correction
+      final newScoreTenths = parseScoreTenths(_score.text.trim());
+      final scoreChanged = newScoreTenths != null && newScoreTenths != widget.staff.scoreTenths;
+
+      if (scoreChanged) {
+        if (!widget.canCorrectMerit) {
+          throw const MeritRepositoryException('You do not have permission to correct merit score.');
+        }
+        if (_reason.text.trim().isEmpty) {
+          throw const MeritRepositoryException('A reason is required when correcting merit score.');
+        }
+        await widget.repository.correctMerit(
+          staffId: widget.staff.id,
+          scoreTenths: newScoreTenths,
+          reason: _reason.text.trim(),
+        );
+        changed = true;
+      }
+
+      if (mounted) {
+        Navigator.pop(context, changed);
+        if (changed) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Staff details saved successfully.')),
+          );
+        }
+      }
+    } on MeritRepositoryException catch (e) {
+      setState(() => _error = e.message);
+    } catch (_) {
+      setState(() => _error = 'Could not save changes. Please check input values.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => AppModalCard(
-        maxWidth: 440,
+        maxWidth: 480,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2534,59 +2508,189 @@ class _CorrectionDialogState extends State<_CorrectionDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Correct Merit Score',
+                        widget.staff.name,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${widget.staff.code}  •  ${widget.staff.name}',
+                        '${widget.staff.code}  •  ${widget.staff.department ?? 'No department'}',
                         style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
                       ),
                     ],
                   ),
                 ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF3FF),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${formatMerit(widget.staff.scoreTenths)} merit',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF245CEB)),
+                  ),
+                ),
+                const SizedBox(width: 6),
                 IconButton(
                   visualDensity: VisualDensity.compact,
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: _busy ? null : () => Navigator.pop(context),
                   icon: const Icon(Icons.close_rounded),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _score,
-              onChanged: (_) => setState(() {}),
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-              decoration: InputDecoration(
-                labelText: 'Corrected score',
-                helperText: 'Current score: ${formatMerit(widget.staff.scoreTenths)}',
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                indicator: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x0F000000), blurRadius: 4, offset: Offset(0, 1)),
+                  ],
+                ),
+                labelColor: const Color(0xFF245CEB),
+                unselectedLabelColor: const Color(0xFF64748B),
+                labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                tabs: const [
+                  Tab(icon: Icon(Icons.badge_outlined, size: 18), text: 'Staff Details'),
+                  Tab(icon: Icon(Icons.stars_outlined, size: 18), text: 'Merit Points'),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _reason,
-              onChanged: (_) => setState(() {}),
-              minLines: 2,
-              maxLines: 4,
-              maxLength: 500,
-              decoration: const InputDecoration(labelText: 'Correction reason (required)', alignLabelWithHint: true),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 260,
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextFormField(
+                          controller: _code,
+                          enabled: widget.canEdit && !_busy,
+                          decoration: const InputDecoration(labelText: 'Staff code', isDense: true),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _name,
+                          enabled: widget.canEdit && !_busy,
+                          decoration: const InputDecoration(labelText: 'Full name', isDense: true),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _department,
+                          enabled: widget.canEdit && !_busy,
+                          decoration: const InputDecoration(labelText: 'Department (optional)', isDense: true),
+                        ),
+                        if (!widget.canEdit)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: Text(
+                              'You have read-only view of staff records.',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.stars_rounded, color: Color(0xFF245CEB), size: 28),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('CURRENT MERIT SCORE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5)),
+                                  Text(
+                                    formatMerit(widget.staff.scoreTenths),
+                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _score,
+                          enabled: widget.canCorrectMerit && !_busy,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                          decoration: const InputDecoration(
+                            labelText: 'Corrected score',
+                            isDense: true,
+                            suffixText: 'merit',
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _reason,
+                          enabled: widget.canCorrectMerit && !_busy,
+                          minLines: 2,
+                          maxLines: 3,
+                          maxLength: 500,
+                          decoration: const InputDecoration(
+                            labelText: 'Correction reason (required if changing score)',
+                            isDense: true,
+                            alignLabelWithHint: true,
+                          ),
+                        ),
+                        const Text(
+                          'A correction records an adjustment in history with your account details.',
+                          style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const Text(
-              'A correction adds a new record; the original history is retained.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
-            ),
-            const SizedBox(height: 18),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 4),
+                child: Text(_error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 13, fontWeight: FontWeight.w600)),
+              ),
+            const SizedBox(height: 14),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                if (widget.canDelete)
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFB42318),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    onPressed: _busy ? null : _confirmDelete,
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    label: const Text('Delete staff'),
+                  ),
+                const Spacer(),
+                TextButton(
+                  onPressed: _busy ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
                 const SizedBox(width: 8),
                 FilledButton(
-                  onPressed: parseScoreTenths(_score.text) == null || _reason.text.trim().isEmpty
-                      ? null
-                      : () => Navigator.pop(context, _CorrectionInput(parseScoreTenths(_score.text)!, _reason.text.trim())),
-                  child: const Text('Save correction'),
+                  onPressed: _busy ? null : _save,
+                  child: Text(_busy ? 'Saving…' : 'Save changes'),
                 ),
               ],
             ),

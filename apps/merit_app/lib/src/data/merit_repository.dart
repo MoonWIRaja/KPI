@@ -227,15 +227,19 @@ class MeritRepository {
     }
   }
 
-  Future<void> deleteStaffWithoutHistory(String staffId) async {
+  Future<void> deleteStaff(String staffId) async {
     try {
-      await _client.rpc('delete_staff_without_history', params: {'target_staff_id': staffId});
-    } on PostgrestException catch (error) {
-      if (error.message.contains('merit history')) throw const MeritRepositoryException('Staff with merit history must be archived instead of deleted.');
-      if (error.message.contains('linked')) throw const MeritRepositoryException('Deactivate the staff account and archive this record.');
-      throw const MeritRepositoryException('Staff record could not be deleted.');
+      await _client.rpc('delete_staff', params: {'target_staff_id': staffId});
+    } on PostgrestException {
+      try {
+        await _client.rpc('delete_staff_without_history', params: {'target_staff_id': staffId});
+      } on PostgrestException {
+        throw const MeritRepositoryException('Staff record could not be deleted.');
+      }
     }
   }
+
+  Future<void> deleteStaffWithoutHistory(String staffId) async => deleteStaff(staffId);
 
   Future<void> correctMerit({required String staffId, required int scoreTenths, required String reason}) async {
     try {

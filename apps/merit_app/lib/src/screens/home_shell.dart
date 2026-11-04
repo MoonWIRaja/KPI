@@ -399,10 +399,8 @@ class _HomeShellState extends State<HomeShell> {
         staff: staff,
         events: _events,
         canAdjust: _hasPermission('merit.adjust'),
-        canCorrect: _hasPermission('merit.correct'),
         search: _search,
         onAdjust: _openAdjustment,
-        onCorrect: _openCorrection,
         onSearchChanged: () => setState(() {}),
         loading: _loading,
       ),
@@ -425,12 +423,14 @@ class _HomeShellState extends State<HomeShell> {
         canEdit: _hasPermission('staff.update'),
         canArchive: _hasPermission('staff.archive'),
         canDelete: _hasPermission('staff.delete'),
+        canCorrectMerit: _hasPermission('merit.correct'),
         search: _search,
         onAddStaff: _openAddStaff,
         onImportCsv: _openCsvImport,
         onEdit: _openEditStaff,
         onArchive: _toggleStaffArchived,
         onDelete: _deleteStaff,
+        onCorrectMerit: _openCorrection,
         onSearchChanged: () => setState(() {}),
         loading: _loading,
       ),
@@ -1109,20 +1109,16 @@ class _DashboardMeritCard extends StatelessWidget {
     required this.staff,
     required this.events,
     required this.canAdjust,
-    required this.canCorrect,
     required this.search,
     required this.onAdjust,
-    required this.onCorrect,
     required this.onSearchChanged,
     required this.loading,
   });
   final List<StaffMember> staff;
   final List<MeritEvent> events;
   final bool canAdjust;
-  final bool canCorrect;
   final TextEditingController search;
   final ValueChanged<StaffMember> onAdjust;
-  final ValueChanged<StaffMember> onCorrect;
   final VoidCallback onSearchChanged;
   final bool loading;
 
@@ -1164,9 +1160,7 @@ class _DashboardMeritCard extends StatelessWidget {
                                 staff: item,
                                 latest: _latestFor(item, events),
                                 canAdjust: canAdjust,
-                                canCorrect: canCorrect,
                                 onAdjust: onAdjust,
-                                onCorrect: onCorrect,
                               );
                             },
                           )
@@ -1221,22 +1215,12 @@ class _DashboardMeritCard extends StatelessWidget {
                                         ),
                                         DataCell(latest == null ? const Text('—') : _DeltaPill(delta: latest.deltaTenths)),
                                         DataCell(
-                                          Wrap(
-                                            spacing: 4,
-                                            children: [
-                                              if (canAdjust)
-                                                FilledButton.tonal(
+                                          canAdjust
+                                              ? FilledButton.tonal(
                                                   onPressed: () => onAdjust(item),
                                                   child: const Text('Adjust merit'),
-                                                ),
-                                              if (canCorrect)
-                                                IconButton(
-                                                  tooltip: 'Correct score',
-                                                  onPressed: () => onCorrect(item),
-                                                  icon: const Icon(Icons.edit_note_outlined, size: 18),
-                                                ),
-                                            ],
-                                          ),
+                                                )
+                                              : const SizedBox.shrink(),
                                         ),
                                       ],
                                     );
@@ -1260,12 +1244,14 @@ class _StaffRosterCard extends StatelessWidget {
     required this.canEdit,
     required this.canArchive,
     required this.canDelete,
+    required this.canCorrectMerit,
     required this.search,
     required this.onAddStaff,
     required this.onImportCsv,
     required this.onEdit,
     required this.onArchive,
     required this.onDelete,
+    required this.onCorrectMerit,
     required this.onSearchChanged,
     required this.loading,
   });
@@ -1275,12 +1261,14 @@ class _StaffRosterCard extends StatelessWidget {
   final bool canEdit;
   final bool canArchive;
   final bool canDelete;
+  final bool canCorrectMerit;
   final TextEditingController search;
   final VoidCallback onAddStaff;
   final VoidCallback onImportCsv;
   final ValueChanged<StaffMember> onEdit;
   final ValueChanged<StaffMember> onArchive;
   final ValueChanged<StaffMember> onDelete;
+  final ValueChanged<StaffMember> onCorrectMerit;
   final VoidCallback onSearchChanged;
   final bool loading;
 
@@ -1358,9 +1346,30 @@ class _StaffRosterCard extends StatelessWidget {
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              item.name,
-                                              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    item.name,
+                                                    style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
+                                                  ),
+                                                ),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFEEF3FF),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Text(
+                                                    '${formatMerit(item.scoreTenths)} merit',
+                                                    style: const TextStyle(
+                                                      fontSize: 11.5,
+                                                      fontWeight: FontWeight.w700,
+                                                      color: Color(0xFF245CEB),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                             const SizedBox(height: 3),
                                             Text(
@@ -1370,6 +1379,12 @@ class _StaffRosterCard extends StatelessWidget {
                                           ],
                                         ),
                                       ),
+                                      if (canCorrectMerit)
+                                        IconButton(
+                                          tooltip: 'Correct merit score',
+                                          onPressed: () => onCorrectMerit(item),
+                                          icon: const Icon(Icons.edit_note_outlined),
+                                        ),
                                       if (canEdit)
                                         IconButton(
                                           tooltip: 'Edit staff',
@@ -1408,6 +1423,7 @@ class _StaffRosterCard extends StatelessWidget {
                                     DataColumn(label: Text('STAFF CODE')),
                                     DataColumn(label: Text('FULL NAME')),
                                     DataColumn(label: Text('DEPARTMENT')),
+                                    DataColumn(label: Text('MERIT')),
                                     DataColumn(label: Text('STATUS')),
                                     DataColumn(label: Text('MANAGE')),
                                   ],
@@ -1417,6 +1433,12 @@ class _StaffRosterCard extends StatelessWidget {
                                         DataCell(Text(item.code, style: const TextStyle(fontWeight: FontWeight.w700))),
                                         DataCell(Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600))),
                                         DataCell(Text(item.department ?? '—')),
+                                        DataCell(
+                                          Text(
+                                            formatMerit(item.scoreTenths),
+                                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
+                                          ),
+                                        ),
                                         DataCell(
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1438,6 +1460,12 @@ class _StaffRosterCard extends StatelessWidget {
                                           Wrap(
                                             spacing: 4,
                                             children: [
+                                              if (canCorrectMerit)
+                                                IconButton(
+                                                  tooltip: 'Correct merit score',
+                                                  onPressed: () => onCorrectMerit(item),
+                                                  icon: const Icon(Icons.edit_note_outlined, size: 18),
+                                                ),
                                               if (canEdit)
                                                 IconButton(
                                                   tooltip: 'Edit staff',
@@ -1485,16 +1513,12 @@ class _DashboardStaffCard extends StatelessWidget {
     required this.staff,
     required this.latest,
     required this.canAdjust,
-    required this.canCorrect,
     required this.onAdjust,
-    required this.onCorrect,
   });
   final StaffMember staff;
   final MeritEvent? latest;
   final bool canAdjust;
-  final bool canCorrect;
   final ValueChanged<StaffMember> onAdjust;
-  final ValueChanged<StaffMember> onCorrect;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -1537,12 +1561,6 @@ class _DashboardStaffCard extends StatelessWidget {
                 runSpacing: 4,
                 children: [
                   if (latest != null) _DeltaPill(delta: latest!.deltaTenths),
-                  if (canCorrect)
-                    IconButton(
-                      tooltip: 'Correct score',
-                      onPressed: () => onCorrect(staff),
-                      icon: const Icon(Icons.edit_note_outlined),
-                    ),
                   if (canAdjust)
                     FilledButton.tonal(
                       onPressed: () => onAdjust(staff),

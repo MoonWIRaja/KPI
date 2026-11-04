@@ -286,7 +286,9 @@ class MeritRepository {
           'floor_input': floorTenths,
           'ceiling_input': ceilingTenths,
         });
-        return;
+        throw const MeritRepositoryException(
+          'Scoring rules saved, but organization name and unit were NOT saved: the database is missing migration 20261104030000_settings_enhancements.sql. Run it in Supabase, then save again.',
+        );
       }
       if (error.message.contains('minimum')) throw const MeritRepositoryException('The default score must be at or above the minimum.');
       if (error.message.contains('maximum')) throw const MeritRepositoryException('The default score must be at or below the maximum.');

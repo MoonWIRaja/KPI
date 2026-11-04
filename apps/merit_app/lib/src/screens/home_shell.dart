@@ -1962,7 +1962,12 @@ class _SettingsPageState extends State<_SettingsPage> {
         );
       }
     } on MeritRepositoryException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) {
+        setState(() => _error = error.message);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message), duration: const Duration(seconds: 8)),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

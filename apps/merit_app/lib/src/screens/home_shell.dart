@@ -32,6 +32,8 @@ class _HomeShellState extends State<HomeShell> {
   List<Map<String, dynamic>> _profiles = const [];
   Set<String> _permissions = {};
   int _defaultScore = 50;
+  String _organizationName = 'MESRC DEVICE';
+  String _scoreUnit = 'merit';
   int _selectedPage = 0;
   bool _loading = true;
   String? _loadError;
@@ -84,9 +86,14 @@ class _HomeShellState extends State<HomeShell> {
         ? await _repository.defaultScoreTenths()
         : 50;
     final profiles = _isOwner ? await _repository.loadProfiles() : const <Map<String, dynamic>>[];
+    try {
+      final settings = await _repository.loadSettings();
+      _defaultScore = settings.defaultScoreTenths;
+      _organizationName = settings.organizationName;
+      _scoreUnit = settings.scoreUnit;
+    } catch (_) {}
     _staff = staff;
     _events = events;
-    _defaultScore = defaultScore;
     _profiles = profiles;
   }
 
@@ -261,6 +268,8 @@ class _HomeShellState extends State<HomeShell> {
           repository: _repository,
           staff: _staff,
           canExport: _hasPermission('reports.export'),
+          organizationName: _organizationName,
+          scoreUnit: _scoreUnit,
         ),
       'users' => _usersPage(),
       'settings' => _settingsPage(),
@@ -547,6 +556,7 @@ class _HomeShellState extends State<HomeShell> {
         canEdit: _hasPermission('staff.update'),
         canCorrectMerit: _hasPermission('merit.correct'),
         canDelete: _hasPermission('staff.delete'),
+        scoreUnit: _scoreUnit,
       ),
     );
     if (updated == true) await _refresh();
@@ -1285,7 +1295,7 @@ class _StaffRosterCard extends StatelessWidget {
                                                     borderRadius: BorderRadius.circular(6),
                                                   ),
                                                   child: Text(
-                                                    '${formatMerit(item.scoreTenths)} merit',
+                                                    '${formatMerit(item.scoreTenths)} $_scoreUnit',
                                                     style: const TextStyle(
                                                       fontSize: 12,
                                                       fontWeight: FontWeight.w700,
@@ -1542,7 +1552,7 @@ class _EventsCard extends StatelessWidget {
               title: Text(
                 canSeeAllStaff
                     ? '${event.staffName ?? 'Staff'}  •  ${formatDelta(event.deltaTenths)}'
-                    : '${formatDelta(event.deltaTenths)}  •  ${formatMerit(event.afterTenths)} merit',
+                    : '${formatDelta(event.deltaTenths)}  •  ${formatMerit(event.afterTenths)} $_scoreUnit',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               subtitle: Text(
@@ -1804,13 +1814,19 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
             ),
             const SizedBox(height: 18),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, _selected),
-                  child: const Text('Save permissions'),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(context, _selected),
+                    child: const Text('Save permissions'),
+                  ),
                 ),
               ],
             ),
@@ -1858,14 +1874,20 @@ class _ConfirmCardDialog extends StatelessWidget {
             Text(message, style: const TextStyle(fontSize: 13.5, color: Color(0xFF667894), height: 1.4)),
             const SizedBox(height: 20),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                OutlinedButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                const SizedBox(width: 8),
-                FilledButton(
-                  style: destructive ? FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318)) : null,
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(confirmLabel),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    style: destructive ? FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318)) : null,
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text(confirmLabel),
+                  ),
                 ),
               ],
             ),
@@ -2548,13 +2570,19 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
             ),
             const SizedBox(height: 20),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                OutlinedButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _busy ? null : _save,
-                  child: Text(_busy ? 'Saving…' : 'Save staff'),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _busy ? null : _save,
+                    child: Text(_busy ? 'Saving…' : 'Save staff'),
+                  ),
                 ),
               ],
             ),
@@ -2701,19 +2729,22 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
           ),
           const SizedBox(height: 18),
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
               ),
-              const SizedBox(width: 8),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: accentColor),
-                onPressed: _reason.text.trim().isEmpty
-                    ? null
-                    : () => Navigator.pop(context, _AdjustmentInput(delta, _reason.text.trim())),
-                child: Text('Confirm ${formatDelta(delta)}'),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: accentColor),
+                  onPressed: _reason.text.trim().isEmpty
+                      ? null
+                      : () => Navigator.pop(context, _AdjustmentInput(delta, _reason.text.trim())),
+                  child: Text('Confirm ${formatDelta(delta)}'),
+                ),
               ),
             ],
           ),
@@ -2730,12 +2761,14 @@ class _StaffUnifiedDialog extends StatefulWidget {
     required this.canEdit,
     required this.canCorrectMerit,
     required this.canDelete,
+    this.scoreUnit = 'merit',
   });
   final StaffMember staff;
   final MeritRepository repository;
   final bool canEdit;
   final bool canCorrectMerit;
   final bool canDelete;
+  final String scoreUnit;
 
   @override
   State<_StaffUnifiedDialog> createState() => _StaffUnifiedDialogState();
@@ -2908,11 +2941,20 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '${formatMerit(widget.staff.scoreTenths)} merit',
+                    '${formatMerit(widget.staff.scoreTenths)} ${widget.scoreUnit}',
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF245CEB)),
                   ),
                 ),
-                const SizedBox(width: 6),
+                if (widget.canDelete) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    tooltip: 'Delete staff',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _busy ? null : _confirmDelete,
+                    icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFB42318), size: 20),
+                  ),
+                ],
+                const SizedBox(width: 4),
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   onPressed: _busy ? null : () => Navigator.pop(context),
@@ -2987,6 +3029,19 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                           icon: const Icon(Icons.stars_outlined, size: 16),
                           label: const Text('Adjust merit points for this staff'),
                         ),
+                        if (widget.canDelete) ...[
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFB42318),
+                              side: const BorderSide(color: Color(0xFFFECDCA)),
+                              backgroundColor: const Color(0xFFFFF5F5),
+                            ),
+                            onPressed: _busy ? null : _confirmDelete,
+                            icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                            label: const Text('Delete this staff record'),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -3107,33 +3162,17 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
             const SizedBox(height: 14),
             Row(
               children: [
-                if (widget.canDelete) ...[
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFB42318),
-                        side: const BorderSide(color: Color(0xFFF3B8B3)),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                      ),
-                      onPressed: _busy ? null : _confirmDelete,
-                      icon: const Icon(Icons.delete_outline, size: 18),
-                      label: const Text('Delete', maxLines: 1),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
                 Expanded(
                   child: OutlinedButton(
                     onPressed: _busy ? null : () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
-                  flex: 2,
                   child: FilledButton(
                     onPressed: _busy ? null : _save,
-                    child: Text(_busy ? 'Saving…' : 'Save changes', maxLines: 1),
+                    child: Text(_busy ? 'Saving…' : 'Save changes'),
                   ),
                 ),
               ],
@@ -3288,14 +3327,20 @@ class _InviteDialogState extends State<_InviteDialog> {
           ),
           const SizedBox(height: 20),
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              OutlinedButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
-              const SizedBox(width: 8),
-              FilledButton.icon(
-                onPressed: _busy || (_role == 'staff' && available.isEmpty) ? null : _send,
-                icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Sending invitation') : const Icon(Icons.send_outlined),
-                label: Text(_busy ? 'Sending…' : 'Send invitation'),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _busy ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _busy || (_role == 'staff' && available.isEmpty) ? null : _send,
+                  icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Sending invitation') : const Icon(Icons.send_outlined),
+                  label: Text(_busy ? 'Sending…' : 'Send invitation'),
+                ),
               ),
             ],
           ),

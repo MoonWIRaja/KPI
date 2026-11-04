@@ -235,9 +235,8 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
                           child: const Text('Cancel'),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Expanded(
-                        flex: 2,
                         child: FilledButton(
                           onPressed: _busy || _rows.isEmpty || _errors.isNotEmpty ? null : _import,
                           child: const Text('Confirm import'),

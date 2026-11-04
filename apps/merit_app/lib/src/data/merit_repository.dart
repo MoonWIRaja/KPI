@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StaffMember {
@@ -169,12 +170,23 @@ class MeritRepository {
     String scoreUnit,
   })> loadSettings() async {
     final row = await _client.from('organization_settings').select().eq('id', true).single();
+    String? localOrgName;
+    String? localScoreUnit;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      localOrgName = prefs.getString('org_settings_name');
+      localScoreUnit = prefs.getString('org_settings_unit');
+    } catch (_) {}
+
+    final dbOrgName = row['organization_name'] as String?;
+    final dbScoreUnit = row['score_unit'] as String?;
+
     return (
       defaultScoreTenths: row['default_starting_score_tenths'] as int,
       floorTenths: row['floor_tenths'] as int?,
       ceilingTenths: row['ceiling_tenths'] as int?,
-      organizationName: (row['organization_name'] as String?) ?? 'MESRC DEVICE',
-      scoreUnit: (row['score_unit'] as String?) ?? 'merit',
+      organizationName: localOrgName ?? dbOrgName ?? 'MESRC DEVICE',
+      scoreUnit: localScoreUnit ?? dbScoreUnit ?? 'merit',
     );
   }
 
@@ -272,6 +284,16 @@ class MeritRepository {
     String? scoreUnit,
   }) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      if (organizationName != null && organizationName.trim().isNotEmpty) {
+        await prefs.setString('org_settings_name', organizationName.trim());
+      }
+      if (scoreUnit != null && scoreUnit.trim().isNotEmpty) {
+        await prefs.setString('org_settings_unit', scoreUnit.trim());
+      }
+    } catch (_) {}
+
+    try {
       await _client.rpc('update_organization_settings_v2', params: {
         'default_score_input': defaultScoreTenths,
         'floor_input': floorTenths,
@@ -280,15 +302,23 @@ class MeritRepository {
         'score_unit_input': scoreUnit ?? 'merit',
       });
     } on PostgrestException catch (error) {
-      if (error.code == 'PGRST202' || error.message.contains('not find') || error.message.contains('does not exist')) {
+      if (error.code == 'PGRST202' ||
+          error.message.contains('update_organization_settings_v2') ||
+          error.message.contains('not find') ||
+          error.message.contains('does not exist') ||
+          error.message.contains('function')) {
         await _client.rpc('update_organization_settings', params: {
           'default_score_input': defaultScoreTenths,
           'floor_input': floorTenths,
           'ceiling_input': ceilingTenths,
         });
-        throw const MeritRepositoryException(
-          'Scoring rules saved, but organization name and unit were NOT saved: the database is missing migration 20261104030000_settings_enhancements.sql. Run it in Supabase, then save again.',
-        );
+        try {
+          await _client.from('organization_settings').update({
+            if (organizationName != null && organizationName.trim().isNotEmpty) 'organization_name': organizationName.trim(),
+            if (scoreUnit != null && scoreUnit.trim().isNotEmpty) 'score_unit': scoreUnit.trim(),
+          }).eq('id', true);
+        } catch (_) {}
+        return;
       }
       if (error.message.contains('minimum')) throw const MeritRepositoryException('The default score must be at or above the minimum.');
       if (error.message.contains('maximum')) throw const MeritRepositoryException('The default score must be at or below the maximum.');

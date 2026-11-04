@@ -15,11 +15,15 @@ class ReportsPage extends StatefulWidget {
     required this.repository,
     required this.staff,
     required this.canExport,
+    this.organizationName = 'MESRC DEVICE',
+    this.scoreUnit = 'merit',
     super.key,
   });
   final MeritRepository repository;
   final List<StaffMember> staff;
   final bool canExport;
+  final String organizationName;
+  final String scoreUnit;
 
   @override
   State<ReportsPage> createState() => _ReportsPageState();
@@ -264,7 +268,7 @@ class _ReportsPageState extends State<ReportsPage> {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      'MESRC MERIT TRACKER — STAFF MERIT REPORT',
+                      '${widget.organizationName.toUpperCase()} — STAFF MERIT REPORT',
                       style: pw.TextStyle(
                         fontSize: 14,
                         fontWeight: pw.FontWeight.bold,
@@ -678,7 +682,7 @@ class _ReportsPageState extends State<ReportsPage> {
                           border: Border.all(color: const Color(0xFFD6E3FF)),
                         ),
                         child: Text(
-                          '${formatMerit(staff.scoreTenths)} merit',
+                          '${formatMerit(staff.scoreTenths)} ${widget.scoreUnit}',
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 12,

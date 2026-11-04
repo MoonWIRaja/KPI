@@ -42,20 +42,7 @@ class _ReportsPageState extends State<ReportsPage> {
     final now = DateTime.now();
     _from = DateTime(now.year, now.month);
     _to = DateTime(now.year, now.month, now.day);
-    for (final s in widget.staff.where((s) => !s.archived)) {
-      _selectedStaffIds.add(s.id);
-    }
     _load();
-  }
-
-  @override
-  void didUpdateWidget(covariant ReportsPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_selectedStaffIds.isEmpty && widget.staff.isNotEmpty) {
-      for (final s in widget.staff.where((s) => !s.archived)) {
-        _selectedStaffIds.add(s.id);
-      }
-    }
   }
 
   @override

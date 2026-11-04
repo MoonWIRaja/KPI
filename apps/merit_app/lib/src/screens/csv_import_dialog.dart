@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 
 import '../data/merit_repository.dart';
@@ -22,6 +24,32 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
   String? _fileName;
   bool _busy = false;
   bool _committed = false;
+
+  Future<void> _downloadTemplate() async {
+    const template = 'staff_code,full_name,department,starting_merit\r\n'
+        'S001,Ahmad Bin Ali,Operations,5.0\r\n'
+        'S002,Siti Aminah,Marketing,5.0\r\n'
+        'S003,Tan Wei Ming,Sales,5.0\r\n';
+    try {
+      await FileSaver.instance.saveFile(
+        name: 'staff-import-template',
+        bytes: Uint8List.fromList(utf8.encode('\uFEFF$template')),
+        fileExtension: 'csv',
+        mimeType: MimeType.csv,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Template downloaded. Edit it, then choose the file to import.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Template could not be downloaded.')),
+        );
+      }
+    }
+  }
 
   Future<void> _chooseFile() async {
     final file = await FilePicker.pickFile(
@@ -143,6 +171,12 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
                     ),
                   ),
                   const SizedBox(height: 14),
+                  FilledButton.tonalIcon(
+                    onPressed: _busy ? null : _downloadTemplate,
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: const Text('Download CSV template'),
+                  ),
+                  const SizedBox(height: 8),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _chooseFile,
                     icon: const Icon(Icons.upload_file_outlined),
@@ -194,16 +228,20 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
                   ],
                   const SizedBox(height: 20),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      TextButton(
-                        onPressed: _busy || _committed ? null : () => Navigator.pop(context),
-                        child: const Text('Cancel'),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _busy || _committed ? null : () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
                       ),
                       const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: _busy || _rows.isEmpty || _errors.isNotEmpty ? null : _import,
-                        child: const Text('Confirm import'),
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton(
+                          onPressed: _busy || _rows.isEmpty || _errors.isNotEmpty ? null : _import,
+                          child: const Text('Confirm import'),
+                        ),
                       ),
                     ],
                   ),

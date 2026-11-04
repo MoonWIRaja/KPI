@@ -1773,7 +1773,7 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: () => Navigator.pop(context, _selected),
@@ -1827,7 +1827,7 @@ class _ConfirmCardDialog extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                OutlinedButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
                 const SizedBox(width: 8),
                 FilledButton(
                   style: destructive ? FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318)) : null,
@@ -2017,7 +2017,7 @@ class _SettingsPageState extends State<_SettingsPage> {
     return Padding(
       padding: EdgeInsets.fromLTRB(isMobile ? 14 : 24, 14, isMobile ? 14 : 24, 18),
       child: Surface3DCard(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(isMobile ? 14 : 20),
         child: _loading
             ? const Center(child: ThinkingOrbsLoader())
             : SingleChildScrollView(
@@ -2030,65 +2030,38 @@ class _SettingsPageState extends State<_SettingsPage> {
                       subtitle: 'Set initial default merit score and boundary limits for all staff.',
                     ),
                     const SizedBox(height: 14),
-                    Surface3DCard(
-                      padding: const EdgeInsets.all(18),
-                      borderRadius: 14,
+                    _SettingsGroup(
+                      padding: isMobile ? 14 : 18,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _default,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                                  decoration: InputDecoration(
-                                    labelText: 'Default starting score (e.g. 5.0)',
-                                    suffixText: _unit.text.trim(),
-                                    isDense: true,
-                                  ),
-                                ),
+                          _fieldsLayout(isMobile, [
+                            TextField(
+                              controller: _default,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                              decoration: InputDecoration(
+                                labelText: 'Default starting score',
+                                hintText: 'e.g. 5.0',
+                                suffixText: _unit.text.trim(),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextField(
-                                  controller: _floor,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Minimum floor (optional)',
-                                    hintText: 'e.g. 0.0',
-                                    isDense: true,
-                                  ),
-                                ),
+                            ),
+                            TextField(
+                              controller: _floor,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                              decoration: const InputDecoration(
+                                labelText: 'Minimum floor (optional)',
+                                hintText: 'e.g. 0.0',
                               ),
-                              if (!isMobile) ...[
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: TextField(
-                                    controller: _ceiling,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                                    decoration: const InputDecoration(
-                                      labelText: 'Maximum ceiling (optional)',
-                                      hintText: 'e.g. 10.0',
-                                      isDense: true,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          if (isMobile) ...[
-                            const SizedBox(height: 12),
+                            ),
                             TextField(
                               controller: _ceiling,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                               decoration: const InputDecoration(
                                 labelText: 'Maximum ceiling (optional)',
                                 hintText: 'e.g. 10.0',
-                                isDense: true,
                               ),
                             ),
-                          ],
+                          ]),
                           const SizedBox(height: 12),
                           Wrap(
                             spacing: 8,
@@ -2138,41 +2111,29 @@ class _SettingsPageState extends State<_SettingsPage> {
                       subtitle: 'Customize organization display name and merit point unit label.',
                     ),
                     const SizedBox(height: 14),
-                    Surface3DCard(
-                      padding: const EdgeInsets.all(18),
-                      borderRadius: 14,
+                    _SettingsGroup(
+                      padding: isMobile ? 14 : 18,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 2,
-                                child: TextField(
-                                  controller: _orgName,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Organization / Company Name',
-                                    isDense: true,
-                                    prefixIcon: Icon(Icons.apartment_rounded, size: 20),
-                                  ),
-                                ),
+                          _fieldsLayout(isMobile, [
+                            TextField(
+                              controller: _orgName,
+                              decoration: const InputDecoration(
+                                labelText: 'Organization / Company Name',
+                                prefixIcon: Icon(Icons.apartment_rounded, size: 20),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: 1,
-                                child: TextField(
-                                  controller: _unit,
-                                  onChanged: (_) => setState(() {}),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Score Unit Label',
-                                    hintText: 'e.g. merit, pts',
-                                    isDense: true,
-                                    prefixIcon: Icon(Icons.stars_rounded, size: 20),
-                                  ),
-                                ),
+                            ),
+                            TextField(
+                              controller: _unit,
+                              onChanged: (_) => setState(() {}),
+                              decoration: const InputDecoration(
+                                labelText: 'Score Unit Label',
+                                hintText: 'e.g. merit, pts',
+                                prefixIcon: Icon(Icons.stars_rounded, size: 20),
                               ),
-                            ],
-                          ),
+                            ),
+                          ]),
                           const SizedBox(height: 14),
                           const Text(
                             'Active Department Tags in System:',
@@ -2204,9 +2165,8 @@ class _SettingsPageState extends State<_SettingsPage> {
                       subtitle: 'Operational policies governing monthly staff merit evaluations and audit logging.',
                     ),
                     const SizedBox(height: 14),
-                    Surface3DCard(
-                      padding: const EdgeInsets.all(18),
-                      borderRadius: 14,
+                    _SettingsGroup(
+                      padding: isMobile ? 14 : 18,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -2243,9 +2203,8 @@ class _SettingsPageState extends State<_SettingsPage> {
                       subtitle: 'Live system diagnostic metrics and instant full database JSON backup export.',
                     ),
                     const SizedBox(height: 14),
-                    Surface3DCard(
-                      padding: const EdgeInsets.all(18),
-                      borderRadius: 14,
+                    _SettingsGroup(
+                      padding: isMobile ? 14 : 18,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -2260,7 +2219,9 @@ class _SettingsPageState extends State<_SettingsPage> {
                             ],
                           ),
                           const SizedBox(height: 18),
-                          Row(
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
                             children: [
                               OutlinedButton.icon(
                                 onPressed: _exportingBackup ? null : _downloadBackup,
@@ -2269,7 +2230,6 @@ class _SettingsPageState extends State<_SettingsPage> {
                                     : const Icon(Icons.download_rounded, size: 16),
                                 label: Text(_exportingBackup ? 'Exporting…' : 'Download JSON backup'),
                               ),
-                              const SizedBox(width: 10),
                               FilledButton.tonalIcon(
                                 onPressed: () async {
                                   await widget.onSaved();
@@ -2296,6 +2256,29 @@ class _SettingsPageState extends State<_SettingsPage> {
                 ),
               ),
       ),
+    );
+  }
+
+  Widget _fieldsLayout(bool isMobile, List<Widget> fields) {
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < fields.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            fields[i],
+          ],
+        ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < fields.length; i++) ...[
+          if (i > 0) const SizedBox(width: 12),
+          Expanded(child: fields[i]),
+        ],
+      ],
     );
   }
 
@@ -2384,6 +2367,23 @@ class _SettingsPageState extends State<_SettingsPage> {
       ),
     );
   }
+}
+
+class _SettingsGroup extends StatelessWidget {
+  const _SettingsGroup({required this.child, this.padding = 18});
+  final Widget child;
+  final double padding;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: EdgeInsets.all(padding),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFAFBFE),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: child,
+      );
 }
 
 class _EmptyState extends StatelessWidget {
@@ -2556,7 +2556,7 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
+                OutlinedButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: _busy ? null : _save,
@@ -3113,25 +3113,34 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
             const SizedBox(height: 14),
             Row(
               children: [
-                if (widget.canDelete)
-                  TextButton.icon(
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFB42318),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                if (widget.canDelete) ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFB42318),
+                        side: const BorderSide(color: Color(0xFFF3B8B3)),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      onPressed: _busy ? null : _confirmDelete,
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Delete', maxLines: 1),
                     ),
-                    onPressed: _busy ? null : _confirmDelete,
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('Delete staff'),
                   ),
-                const Spacer(),
-                TextButton(
-                  onPressed: _busy ? null : () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _busy ? null : _save,
-                  child: Text(_busy ? 'Saving…' : 'Save changes'),
+                Expanded(
+                  flex: 2,
+                  child: FilledButton(
+                    onPressed: _busy ? null : _save,
+                    child: Text(_busy ? 'Saving…' : 'Save changes', maxLines: 1),
+                  ),
                 ),
               ],
             ),
@@ -3287,7 +3296,7 @@ class _InviteDialogState extends State<_InviteDialog> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
+              OutlinedButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
               const SizedBox(width: 8),
               FilledButton.icon(
                 onPressed: _busy || (_role == 'staff' && available.isEmpty) ? null : _send,

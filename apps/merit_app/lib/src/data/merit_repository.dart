@@ -384,9 +384,27 @@ class MeritRepository {
     required String role,
     String? staffId,
   }) async {
+    // 1. Try direct database RPC first (fast, reliable, zero edge-function CORS issues)
+    try {
+      await _client.rpc('invite_user_direct', params: {
+        'email_input': email.trim().toLowerCase(),
+        'display_name_input': displayName.trim(),
+        'role_input': role,
+        'staff_id_input': staffId,
+      });
+      return;
+    } on PostgrestException catch (error) {
+      final msg = error.message.toLowerCase();
+      if (!msg.contains('invite_user_direct') && !msg.contains('does not exist') && error.code != 'PGRST202') {
+        throw MeritRepositoryException(error.message);
+      }
+      // RPC not yet applied on remote database, fall back to Edge Function
+    }
+
+    // 2. Fall back to Edge Function if deployed
     try {
       await _client.functions.invoke('invite-user', body: {
-        'email': email.trim(),
+        'email': email.trim().toLowerCase(),
         'display_name': displayName.trim(),
         'role': role,
         'staff_id': staffId,
@@ -396,9 +414,13 @@ class MeritRepository {
       if (details is Map && details['error'] is String) {
         throw MeritRepositoryException(details['error'] as String);
       }
-      throw const MeritRepositoryException('Invitation failed. Check SMTP configuration and try again.');
+      throw const MeritRepositoryException(
+        'Invitation failed. Please run migration 20261104040000_direct_user_invitation.sql in Supabase SQL Editor.',
+      );
     } catch (_) {
-      throw const MeritRepositoryException('Invitation failed. Check SMTP configuration and try again.');
+      throw const MeritRepositoryException(
+        'Invitation service not ready: Please run migration 20261104040000_direct_user_invitation.sql in Supabase SQL Editor.',
+      );
     }
   }
 }

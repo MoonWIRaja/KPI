@@ -6,15 +6,23 @@ const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}') as R
 const anonKey = publishableKeys.default ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const serviceRoleKey = secretKeys.default ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const siteUrl = Deno.env.get('SITE_URL') ?? '';
-const allowedOrigins = new Set(
-  (Deno.env.get('CORS_ORIGINS') ?? siteUrl)
+const allowedOrigins = new Set([
+  'https://moonwiraja.github.io',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'http://localhost:8080',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5000',
+  'http://127.0.0.1:8080',
+  ...(Deno.env.get('CORS_ORIGINS') ?? siteUrl)
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean),
-);
+]);
 
 function response(status: number, body: Record<string, unknown>, origin: string | null) {
-  const corsOrigin = origin && allowedOrigins.has(origin) ? origin : 'null';
+  const isAllowed = origin && (allowedOrigins.has(origin) || origin.endsWith('.github.io') || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1'));
+  const corsOrigin = isAllowed ? origin : '*';
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -30,7 +38,6 @@ function response(status: number, body: Record<string, unknown>, origin: string 
 Deno.serve(async (request: Request) => {
   const origin = request.headers.get('origin');
   if (request.method === 'OPTIONS') {
-    if (origin && !allowedOrigins.has(origin)) return response(403, { error: 'Origin is not allowed.' }, origin);
     return response(204, {}, origin);
   }
   if (request.method !== 'POST') return response(405, { error: 'Method not allowed.' }, origin);

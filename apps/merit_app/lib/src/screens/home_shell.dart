@@ -2038,10 +2038,9 @@ String _roleLabel(String role) => switch (role) {
     };
 
 class _AddStaffDialog extends StatefulWidget {
-  const _AddStaffDialog({required this.defaultScoreTenths, required this.repository, this.staff});
+  const _AddStaffDialog({required this.defaultScoreTenths, required this.repository});
   final int defaultScoreTenths;
   final MeritRepository repository;
-  final StaffMember? staff;
   @override
   State<_AddStaffDialog> createState() => _AddStaffDialogState();
 }
@@ -2057,11 +2056,7 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
   @override
   void initState() {
     super.initState();
-    final staff = widget.staff;
-    _score.text = formatMerit(staff?.scoreTenths ?? widget.defaultScoreTenths);
-    _code.text = staff?.code ?? '';
-    _name.text = staff?.name ?? '';
-    _department.text = staff?.department ?? '';
+    _score.text = formatMerit(widget.defaultScoreTenths);
   }
 
   @override
@@ -2080,26 +2075,16 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
       _error = null;
     });
     try {
-      final staff = widget.staff;
-      if (staff == null) {
-        final scoreTenths = parseScoreTenths(_score.text);
-        if (scoreTenths == null) {
-          throw const MeritRepositoryException('Enter a valid score with at most one decimal place.');
-        }
-        await widget.repository.createStaff(
-          code: _code.text,
-          name: _name.text,
-          department: _department.text,
-          startingScoreTenths: scoreTenths,
-        );
-      } else {
-        await widget.repository.updateStaff(
-          staff,
-          code: _code.text,
-          name: _name.text,
-          department: _department.text,
-        );
+      final scoreTenths = parseScoreTenths(_score.text);
+      if (scoreTenths == null) {
+        throw const MeritRepositoryException('Enter a valid score with at most one decimal place.');
       }
+      await widget.repository.createStaff(
+        code: _code.text,
+        name: _name.text,
+        department: _department.text,
+        startingScoreTenths: scoreTenths,
+      );
       if (mounted) Navigator.pop(context, true);
     } on MeritRepositoryException catch (error) {
       setState(() => _error = error.message);
@@ -2121,7 +2106,7 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
               children: [
                 Expanded(
                   child: Text(
-                    widget.staff == null ? 'Add staff' : 'Edit staff record',
+                    'Add staff',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -2143,19 +2128,17 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
                   TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Full name'), validator: _required),
                   const SizedBox(height: 10),
                   TextFormField(controller: _department, decoration: const InputDecoration(labelText: 'Department (optional)')),
-                  if (widget.staff == null) ...[
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _score,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                      decoration: InputDecoration(
-                        labelText: 'Starting merit score (default ${formatMerit(widget.defaultScoreTenths)})',
-                        suffixText: 'merit',
-                      ),
-                      validator: (value) =>
-                          parseScoreTenths(value ?? '') == null ? 'Enter a valid score (e.g. 5.0).' : null,
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _score,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                    decoration: InputDecoration(
+                      labelText: 'Starting merit score (default ${formatMerit(widget.defaultScoreTenths)})',
+                      suffixText: 'merit',
                     ),
-                  ],
+                    validator: (value) =>
+                        parseScoreTenths(value ?? '') == null ? 'Enter a valid score (e.g. 5.0).' : null,
+                  ),
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 10),
@@ -2172,7 +2155,7 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: _busy ? null : _save,
-                  child: Text(_busy ? 'Saving…' : widget.staff == null ? 'Save staff' : 'Save changes'),
+                  child: Text(_busy ? 'Saving…' : 'Save staff'),
                 ),
               ],
             ),

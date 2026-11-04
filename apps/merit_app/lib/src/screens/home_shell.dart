@@ -1219,24 +1219,25 @@ class _StaffRosterCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (canImport)
-                    OutlinedButton.icon(
-                      onPressed: onImportCsv,
-                      icon: const Icon(Icons.upload_file_outlined, size: 18),
-                      label: const Text('Import CSV'),
-                    ),
-                  if (canCreate)
-                    FilledButton.icon(
-                      onPressed: onAddStaff,
-                      icon: const Icon(Icons.person_add_alt_1, size: 18),
-                      label: const Text('Add staff'),
-                    ),
-                ],
-              ),
+              if (!narrow)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (canImport)
+                      OutlinedButton.icon(
+                        onPressed: onImportCsv,
+                        icon: const Icon(Icons.upload_file_outlined, size: 18),
+                        label: const Text('Import CSV'),
+                      ),
+                    if (canCreate)
+                      FilledButton.icon(
+                        onPressed: onAddStaff,
+                        icon: const Icon(Icons.person_add_alt_1, size: 18),
+                        label: const Text('Add staff'),
+                      ),
+                  ],
+                ),
             ],
           ),
           const SizedBox(height: 14),
@@ -1355,6 +1356,38 @@ class _StaffRosterCard extends StatelessWidget {
                             ),
                           ),
           ),
+          if (narrow && (canImport || canCreate)) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: Row(
+                children: [
+                  if (canImport)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: onImportCsv,
+                        icon: const Icon(Icons.upload_file_outlined, size: 16),
+                        label: const Text('Import CSV', style: TextStyle(fontSize: 12.5)),
+                      ),
+                    ),
+                  if (canImport && canCreate) const SizedBox(width: 8),
+                  if (canCreate)
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: onAddStaff,
+                        icon: const Icon(Icons.person_add_alt_1, size: 16),
+                        label: const Text('Add staff', style: TextStyle(fontSize: 12.5)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

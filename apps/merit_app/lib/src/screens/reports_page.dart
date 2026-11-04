@@ -706,7 +706,7 @@ class _ReportsPageState extends State<ReportsPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          '${staff.code}  â€¢  ${staff.department ?? 'No department'}',
+                          '${staff.code}  •  ${staff.department ?? 'No department'}',
                           style: const TextStyle(color: Color(0xFF667894), fontSize: 11.5),
                         ),
                       ),

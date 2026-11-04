@@ -2329,8 +2329,8 @@ class _AdjustmentDialog extends StatefulWidget {
 class _AdjustmentDialogState extends State<_AdjustmentDialog> {
   final _reason = TextEditingController();
   int _direction = -1; // Default to Tolak (-), user can toggle Tambah (+)
-  int _step = 10; // 0.1 to 1.0 (10 to 100 tenths)
-  static const _steps = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+  int _step = 1; // 0.1 merit (1 tenth)
+  static const _steps = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   @override
   void dispose() {

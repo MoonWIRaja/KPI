@@ -3043,14 +3043,8 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                               style: TextStyle(fontSize: 12, color: Color(0xFF667894)),
                             ),
                           ),
-                        const SizedBox(height: 14),
-                        OutlinedButton.icon(
-                          onPressed: () => _tabController.animateTo(1),
-                          icon: const Icon(Icons.stars_outlined, size: 16),
-                          label: const Text('Adjust merit points for this staff'),
-                        ),
                         if (widget.canDelete) ...[
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 18),
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFFB42318),

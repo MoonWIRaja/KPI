@@ -15,7 +15,9 @@ Future<void> main() async {
       await Supabase.initialize(
         url: supabaseUrl,
         publishableKey: supabasePublishableKey,
-        authOptions: const FlutterAuthClientOptions(persistSession: false),
+        authOptions: const FlutterAuthClientOptions(
+          autoRefreshToken: true,
+        ),
       );
     } catch (_) {
       configured = false;

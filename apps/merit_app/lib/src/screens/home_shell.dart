@@ -1903,15 +1903,6 @@ class _SettingsPageState extends State<_SettingsPage> {
   bool _exportingBackup = false;
   String? _error;
 
-  static const _defaultDepts = [
-    'MARKETING',
-    'SALES',
-    'IT & TECH',
-    'OPERATIONS',
-    'HUMAN RESOURCES',
-    'ADMIN & FINANCE',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -2053,7 +2044,10 @@ class _SettingsPageState extends State<_SettingsPage> {
         padding: EdgeInsets.all(isMobile ? 14 : 20),
         child: _loading
             ? const Center(child: ThinkingOrbsLoader())
-            : SingleChildScrollView(
+            : Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -2123,17 +2117,6 @@ class _SettingsPageState extends State<_SettingsPage> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 14),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: FilledButton.icon(
-                              onPressed: _saving ? null : _save,
-                              icon: _saving
-                                  ? const ThinkingOrbsLoader(size: 16, label: 'Saving')
-                                  : const Icon(Icons.check_circle_outline, size: 16),
-                              label: Text(_saving ? 'Saving…' : 'Save scoring rules'),
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -2167,27 +2150,6 @@ class _SettingsPageState extends State<_SettingsPage> {
                               ),
                             ),
                           ]),
-                          const SizedBox(height: 14),
-                          const Text(
-                            'Active Department Tags in System:',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            children: _defaultDepts.map((d) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                                ),
-                                child: Text(d, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF334155))),
-                              );
-                            }).toList(),
-                          ),
                         ],
                       ),
                     ),
@@ -2288,6 +2250,28 @@ class _SettingsPageState extends State<_SettingsPage> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const ThinkingOrbsLoader(size: 16, label: 'Saving')
+                      : const Icon(Icons.check_circle_outline, size: 18),
+                  label: Text(_saving ? 'Saving…' : 'Save settings'),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,16 +1,10 @@
 -- Migration: Fix invite_user_direct to leave email_confirmed_at NULL
--- so GoTrue can process signInWithOtp without "Database error finding user"
---
 -- Root cause: email_confirmed_at = now() + encrypted_password = '' causes GoTrue
--- to crash internally when OTP is requested because it tries to update user state
--- but cannot handle empty password + already-confirmed state combination.
---
--- Fix: Set email_confirmed_at = NULL on invite so GoTrue treats user as
--- "pending confirmation" and can send OTP normally. After user verifies OTP,
--- GoTrue sets email_confirmed_at automatically.
+-- "Database error finding user" (500) when signInWithOtp is called after invite.
+-- Fix: NULL lets GoTrue treat the account as unconfirmed so it can send OTP normally.
+-- After the invited user verifies OTP, GoTrue sets email_confirmed_at automatically.
 
--- 1. Fix existing invited users who have empty password but email_confirmed_at set
---    Reset them to unconfirmed so OTP works
+-- 1. Reset existing broken invited users (empty password + already confirmed → unconfirm them)
 update auth.users
 set email_confirmed_at = null,
     updated_at = now()
@@ -20,47 +14,36 @@ where encrypted_password = ''
     select user_id from public.profiles where role in ('ceo', 'admin')
   );
 
--- 2. Replace invite_user_direct to set email_confirmed_at = NULL
+-- 2. Replace invite_user_direct with the same signature as before but email_confirmed_at = NULL
 create or replace function public.invite_user_direct(
   email_input text,
-  role_input text,
-  display_name_input text default '',
-  actor_user_id uuid default null
+  display_name_input text default null,
+  role_input text default 'admin',
+  staff_id_input uuid default null
 )
 returns uuid
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
-  v_actor_id uuid;
-  v_normalized_email text;
-  v_trimmed_name text;
+  v_actor_id uuid := auth.uid();
+  v_normalized_email text := lower(trim(coalesce(email_input, '')));
+  v_trimmed_name text := trim(coalesce(display_name_input, ''));
   v_user_id uuid;
   v_id_type text;
   v_has_provider_id boolean;
 begin
-  -- Resolve actor
-  v_actor_id := coalesce(actor_user_id, auth.uid());
   if v_actor_id is null then
     raise exception 'Authentication required.';
   end if;
 
-  -- Validate actor is owner or admin
-  if not exists (
-    select 1 from public.profiles
-    where user_id = v_actor_id
-      and role in ('owner', 'admin')
-      and is_active = true
-  ) then
-    raise exception 'Only owners or admins can invite users.';
+  if not public.has_permission('users.invite') then
+    raise exception 'You do not have permission to invite users.';
   end if;
 
-  v_normalized_email := lower(trim(email_input));
-  v_trimmed_name := trim(coalesce(display_name_input, ''));
-
-  if v_normalized_email = '' then
-    raise exception 'Email address is required.';
+  if v_normalized_email = '' or length(v_normalized_email) > 254 or v_normalized_email !~ '^[^\s@]+@[^\s@]+\.[^\s@]+$' then
+    raise exception 'Enter a valid email address.';
   end if;
 
   if role_input not in ('ceo', 'admin') then
@@ -101,7 +84,7 @@ begin
       role,
       email,
       encrypted_password,
-      email_confirmed_at,  -- NULL: let GoTrue confirm after OTP verification
+      email_confirmed_at,
       raw_app_meta_data,
       raw_user_meta_data,
       created_at,
@@ -117,7 +100,7 @@ begin
       'authenticated',
       v_normalized_email,
       '',
-      null,  -- KEY FIX: NULL instead of now() so GoTrue can process OTP
+      null,  -- KEY FIX: was now(), NULL lets GoTrue send OTP without 500 error
       '{"provider":"email","providers":["email"]}'::jsonb,
       jsonb_build_object('display_name', v_trimmed_name),
       now(),
@@ -128,9 +111,8 @@ begin
       ''
     );
   else
-    -- User exists in auth.users: reset to unconfirmed so OTP works
     update auth.users
-    set email_confirmed_at = null,
+    set email_confirmed_at = null,  -- reset so OTP works
         raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('display_name', v_trimmed_name),
         confirmation_token = coalesce(confirmation_token, ''),
         recovery_token = coalesce(recovery_token, ''),
@@ -140,7 +122,7 @@ begin
     where id = v_user_id;
   end if;
 
-  -- Ensure auth.identities has matching email identity
+  -- Ensure auth.identities has matching email identity for OTP authentication
   select data_type into v_id_type
   from information_schema.columns
   where table_schema = 'auth' and table_name = 'identities' and column_name = 'id';
@@ -165,7 +147,7 @@ begin
         )
         values (gen_random_uuid(), $1, $2, $3, ''email'', now(), now(), now())
         on conflict do nothing'
-      using v_user_id::text, v_user_id, jsonb_build_object('sub', v_user_id::text, 'email', v_normalized_email, 'email_verified', false);
+      using v_user_id::text, v_user_id, jsonb_build_object('sub', v_user_id::text, 'email', v_normalized_email);
     else
       execute '
         insert into auth.identities (
@@ -180,7 +162,7 @@ begin
         )
         values ($1, $2, $3, $4, ''email'', now(), now(), now())
         on conflict do nothing'
-      using v_user_id::text, v_user_id::text, v_user_id, jsonb_build_object('sub', v_user_id::text, 'email', v_normalized_email, 'email_verified', false);
+      using v_user_id::text, v_user_id::text, v_user_id, jsonb_build_object('sub', v_user_id::text, 'email', v_normalized_email);
     end if;
   else
     execute '
@@ -195,10 +177,9 @@ begin
       )
       values ($1, $2, $3, ''email'', now(), now(), now())
       on conflict do nothing'
-    using v_user_id::text, v_user_id, jsonb_build_object('sub', v_user_id::text, 'email', v_normalized_email, 'email_verified', false);
+    using v_user_id::text, v_user_id, jsonb_build_object('sub', v_user_id::text, 'email', v_normalized_email);
   end if;
 
-  -- Create profile record
   insert into public.profiles (
     user_id,
     email,
@@ -217,7 +198,6 @@ begin
     false
   );
 
-  -- Audit log
   insert into public.audit_events (
     actor_id,
     action,

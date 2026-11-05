@@ -574,7 +574,7 @@ class _HomeShellState extends State<HomeShell> {
                             child: _UserAccessRow(
                               profile: profile,
                               isSelf: isSelf,
-                              onPermissions: isOwner ? null : () => _editUserPermissions(profile),
+                              onPermissions: null,
                               onToggleActive: canToggleOrDelete ? () => _toggleUserActive(profile) : null,
                               onDelete: canToggleOrDelete ? () => _deleteUser(profile) : null,
                               onResendEmail: isSelf ? null : () => _resendLoginEmail(profile),
@@ -629,26 +629,7 @@ class _HomeShellState extends State<HomeShell> {
     if (imported == true) await _refresh();
   }
 
-  Future<void> _editUserPermissions(Map<String, dynamic> profile) async {
-    final existing = (profile['user_permissions'] as List<dynamic>? ?? const [])
-        .map((item) => (item as Map<String, dynamic>)['permission_key'] as String)
-        .toSet();
-    final updated = await showAppModal<Set<String>>(
-      context: context,
-      builder: (_) => _PermissionsDialog(
-        profile: profile,
-        selected: existing,
-        scoreUnit: _scoreUnit,
-      ),
-    );
-    if (updated == null) return;
-    try {
-      await _repository.setUserPermissions(profile['user_id'] as String, updated);
-      await _refresh();
-    } on MeritRepositoryException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
-    }
-  }
+
 
   Future<void> _toggleUserActive(Map<String, dynamic> profile) async {
     final active = profile['is_active'] != true;
@@ -1894,8 +1875,7 @@ class _UserAccessRow extends StatelessWidget {
     final isActive = profile['is_active'] == true;
     final role = profile['role'] as String? ?? 'staff';
     final isOwner = role == 'owner';
-    final permCount = (profile['user_permissions'] as List<dynamic>? ?? const []).length;
-    final permLabel = isOwner ? 'Full system access' : '$permCount permissions';
+    final permLabel = 'Full system access';
     final initial = name.isEmpty ? 'U' : name.characters.first.toUpperCase();
 
     if (isMobile) {
@@ -1996,12 +1976,7 @@ class _UserAccessRow extends StatelessWidget {
                   icon: const Icon(Icons.mail_outline, size: 20, color: Color(0xFF245CEB)),
                 ),
               if (onPermissions != null)
-                IconButton(
-                  tooltip: 'Set permissions',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onPermissions,
-                  icon: const Icon(Icons.tune_outlined, size: 20),
-                ),
+                const SizedBox.shrink(),
               if (onToggleActive != null)
                 IconButton(
                   tooltip: isActive ? 'Deactivate account' : 'Activate account',
@@ -2122,11 +2097,7 @@ class _UserAccessRow extends StatelessWidget {
               icon: const Icon(Icons.mail_outline, size: 20, color: Color(0xFF245CEB)),
             ),
           if (onPermissions != null)
-            IconButton(
-              tooltip: 'Set permissions',
-              onPressed: onPermissions,
-              icon: const Icon(Icons.tune_outlined, size: 20),
-            ),
+            const SizedBox.shrink(),
           if (onToggleActive != null)
             IconButton(
               tooltip: isActive ? 'Deactivate account' : 'Activate account',
@@ -2147,111 +2118,6 @@ class _UserAccessRow extends StatelessWidget {
       ),
     );
   }
-}
-
-class _PermissionsDialog extends StatefulWidget {
-  const _PermissionsDialog({
-    required this.profile,
-    required this.selected,
-    this.scoreUnit = 'merit',
-  });
-  final Map<String, dynamic> profile;
-  final Set<String> selected;
-  final String scoreUnit;
-  @override
-  State<_PermissionsDialog> createState() => _PermissionsDialogState();
-}
-
-class _PermissionsDialogState extends State<_PermissionsDialog> {
-  late final Set<String> _selected = {...widget.selected};
-  late final String _unitCap = widget.scoreUnit.trim().isEmpty
-      ? 'Score'
-      : '${widget.scoreUnit.trim()[0].toUpperCase()}${widget.scoreUnit.trim().substring(1)}';
-  late final List<(String, String)> _permissions = [
-    ('staff.read.all', 'View all staff records'),
-    ('staff.create', 'Add staff'),
-    ('staff.update', 'Edit staff'),
-    ('staff.archive', 'Archive or restore staff'),
-    ('staff.delete', 'Delete staff without $_unitCap history'),
-    ('staff.import', 'Import CSV'),
-    ('merit.read.all', 'View all $_unitCap activity'),
-    ('merit.adjust', 'Adjust $_unitCap'),
-    ('merit.correct', 'Correct $_unitCap'),
-    ('reports.read', 'View reports'),
-    ('reports.export', 'Export reports'),
-    ('settings.manage', 'Change $_unitCap settings'),
-    ('audit.read', 'View audit log'),
-  ];
-
-  @override
-  Widget build(BuildContext context) => AppModalCard(
-        maxWidth: 480,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Permissions',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.profile['display_name'] as String? ?? 'User',
-                        style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Permissions are enforced by database security rules.',
-              style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
-            ),
-            const SizedBox(height: 8),
-            ..._permissions.map(
-              (item) => CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(item.$2, style: const TextStyle(fontSize: 13.5)),
-                value: _selected.contains(item.$1),
-                onChanged: (value) => setState(() {
-                  value == true ? _selected.add(item.$1) : _selected.remove(item.$1);
-                }),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(context, _selected),
-                    child: const Text('Save permissions'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
 }
 
 class _ConfirmCardDialog extends StatelessWidget {

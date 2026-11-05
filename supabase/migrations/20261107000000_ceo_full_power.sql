@@ -50,3 +50,4 @@ from public.profiles p
 cross join public.permission_catalog c
 where p.role in ('ceo', 'admin')
 on conflict do nothing;
+

@@ -3781,19 +3781,11 @@ class _InviteDialog extends StatefulWidget {
 class _InviteDialogState extends State<_InviteDialog> {
   final _form = GlobalKey<FormState>();
   final _email = TextEditingController();
-  String _role = 'ceo';
+  final String _role = 'admin';
   String? _error;
   bool _busy = false;
   bool _created = false;
   String _invitedEmail = '';
-  String _invitedRole = '';
-
-  @override
-  void initState() {
-    super.initState();
-    final ceoExists = widget.profiles.any((item) => item['role'] == 'ceo');
-    _role = ceoExists ? 'admin' : 'ceo';
-  }
 
   @override
   void dispose() {
@@ -3815,7 +3807,6 @@ class _InviteDialogState extends State<_InviteDialog> {
       setState(() {
         _created = true;
         _invitedEmail = _email.text.trim();
-        _invitedRole = _role;
       });
     } on MeritRepositoryException catch (error) {
       setState(() => _error = error.message);
@@ -3829,7 +3820,6 @@ class _InviteDialogState extends State<_InviteDialog> {
   @override
   Widget build(BuildContext context) {
     if (_created) {
-      final roleTitle = _roleLabel(_invitedRole);
       return AppModalCard(
         maxWidth: 420,
         child: Column(
@@ -3883,7 +3873,7 @@ class _InviteDialogState extends State<_InviteDialog> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          'Pautan jemputan ke sistem telah dihantar ke $_invitedEmail ($roleTitle). Mereka boleh terus buka emel dan log masuk.',
+                          'Pautan jemputan ke sistem telah dihantar ke $_invitedEmail. Mereka boleh terus buka emel dan log masuk.',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Color(0xFF166534),
@@ -3905,7 +3895,6 @@ class _InviteDialogState extends State<_InviteDialog> {
       );
     }
 
-    final ceoExists = widget.profiles.any((item) => item['role'] == 'ceo');
     return AppModalCard(
       maxWidth: 460,
       child: Column(
@@ -3929,7 +3918,7 @@ class _InviteDialogState extends State<_InviteDialog> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Invite a CEO or Admin to access the ${(widget.scoreUnit.trim().isEmpty || widget.scoreUnit.trim().toLowerCase() == 'merit') ? 'Merit Tracker' : '${widget.scoreUnit.trim()[0].toUpperCase()}${widget.scoreUnit.trim().substring(1)} Tracker'} system. An invitation email will be sent via SMTP.',
+            'Invite a user to access the ${(widget.scoreUnit.trim().isEmpty || widget.scoreUnit.trim().toLowerCase() == 'merit') ? 'Merit Tracker' : '${widget.scoreUnit.trim()[0].toUpperCase()}${widget.scoreUnit.trim().substring(1)} Tracker'} system. All users have full management access.',
             style: const TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
           ),
           const SizedBox(height: 14),
@@ -3948,22 +3937,6 @@ class _InviteDialogState extends State<_InviteDialog> {
                     prefixIcon: Icon(Icons.email_outlined, size: 20),
                   ),
                   validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _role,
-                  decoration: const InputDecoration(
-                    labelText: 'Role',
-                    prefixIcon: Icon(Icons.badge_outlined, size: 20),
-                  ),
-                  items: [
-                    if (!ceoExists)
-                      const DropdownMenuItem(value: 'ceo', child: Text('CEO (Executive access)')),
-                    const DropdownMenuItem(value: 'admin', child: Text('Admin (Full administration)')),
-                  ],
-                  onChanged: (value) => setState(() {
-                    _role = value ?? (ceoExists ? 'admin' : 'ceo');
-                  }),
                 ),
                 if (_error != null)
                   Padding(

@@ -100,18 +100,26 @@ class _LoginPageState extends State<LoginPage> {
           type: OtpType.email,
         );
       } on AuthException {
-        await Supabase.instance.client.auth.verifyOTP(
-          email: email,
-          token: token,
-          type: OtpType.signup,
-        );
+        try {
+          await Supabase.instance.client.auth.verifyOTP(
+            email: email,
+            token: token,
+            type: OtpType.invite,
+          );
+        } on AuthException {
+          await Supabase.instance.client.auth.verifyOTP(
+            email: email,
+            token: token,
+            type: OtpType.signup,
+          );
+        }
       }
       return true;
-    } on AuthException {
-      if (mounted) setState(() => _error = 'Invalid or expired code.');
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.message.isNotEmpty ? e.message : 'Invalid or expired code.');
       return false;
-    } catch (_) {
-      if (mounted) setState(() => _error = 'Verification failed.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Verification failed: ${e.toString()}');
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);

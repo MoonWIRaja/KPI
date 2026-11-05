@@ -107,137 +107,7 @@ class _HomeShellState extends State<HomeShell> {
     _profiles = profiles;
   }
 
-  void _checkFirstTimeNameSetup() {
-    // Disabled automatic pop-up on refresh so users are not blocked or repeatedly prompted.
-    // Users can edit their display name anytime from Account & Security or Profile menu.
-    return;
-  }
 
-  Future<void> _showFirstTimeNameSetupModal() async {
-    final nameController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    var busy = false;
-    String? error;
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogCtx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final role = _profile?['role'] as String? ?? '';
-            final roleLabel = role == 'ceo' ? 'CEO' : (role == 'admin' ? 'Admin' : 'Staff');
-
-            return AppModalCard(
-              maxWidth: 440,
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.badge_rounded, color: Color(0xFF1D4ED8), size: 24),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Sediakan Profil Anda',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              Text(
-                                'Akaun $roleLabel',
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF667894)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Selamat datang ke sistem $_systemTitle! Sila masukkan nama penuh anda untuk melengkapkan profil akaun ini.',
-                      style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFF334155)),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: nameController,
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama Penuh Anda',
-                        hintText: 'Contoh: Ahmad Danial bin Rosli',
-                        prefixIcon: Icon(Icons.person_outline, size: 20),
-                      ),
-                      validator: (val) {
-                        final trimmed = val?.trim() ?? '';
-                        if (trimmed.isEmpty) return 'Sila masukkan nama penuh anda.';
-                        if (trimmed.length < 2) return 'Nama terlalu pendek.';
-                        return null;
-                      },
-                    ),
-                    if (error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 12)),
-                      ),
-                    const SizedBox(height: 20),
-                    FilledButton(
-                      onPressed: busy
-                          ? null
-                          : () async {
-                              if (!formKey.currentState!.validate()) return;
-                              setModalState(() {
-                                busy = true;
-                                error = null;
-                              });
-                              try {
-                                final clean = nameController.text.trim();
-                                await _repository.updateMyDisplayName(clean);
-                                if (mounted) {
-                                  setState(() {
-                                    _profile?['display_name'] = clean;
-                                  });
-                                }
-                                if (dialogCtx.mounted) {
-                                  Navigator.pop(dialogCtx);
-                                }
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Profil dikemaskini sebagai $clean.')),
-                                  );
-                                }
-                              } catch (e) {
-                                setModalState(() {
-                                  busy = false;
-                                  error = 'Gagal menyimpan nama. Sila cuba lagi.';
-                                });
-                              }
-                            },
-                      child: busy
-                          ? const ThinkingOrbsLoader(size: 16, label: 'Menyimpan…')
-                          : const Text('Simpan & Teruskan'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 
   Future<void> _refresh() async {
     setState(() {
@@ -250,7 +120,6 @@ class _HomeShellState extends State<HomeShell> {
       _profile = await _repository.loadProfile(user.id);
       _permissions = _isOwner ? const {} : await _repository.loadPermissions(user.id);
       await _loadData();
-      _checkFirstTimeNameSetup();
     } catch (_) {
       _loadError = 'Data could not be loaded. Check your connection and try again.';
     } finally {

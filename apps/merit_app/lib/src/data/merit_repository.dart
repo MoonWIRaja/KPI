@@ -441,15 +441,28 @@ class MeritRepository {
       }
     }
 
-    // 3. Dispatch the login invitation email via Supabase SMTP
+    // 3. Dispatch the login verification code email via Supabase SMTP (exact same as login page)
     var emailDispatched = false;
     try {
       await _client.auth.signInWithOtp(
         email: cleanEmail,
-        shouldCreateUser: true,
-        emailRedirectTo: 'https://moonwiraja.github.io/KPI/',
+        shouldCreateUser: false,
       );
       emailDispatched = true;
+    } on AuthException catch (e) {
+      if (e.message.toLowerCase().contains('rate limit') || e.statusCode == '429') {
+        emailDispatched = true;
+      } else {
+        try {
+          await _client.auth.signInWithOtp(
+            email: cleanEmail,
+            shouldCreateUser: true,
+          );
+          emailDispatched = true;
+        } catch (_) {
+          emailDispatched = false;
+        }
+      }
     } catch (_) {
       emailDispatched = false;
     }
@@ -465,8 +478,7 @@ class MeritRepository {
     try {
       await _client.auth.signInWithOtp(
         email: cleanEmail,
-        shouldCreateUser: true,
-        emailRedirectTo: 'https://moonwiraja.github.io/KPI/',
+        shouldCreateUser: false,
       );
     } on AuthException catch (error) {
       if (error.message.toLowerCase().contains('rate limit') || error.statusCode == '429') {
@@ -474,7 +486,7 @@ class MeritRepository {
       }
       throw MeritRepositoryException(error.message);
     } catch (_) {
-      throw const MeritRepositoryException('Failed to send login email. Check SMTP settings in Supabase.');
+      throw const MeritRepositoryException('Failed to send verification code email. Check SMTP settings in Supabase.');
     }
   }
 

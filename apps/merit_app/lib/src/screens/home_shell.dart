@@ -888,7 +888,7 @@ class _HomeShellState extends State<HomeShell> {
       await _repository.resendLoginEmail(email);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login email sent to $email.')),
+        SnackBar(content: Text('Verification code email sent to $email.')),
       );
     } on MeritRepositoryException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
@@ -3891,7 +3891,7 @@ class _InviteDialogState extends State<_InviteDialog> {
                         const SizedBox(height: 2),
                         Text(
                           _emailSent
-                              ? 'Emel jemputan telah berjaya dihantar ke $_invitedEmail.'
+                              ? 'Emel kod pengesahan (verification code) telah berjaya dihantar ke $_invitedEmail.'
                               : 'Emel belum dihantar kepada penerima. Sila salin mesej jemputan di bawah untuk dikongsi terus kepada mereka.',
                           style: TextStyle(
                             fontSize: 12,

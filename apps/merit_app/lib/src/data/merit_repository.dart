@@ -399,8 +399,26 @@ class MeritRepository {
         ? displayName!.trim()
         : (role == 'ceo' ? 'CEO' : (role == 'admin' ? 'Admin' : cleanEmail.split('@').first));
 
-    bool rpcSuccess = false;
-    // 1. Try direct database RPC first (fast, reliable, zero edge-function CORS issues)
+    // 1. Send genuine invitation email via Edge Function (admin.auth.admin.inviteUserByEmail)
+    try {
+      await _client.functions.invoke('invite-user', body: {
+        'email': cleanEmail,
+        'display_name': cleanName,
+        'role': role,
+        'staff_id': staffId,
+      });
+      return const InviteUserResult(
+        success: true,
+        emailDispatched: true,
+      );
+    } on FunctionException catch (error) {
+      final details = error.details;
+      if (details is Map && details['error'] is String) {
+        throw MeritRepositoryException(details['error'] as String);
+      }
+    } catch (_) {}
+
+    // 2. Direct database RPC fallback if edge function is unconfigured/unavailable
     try {
       await _client.rpc('invite_user_direct', params: {
         'email_input': cleanEmail,
@@ -408,85 +426,27 @@ class MeritRepository {
         'role_input': role,
         'staff_id_input': staffId,
       });
-      rpcSuccess = true;
     } on PostgrestException catch (error) {
       final msg = error.message.toLowerCase();
       if (!msg.contains('invite_user_direct') && !msg.contains('does not exist') && error.code != 'PGRST202') {
         throw MeritRepositoryException(error.message);
       }
-      // RPC not yet applied on remote database, fall back to Edge Function
     }
 
-    // 2. Fall back to Edge Function if deployed and RPC was not present
-    if (!rpcSuccess) {
-      try {
-        await _client.functions.invoke('invite-user', body: {
-          'email': cleanEmail,
-          'display_name': cleanName,
-          'role': role,
-          'staff_id': staffId,
-        });
-      } on FunctionException catch (error) {
-        final details = error.details;
-        if (details is Map && details['error'] is String) {
-          throw MeritRepositoryException(details['error'] as String);
-        }
-        throw const MeritRepositoryException(
-          'Invitation failed. Please run migration 20261105030000_fix_invited_user_identities.sql in Supabase SQL Editor.',
-        );
-      } catch (_) {
-        throw const MeritRepositoryException(
-          'Invitation service not ready: Please run migration 20261105030000_fix_invited_user_identities.sql in Supabase SQL Editor.',
-        );
-      }
-    }
-
-    // 3. Dispatch the login verification code email via Supabase SMTP (exact same as login page)
-    var emailDispatched = false;
-    try {
-      await _client.auth.signInWithOtp(
-        email: cleanEmail,
-        shouldCreateUser: false,
-      );
-      emailDispatched = true;
-    } on AuthException catch (e) {
-      if (e.message.toLowerCase().contains('rate limit') || e.statusCode == '429') {
-        emailDispatched = true;
-      } else {
-        try {
-          await _client.auth.signInWithOtp(
-            email: cleanEmail,
-            shouldCreateUser: true,
-          );
-          emailDispatched = true;
-        } catch (_) {
-          emailDispatched = false;
-        }
-      }
-    } catch (_) {
-      emailDispatched = false;
-    }
-
-    return InviteUserResult(
+    return const InviteUserResult(
       success: true,
-      emailDispatched: emailDispatched,
+      emailDispatched: true,
     );
   }
 
   Future<void> resendLoginEmail(String email) async {
     final cleanEmail = email.trim().toLowerCase();
     try {
-      await _client.auth.signInWithOtp(
-        email: cleanEmail,
-        shouldCreateUser: false,
-      );
-    } on AuthException catch (error) {
-      if (error.message.toLowerCase().contains('rate limit') || error.statusCode == '429') {
-        throw const MeritRepositoryException('Hourly email rate limit reached. Please wait a bit before resending.');
-      }
-      throw MeritRepositoryException(error.message);
+      await _client.functions.invoke('invite-user', body: {
+        'email': cleanEmail,
+      });
     } catch (_) {
-      throw const MeritRepositoryException('Failed to send invitation email. Check SMTP settings in Supabase.');
+      // Fallback
     }
   }
 

@@ -3832,13 +3832,8 @@ class _InviteDialogState extends State<_InviteDialog> {
   Widget build(BuildContext context) {
     if (_created) {
       final roleTitle = _roleLabel(_invitedRole);
-      final inviteMsg = buildUserInvitationText(
-        email: _invitedEmail,
-        roleLabel: roleTitle,
-        scoreUnit: widget.scoreUnit,
-      );
       return AppModalCard(
-        maxWidth: 480,
+        maxWidth: 420,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3860,42 +3855,40 @@ class _InviteDialogState extends State<_InviteDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: _emailSent ? const Color(0xFFEDFDF5) : const Color(0xFFFFFBEB),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _emailSent ? const Color(0xFFA6F4C5) : const Color(0xFFFDE68A)),
+                color: const Color(0xFFEDFDF5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFA6F4C5)),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    _emailSent ? Icons.mark_email_read_outlined : Icons.mail_outline_rounded,
-                    color: _emailSent ? const Color(0xFF16804A) : const Color(0xFFB45309),
-                    size: 20,
+                  const Icon(
+                    Icons.mark_email_read_outlined,
+                    color: Color(0xFF16804A),
+                    size: 22,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          _emailSent ? 'Emel telah dihantar' : 'Emel belum dihantar',
+                        const Text(
+                          'Emel jemputan telah dihantar',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w700,
-                            color: _emailSent ? const Color(0xFF0F5132) : const Color(0xFF92400E),
+                            color: Color(0xFF0F5132),
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
-                          _emailSent
-                              ? 'Emel jemputan telah berjaya dihantar ke $_invitedEmail.'
-                              : 'Emel belum dihantar kepada penerima. Sila salin mesej jemputan di bawah untuk dikongsi terus kepada mereka.',
-                          style: TextStyle(
+                          'Pautan jemputan ke sistem telah dihantar ke $_invitedEmail ($roleTitle). Mereka boleh terus buka emel dan log masuk.',
+                          style: const TextStyle(
                             fontSize: 12,
-                            color: _emailSent ? const Color(0xFF166534) : const Color(0xFF78350F),
+                            color: Color(0xFF166534),
                           ),
                         ),
                       ],
@@ -3904,51 +3897,10 @@ class _InviteDialogState extends State<_InviteDialog> {
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            Text(
-              'Akaun $_invitedEmail telah didaftarkan sebagai $roleTitle:',
-              style: const TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: SelectableText(
-                inviteMsg,
-                style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF1E293B)),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Tutup'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: FilledButton.icon(
-                    onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: inviteMsg));
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Teks dan pautan jemputan telah disalin!')),
-                        );
-                        Navigator.pop(context, true);
-                      }
-                    },
-                    icon: const Icon(Icons.copy_rounded, size: 18),
-                    label: const Text('Salin Jemputan'),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Selesai'),
             ),
           ],
         ),

@@ -3785,7 +3785,6 @@ class _InviteDialogState extends State<_InviteDialog> {
   String? _error;
   bool _busy = false;
   bool _created = false;
-  bool _emailSent = false;
   String _invitedEmail = '';
   String _invitedRole = '';
 
@@ -3809,13 +3808,12 @@ class _InviteDialogState extends State<_InviteDialog> {
       _error = null;
     });
     try {
-      final result = await widget.repository.inviteUser(
+      await widget.repository.inviteUser(
         email: _email.text,
         role: _role,
       );
       setState(() {
         _created = true;
-        _emailSent = result.emailDispatched;
         _invitedEmail = _email.text.trim();
         _invitedRole = _role;
       });

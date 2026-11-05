@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
@@ -3631,7 +3630,6 @@ class _InviteDialogState extends State<_InviteDialog> {
       await widget.repository.inviteUser(
         email: _email.text,
         role: _role,
-        sendOtpDirectly: false,
       );
       setState(() {
         _created = true;

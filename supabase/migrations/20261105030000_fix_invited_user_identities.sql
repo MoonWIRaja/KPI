@@ -2,37 +2,75 @@
 
 -- 1. Backfill any existing users in auth.users who are missing a record in auth.identities
 do $$
+declare
+  v_id_type text;
+  v_has_provider_id boolean;
 begin
-  if exists (
+  select data_type into v_id_type
+  from information_schema.columns
+  where table_schema = 'auth' and table_name = 'identities' and column_name = 'id';
+
+  select exists (
     select 1 from information_schema.columns
     where table_schema = 'auth' and table_name = 'identities' and column_name = 'provider_id'
-  ) then
-    execute '
-      insert into auth.identities (
-        id,
-        provider_id,
-        user_id,
-        identity_data,
-        provider,
-        last_sign_in_at,
-        created_at,
-        updated_at
-      )
-      select
-        u.id::text,
-        u.id::text,
-        u.id,
-        jsonb_build_object(''sub'', u.id::text, ''email'', lower(u.email)),
-        ''email'',
-        now(),
-        now(),
-        now()
-      from auth.users u
-      where not exists (
-        select 1 from auth.identities i
-        where i.user_id = u.id and i.provider = ''email''
-      )
-      on conflict do nothing';
+  ) into v_has_provider_id;
+
+  if v_has_provider_id then
+    if v_id_type = 'uuid' then
+      execute '
+        insert into auth.identities (
+          id,
+          provider_id,
+          user_id,
+          identity_data,
+          provider,
+          last_sign_in_at,
+          created_at,
+          updated_at
+        )
+        select
+          gen_random_uuid(),
+          u.id::text,
+          u.id,
+          jsonb_build_object(''sub'', u.id::text, ''email'', lower(u.email)),
+          ''email'',
+          now(),
+          now(),
+          now()
+        from auth.users u
+        where not exists (
+          select 1 from auth.identities i
+          where i.user_id = u.id and i.provider = ''email''
+        )
+        on conflict do nothing';
+    else
+      execute '
+        insert into auth.identities (
+          id,
+          provider_id,
+          user_id,
+          identity_data,
+          provider,
+          last_sign_in_at,
+          created_at,
+          updated_at
+        )
+        select
+          u.id::text,
+          u.id::text,
+          u.id,
+          jsonb_build_object(''sub'', u.id::text, ''email'', lower(u.email)),
+          ''email'',
+          now(),
+          now(),
+          now()
+        from auth.users u
+        where not exists (
+          select 1 from auth.identities i
+          where i.user_id = u.id and i.provider = ''email''
+        )
+        on conflict do nothing';
+    end if;
   else
     execute '
       insert into auth.identities (
@@ -78,6 +116,8 @@ declare
   v_normalized_email text := lower(trim(coalesce(email_input, '')));
   v_trimmed_name text := trim(coalesce(display_name_input, ''));
   v_user_id uuid;
+  v_id_type text;
+  v_has_provider_id boolean;
 begin
   if v_actor_id is null then
     raise exception 'Authentication required.';
@@ -156,24 +196,47 @@ begin
   end if;
 
   -- Ensure auth.identities has matching email identity for OTP authentication
-  if exists (
+  select data_type into v_id_type
+  from information_schema.columns
+  where table_schema = 'auth' and table_name = 'identities' and column_name = 'id';
+
+  select exists (
     select 1 from information_schema.columns
     where table_schema = 'auth' and table_name = 'identities' and column_name = 'provider_id'
-  ) then
-    execute '
-      insert into auth.identities (
-        id,
-        provider_id,
-        user_id,
-        identity_data,
-        provider,
-        last_sign_in_at,
-        created_at,
-        updated_at
-      )
-      values ($1, $2, $3, $4, ''email'', now(), now(), now())
-      on conflict do nothing'
-    using v_user_id::text, v_user_id::text, v_user_id, jsonb_build_object('sub', v_user_id::text, 'email', v_normalized_email);
+  ) into v_has_provider_id;
+
+  if v_has_provider_id then
+    if v_id_type = 'uuid' then
+      execute '
+        insert into auth.identities (
+          id,
+          provider_id,
+          user_id,
+          identity_data,
+          provider,
+          last_sign_in_at,
+          created_at,
+          updated_at
+        )
+        values (gen_random_uuid(), $1, $2, $3, ''email'', now(), now(), now())
+        on conflict do nothing'
+      using v_user_id::text, v_user_id, jsonb_build_object('sub', v_user_id::text, 'email', v_normalized_email);
+    else
+      execute '
+        insert into auth.identities (
+          id,
+          provider_id,
+          user_id,
+          identity_data,
+          provider,
+          last_sign_in_at,
+          created_at,
+          updated_at
+        )
+        values ($1, $2, $3, $4, ''email'', now(), now(), now())
+        on conflict do nothing'
+      using v_user_id::text, v_user_id::text, v_user_id, jsonb_build_object('sub', v_user_id::text, 'email', v_normalized_email);
+    end if;
   else
     execute '
       insert into auth.identities (

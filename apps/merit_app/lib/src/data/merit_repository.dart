@@ -486,7 +486,7 @@ class MeritRepository {
       }
       throw MeritRepositoryException(error.message);
     } catch (_) {
-      throw const MeritRepositoryException('Failed to send verification code email. Check SMTP settings in Supabase.');
+      throw const MeritRepositoryException('Failed to send invitation email. Check SMTP settings in Supabase.');
     }
   }
 

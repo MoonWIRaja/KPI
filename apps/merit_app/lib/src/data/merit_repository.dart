@@ -387,7 +387,7 @@ class MeritRepository {
     final cleanEmail = email.trim().toLowerCase();
     final cleanName = displayName?.trim().isNotEmpty == true
         ? displayName!.trim()
-        : (role == 'ceo' ? 'CEO' : cleanEmail.split('@').first);
+        : (role == 'ceo' ? 'CEO' : (role == 'admin' ? 'Admin' : cleanEmail.split('@').first));
 
     bool rpcSuccess = false;
     // 1. Try direct database RPC first (fast, reliable, zero edge-function CORS issues)

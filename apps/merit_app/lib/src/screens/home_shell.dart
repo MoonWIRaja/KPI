@@ -39,8 +39,9 @@ class _HomeShellState extends State<HomeShell> {
   String? _loadError;
 
   bool get _isOwner => _profile?['role'] == 'owner';
+  bool get _isAdmin => _profile?['role'] == 'admin' || _isOwner;
   bool get _isStaff => _profile?['role'] == 'staff';
-  bool _hasPermission(String key) => _isOwner || _permissions.contains(key);
+  bool _hasPermission(String key) => _isAdmin || _permissions.contains(key);
 
   @override
   void initState() {
@@ -697,7 +698,7 @@ class _HomeShellState extends State<HomeShell> {
   Future<void> _openInvite() async {
     final invited = await showAppModal<bool>(
       context: context,
-      builder: (_) => _InviteDialog(repository: _repository, staff: _staff, profiles: _profiles),
+      builder: (_) => _InviteDialog(repository: _repository, profiles: _profiles),
     );
     if (invited == true) {
       if (mounted) {
@@ -2669,6 +2670,7 @@ class _FailurePage extends StatelessWidget {
 
 String _roleLabel(String role) => switch (role) {
       'owner' => 'System owner',
+      'admin' => 'Admin',
       'ceo' => 'CEO',
       _ => 'Staff',
     };
@@ -3392,9 +3394,8 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
 }
 
 class _InviteDialog extends StatefulWidget {
-  const _InviteDialog({required this.repository, required this.staff, required this.profiles});
+  const _InviteDialog({required this.repository, required this.profiles});
   final MeritRepository repository;
-  final List<StaffMember> staff;
   final List<Map<String, dynamic>> profiles;
   @override
   State<_InviteDialog> createState() => _InviteDialogState();
@@ -3403,15 +3404,15 @@ class _InviteDialog extends StatefulWidget {
 class _InviteDialogState extends State<_InviteDialog> {
   final _form = GlobalKey<FormState>();
   final _email = TextEditingController();
-  String _role = 'staff';
-  String? _staffId;
+  String _role = 'ceo';
   String? _error;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
-    if (!widget.profiles.any((item) => item['role'] == 'ceo')) _role = 'ceo';
+    final ceoExists = widget.profiles.any((item) => item['role'] == 'ceo');
+    _role = ceoExists ? 'admin' : 'ceo';
   }
 
   @override
@@ -3430,7 +3431,6 @@ class _InviteDialogState extends State<_InviteDialog> {
       await widget.repository.inviteUser(
         email: _email.text,
         role: _role,
-        staffId: _role == 'staff' ? _staffId : null,
       );
       if (mounted) Navigator.pop(context, true);
     } on MeritRepositoryException catch (error) {
@@ -3444,10 +3444,7 @@ class _InviteDialogState extends State<_InviteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final assigned = widget.profiles.map((item) => item['staff_id']).whereType<String>().toSet();
-    final available = widget.staff.where((item) => !item.archived && !assigned.contains(item.id)).toList();
     final ceoExists = widget.profiles.any((item) => item['role'] == 'ceo');
-    if (_role == 'staff' && _staffId != null && !available.any((item) => item.id == _staffId)) _staffId = null;
     return AppModalCard(
       maxWidth: 460,
       child: Column(
@@ -3471,7 +3468,7 @@ class _InviteDialogState extends State<_InviteDialog> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Enter the email address. A login OTP email will be sent automatically, and users can set up their own profile name after signing in.',
+            'Invite a CEO or Admin. A login OTP code will be sent to their email automatically.',
             style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
           ),
           const SizedBox(height: 14),
@@ -3486,7 +3483,7 @@ class _InviteDialogState extends State<_InviteDialog> {
                   autofocus: true,
                   decoration: const InputDecoration(
                     labelText: 'User Email Address',
-                    hintText: 'e.g. user@mesrc.com.my',
+                    hintText: 'e.g. name@mesrc.com.my',
                     prefixIcon: Icon(Icons.email_outlined, size: 20),
                   ),
                   validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
@@ -3499,37 +3496,14 @@ class _InviteDialogState extends State<_InviteDialog> {
                     prefixIcon: Icon(Icons.badge_outlined, size: 20),
                   ),
                   items: [
-                    if (!ceoExists) const DropdownMenuItem(value: 'ceo', child: Text('CEO')),
-                    const DropdownMenuItem(value: 'staff', child: Text('Staff — own records only')),
+                    if (!ceoExists)
+                      const DropdownMenuItem(value: 'ceo', child: Text('CEO (Executive access)')),
+                    const DropdownMenuItem(value: 'admin', child: Text('Admin (Full administration)')),
                   ],
                   onChanged: (value) => setState(() {
-                    _role = value ?? 'staff';
-                    _staffId = null;
+                    _role = value ?? (ceoExists ? 'admin' : 'ceo');
                   }),
                 ),
-                if (_role == 'staff') ...[
-                  const SizedBox(height: 10),
-                  if (available.isEmpty)
-                    const Text(
-                      'Add a staff record before sending a staff invitation.',
-                      style: TextStyle(color: Color(0xFF667894), fontSize: 12),
-                    )
-                  else
-                    DropdownButtonFormField<String>(
-                      initialValue: _staffId,
-                      decoration: const InputDecoration(labelText: 'Link staff record'),
-                      items: available
-                          .map(
-                            (item) => DropdownMenuItem(
-                              value: item.id,
-                              child: Text('${item.code} — ${item.name}', overflow: TextOverflow.ellipsis),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) => setState(() => _staffId = value),
-                      validator: (value) => _role == 'staff' && value == null ? 'Select a staff record.' : null,
-                    ),
-                ],
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
@@ -3550,7 +3524,7 @@ class _InviteDialogState extends State<_InviteDialog> {
               const SizedBox(width: 10),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: _busy || (_role == 'staff' && available.isEmpty) ? null : _send,
+                  onPressed: _busy ? null : _send,
                   icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Sending invitation') : const Icon(Icons.send_outlined),
                   label: Text(_busy ? 'Sending…' : 'Send invitation'),
                 ),

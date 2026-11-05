@@ -3816,7 +3816,7 @@ class _InviteDialogState extends State<_InviteDialog> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _emailSent ? 'Invitation & Email Sent' : 'Invitation Created',
+                    'Jemputan Berjaya',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -3827,52 +3827,53 @@ class _InviteDialogState extends State<_InviteDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            if (_emailSent)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEDFDF5),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFA6F4C5)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.mark_email_read_outlined, color: Color(0xFF16804A), size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Emel jemputan telah berjaya dihantar ke $_invitedEmail melalui SMTP!',
-                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF0F5132)),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else if (_emailWarning != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEB),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFFDE68A)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, color: Color(0xFFB45309), size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Akaun didaftarkan. Status emel: $_emailWarning. Sila salin mesej di bawah untuk dikongsi terus.',
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: _emailSent ? const Color(0xFFEDFDF5) : const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _emailSent ? const Color(0xFFA6F4C5) : const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _emailSent ? Icons.mark_email_read_outlined : Icons.mail_outline_rounded,
+                    color: _emailSent ? const Color(0xFF16804A) : const Color(0xFFB45309),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _emailSent ? 'Emel telah dihantar' : 'Emel belum dihantar',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: _emailSent ? const Color(0xFF0F5132) : const Color(0xFF92400E),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _emailSent
+                              ? 'Emel jemputan telah berjaya dihantar ke $_invitedEmail.'
+                              : 'Emel belum dihantar kepada penerima. Sila salin mesej jemputan di bawah untuk dikongsi terus kepada mereka.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _emailSent ? const Color(0xFF166534) : const Color(0xFF78350F),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
             Text(
-              '$_invitedEmail kini disahkan sebagai $roleTitle. Kongsi maklumat log masuk ini jika diperlukan:',
+              'Akaun $_invitedEmail telah didaftarkan sebagai $roleTitle:',
               style: const TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
             ),
             const SizedBox(height: 10),
@@ -3894,7 +3895,7 @@ class _InviteDialogState extends State<_InviteDialog> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Close'),
+                    child: const Text('Tutup'),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -3905,13 +3906,13 @@ class _InviteDialogState extends State<_InviteDialog> {
                       await Clipboard.setData(ClipboardData(text: inviteMsg));
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Invitation text and link copied!')),
+                          const SnackBar(content: Text('Teks dan pautan jemputan telah disalin!')),
                         );
                         Navigator.pop(context, true);
                       }
                     },
                     icon: const Icon(Icons.copy_rounded, size: 18),
-                    label: const Text('Copy Invitation'),
+                    label: const Text('Salin Jemputan'),
                   ),
                 ),
               ],

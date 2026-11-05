@@ -445,7 +445,6 @@ class MeritRepository {
 
     // 3. Dispatch the login invitation email via Supabase SMTP
     var emailDispatched = false;
-    String? emailErr;
     try {
       await _client.auth.signInWithOtp(
         email: cleanEmail,
@@ -453,20 +452,14 @@ class MeritRepository {
         emailRedirectTo: 'https://moonwiraja.github.io/KPI/',
       );
       emailDispatched = true;
-    } on AuthException catch (error) {
-      if (error.message.toLowerCase().contains('rate limit') || error.statusCode == '429') {
-        emailErr = 'Hourly email rate limit reached.';
-      } else {
-        emailErr = error.message;
-      }
-    } catch (e) {
-      emailErr = e.toString();
+    } catch (_) {
+      emailDispatched = false;
     }
 
     return InviteUserResult(
       success: true,
       emailDispatched: emailDispatched,
-      emailErrorMessage: emailErr,
+      emailErrorMessage: null,
     );
   }
 

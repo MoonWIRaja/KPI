@@ -1,5 +1,37 @@
 -- Migration: Fix invited user auth identities to enable Supabase OTP login & email delivery
 
+-- 0. Fix NULL token columns in auth.users that trigger GoTrue "Database error finding user"
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'confirmation_token') then
+    update auth.users set confirmation_token = '' where confirmation_token is null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'recovery_token') then
+    update auth.users set recovery_token = '' where recovery_token is null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_change') then
+    update auth.users set email_change = '' where email_change is null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_change_token_new') then
+    update auth.users set email_change_token_new = '' where email_change_token_new is null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_change_token_current') then
+    update auth.users set email_change_token_current = '' where email_change_token_current is null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'phone_change') then
+    update auth.users set phone_change = '' where phone_change is null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'phone_change_token') then
+    update auth.users set phone_change_token = '' where phone_change_token is null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'reauthentication_token') then
+    update auth.users set reauthentication_token = '' where reauthentication_token is null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'is_sso_user') then
+    update auth.users set is_sso_user = false where is_sso_user is null;
+  end if;
+end $$;
+
 -- 1. Backfill any existing users in auth.users who are missing a record in auth.identities
 do $$
 declare
@@ -173,7 +205,11 @@ begin
       raw_app_meta_data,
       raw_user_meta_data,
       created_at,
-      updated_at
+      updated_at,
+      confirmation_token,
+      recovery_token,
+      email_change_token_new,
+      email_change
     ) values (
       '00000000-0000-0000-0000-000000000000',
       v_user_id,
@@ -185,12 +221,20 @@ begin
       '{"provider":"email","providers":["email"]}'::jsonb,
       jsonb_build_object('display_name', v_trimmed_name),
       now(),
-      now()
+      now(),
+      '',
+      '',
+      '',
+      ''
     );
   else
     update auth.users
     set email_confirmed_at = coalesce(email_confirmed_at, now()),
         raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('display_name', v_trimmed_name),
+        confirmation_token = coalesce(confirmation_token, ''),
+        recovery_token = coalesce(recovery_token, ''),
+        email_change = coalesce(email_change, ''),
+        email_change_token_new = coalesce(email_change_token_new, ''),
         updated_at = now()
     where id = v_user_id;
   end if;

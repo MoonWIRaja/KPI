@@ -67,9 +67,9 @@ Deno.serve(async (request: Request) => {
   if (displayName.length < 1 || displayName.length > 160) {
     return response(400, { error: 'Name must contain 1–160 characters.' }, origin);
   }
-  if (role !== 'ceo' && role !== 'staff') return response(400, { error: 'Choose an allowed role.' }, origin);
-  if ((role === 'staff' && !staffId) || (role === 'ceo' && staffId)) {
-    return response(400, { error: 'A staff account must link to one staff record; CEO accounts cannot.' }, origin);
+  if (role !== 'ceo' && role !== 'admin' && role !== 'staff') return response(400, { error: 'Choose an allowed role.' }, origin);
+  if ((role === 'staff' && !staffId) || ((role === 'ceo' || role === 'admin') && staffId)) {
+    return response(400, { error: 'A staff account must link to one staff record; CEO/Admin accounts cannot.' }, origin);
   }
   if (staffId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(staffId)) {
     return response(400, { error: 'Invalid staff record.' }, origin);

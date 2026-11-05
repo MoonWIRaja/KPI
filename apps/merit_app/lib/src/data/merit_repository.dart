@@ -431,22 +431,8 @@ class MeritRepository {
       }
     }
 
-    // 3. Immediately dispatch the login OTP email to the invited user
-    try {
-      await _client.auth.signInWithOtp(
-        email: cleanEmail,
-        shouldCreateUser: false,
-        emailRedirectTo: 'https://moonwiraja.github.io/KPI/',
-      );
-      return true;
-    } on AuthException catch (error) {
-      if (error.message.toLowerCase().contains('rate limit') || error.statusCode == '429') {
-        return false;
-      }
-      throw MeritRepositoryException('User created, but email dispatch failed: ${error.message}');
-    } catch (_) {
-      return false;
-    }
+    // 3. User authorized and created; return true to display copyable invitation
+    return true;
   }
 
   Future<void> resendLoginEmail(String email) async {

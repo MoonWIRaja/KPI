@@ -378,21 +378,27 @@ class MeritRepository {
     }
   }
 
-  Future<void> inviteUser({
+  Future<bool> inviteUser({
     required String email,
-    required String displayName,
+    String? displayName,
     required String role,
     String? staffId,
   }) async {
+    final cleanEmail = email.trim().toLowerCase();
+    final cleanName = displayName?.trim().isNotEmpty == true
+        ? displayName!.trim()
+        : (role == 'ceo' ? 'CEO' : cleanEmail.split('@').first);
+
+    bool rpcSuccess = false;
     // 1. Try direct database RPC first (fast, reliable, zero edge-function CORS issues)
     try {
       await _client.rpc('invite_user_direct', params: {
-        'email_input': email.trim().toLowerCase(),
-        'display_name_input': displayName.trim(),
+        'email_input': cleanEmail,
+        'display_name_input': cleanName,
         'role_input': role,
         'staff_id_input': staffId,
       });
-      return;
+      rpcSuccess = true;
     } on PostgrestException catch (error) {
       final msg = error.message.toLowerCase();
       if (!msg.contains('invite_user_direct') && !msg.contains('does not exist') && error.code != 'PGRST202') {
@@ -401,26 +407,99 @@ class MeritRepository {
       // RPC not yet applied on remote database, fall back to Edge Function
     }
 
-    // 2. Fall back to Edge Function if deployed
-    try {
-      await _client.functions.invoke('invite-user', body: {
-        'email': email.trim().toLowerCase(),
-        'display_name': displayName.trim(),
-        'role': role,
-        'staff_id': staffId,
-      });
-    } on FunctionException catch (error) {
-      final details = error.details;
-      if (details is Map && details['error'] is String) {
-        throw MeritRepositoryException(details['error'] as String);
+    // 2. Fall back to Edge Function if deployed and RPC was not present
+    if (!rpcSuccess) {
+      try {
+        await _client.functions.invoke('invite-user', body: {
+          'email': cleanEmail,
+          'display_name': cleanName,
+          'role': role,
+          'staff_id': staffId,
+        });
+      } on FunctionException catch (error) {
+        final details = error.details;
+        if (details is Map && details['error'] is String) {
+          throw MeritRepositoryException(details['error'] as String);
+        }
+        throw const MeritRepositoryException(
+          'Invitation failed. Please run migration 20261105010000_user_management_and_profile_setup.sql in Supabase SQL Editor.',
+        );
+      } catch (_) {
+        throw const MeritRepositoryException(
+          'Invitation service not ready: Please run migration 20261105010000_user_management_and_profile_setup.sql in Supabase SQL Editor.',
+        );
       }
-      throw const MeritRepositoryException(
-        'Invitation failed. Please run migration 20261104040000_direct_user_invitation.sql in Supabase SQL Editor.',
+    }
+
+    // 3. Immediately dispatch the login OTP email to the invited user
+    try {
+      await _client.auth.signInWithOtp(
+        email: cleanEmail,
+        shouldCreateUser: false,
+        emailRedirectTo: 'https://moonwiraja.github.io/KPI/',
       );
+      return true;
     } catch (_) {
-      throw const MeritRepositoryException(
-        'Invitation service not ready: Please run migration 20261104040000_direct_user_invitation.sql in Supabase SQL Editor.',
+      return false;
+    }
+  }
+
+  Future<void> resendLoginEmail(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    try {
+      await _client.auth.signInWithOtp(
+        email: cleanEmail,
+        shouldCreateUser: false,
+        emailRedirectTo: 'https://moonwiraja.github.io/KPI/',
       );
+    } on AuthException catch (error) {
+      if (error.message.toLowerCase().contains('rate limit')) {
+        throw const MeritRepositoryException('A code was recently sent. Please wait a minute before resending.');
+      }
+      throw MeritRepositoryException(error.message);
+    } catch (_) {
+      throw const MeritRepositoryException('Failed to send login email. Check SMTP settings in Supabase.');
+    }
+  }
+
+  Future<void> deleteUser(String userId) async {
+    try {
+      await _client.rpc('delete_user_account', params: {
+        'target_user_id': userId,
+      });
+    } on PostgrestException catch (error) {
+      if (error.code == 'PGRST202' || error.message.contains('delete_user_account') || error.message.contains('does not exist')) {
+        try {
+          await _client.from('user_permissions').delete().eq('user_id', userId);
+          await _client.from('profiles').delete().eq('user_id', userId);
+          return;
+        } catch (_) {}
+      }
+      throw MeritRepositoryException(error.message);
+    } catch (_) {
+      throw const MeritRepositoryException('Failed to delete user account. Check permissions and try again.');
+    }
+  }
+
+  Future<void> updateMyDisplayName(String newName) async {
+    final clean = newName.trim();
+    if (clean.isEmpty) throw const MeritRepositoryException('Name cannot be empty.');
+    try {
+      await _client.rpc('update_my_profile_name', params: {
+        'display_name_input': clean,
+      });
+      return;
+    } on PostgrestException catch (error) {
+      if (error.code == 'PGRST202' || error.message.contains('update_my_profile_name') || error.message.contains('does not exist')) {
+        final userId = _client.auth.currentUser?.id;
+        if (userId != null) {
+          await _client.from('profiles').update({'display_name': clean}).eq('user_id', userId);
+          return;
+        }
+      }
+      throw MeritRepositoryException(error.message);
+    } catch (_) {
+      throw const MeritRepositoryException('Failed to update display name. Try again.');
     }
   }
 }

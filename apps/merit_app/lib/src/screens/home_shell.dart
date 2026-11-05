@@ -538,6 +538,8 @@ class _HomeShellState extends State<HomeShell> {
                               profile: profile,
                               onPermissions: () => _editUserPermissions(profile),
                               onToggleActive: () => _toggleUserActive(profile),
+                              onDelete: profile['role'] == 'owner' ? null : () => _deleteUser(profile),
+                              onResendEmail: () => _resendLoginEmail(profile),
                             ),
                           ),
                         );
@@ -649,12 +651,61 @@ class _HomeShellState extends State<HomeShell> {
   }
 
 
+  Future<void> _deleteUser(Map<String, dynamic> profile) async {
+    final userId = profile['user_id']?.toString() ?? '';
+    final email = profile['email']?.toString() ?? 'this user';
+    if (userId.isEmpty) return;
+
+    final confirmed = await showAppModal<bool>(
+      context: context,
+      builder: (_) => _ConfirmCardDialog(
+        title: 'Delete user account?',
+        message: 'Are you sure you want to delete the account for $email? All access permissions will be removed. You can re-invite them afterwards if needed.',
+        confirmLabel: 'Delete account',
+        destructive: true,
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _repository.deleteUser(userId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Account for $email deleted.')),
+      );
+      await _refresh();
+    } on MeritRepositoryException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  Future<void> _resendLoginEmail(Map<String, dynamic> profile) async {
+    final email = profile['email']?.toString() ?? '';
+    if (email.isEmpty) return;
+    try {
+      await _repository.resendLoginEmail(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login email sent to $email.')),
+      );
+    } on MeritRepositoryException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
   Future<void> _openInvite() async {
     final invited = await showAppModal<bool>(
       context: context,
       builder: (_) => _InviteDialog(repository: _repository, staff: _staff, profiles: _profiles),
     );
-    if (invited == true) await _refresh();
+    if (invited == true) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invitation sent. A login email with code was dispatched.')),
+        );
+      }
+      await _refresh();
+    }
   }
 }
 
@@ -852,6 +903,79 @@ class _ProfileAccountDialogState extends State<_ProfileAccountDialog> {
     await triggerMeritPwaInstall(platformHint);
   }
 
+  Future<void> _editDisplayName() async {
+    final current = _profile['display_name'] as String? ?? '';
+    final controller = TextEditingController(text: current);
+    final formKey = GlobalKey<FormState>();
+
+    final updated = await showAppModal<String>(
+      context: context,
+      builder: (modalCtx) => AppModalCard(
+        maxWidth: 360,
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Edit display name',
+                style: Theme.of(modalCtx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: controller,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Your display name',
+                  prefixIcon: Icon(Icons.person_outline, size: 20),
+                ),
+                validator: (val) => val == null || val.trim().isEmpty ? 'Please enter a name.' : null,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(modalCtx),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () {
+                      if (formKey.currentState!.validate()) {
+                        Navigator.pop(modalCtx, controller.text.trim());
+                      }
+                    },
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (updated != null && updated.isNotEmpty && updated != current) {
+      setState(() {
+        _saving = true;
+        _error = null;
+      });
+      try {
+        await widget.repository.updateMyDisplayName(updated);
+        setState(() => _profile['display_name'] = updated);
+        await widget.onAvatarUpdated();
+      } on MeritRepositoryException catch (e) {
+        setState(() => _error = e.message);
+      } catch (_) {
+        setState(() => _error = 'Could not update display name.');
+      } finally {
+        if (mounted) setState(() => _saving = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) => AppModalCard(
         maxWidth: 380,
@@ -911,10 +1035,23 @@ class _ProfileAccountDialogState extends State<_ProfileAccountDialog> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    _profile['display_name'] as String? ?? '',
-                    style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
-                    textAlign: TextAlign.center,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          _profile['display_name'] as String? ?? '',
+                          style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, color: Color(0xFF141C2E)),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Edit display name',
+                        icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF245CEB)),
+                        onPressed: _saving ? null : _editDisplayName,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -1594,11 +1731,15 @@ class _UserAccessRow extends StatelessWidget {
     required this.profile,
     required this.onPermissions,
     required this.onToggleActive,
+    this.onDelete,
+    this.onResendEmail,
   });
 
   final Map<String, dynamic> profile;
   final VoidCallback onPermissions;
   final VoidCallback onToggleActive;
+  final VoidCallback? onDelete;
+  final VoidCallback? onResendEmail;
 
   @override
   Widget build(BuildContext context) {
@@ -1669,6 +1810,13 @@ class _UserAccessRow extends StatelessWidget {
                 style: const TextStyle(color: Color(0xFF667894), fontSize: 11.5),
               ),
               const Spacer(),
+              if (onResendEmail != null)
+                IconButton(
+                  tooltip: 'Resend login email',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onResendEmail,
+                  icon: const Icon(Icons.mail_outline, size: 20, color: Color(0xFF245CEB)),
+                ),
               IconButton(
                 tooltip: 'Set permissions',
                 visualDensity: VisualDensity.compact,
@@ -1685,6 +1833,13 @@ class _UserAccessRow extends StatelessWidget {
                   color: isActive ? const Color(0xFFB42318) : const Color(0xFF16804A),
                 ),
               ),
+              if (onDelete != null)
+                IconButton(
+                  tooltip: 'Delete user account',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFFB42318)),
+                ),
             ],
           ),
         ],
@@ -1738,6 +1893,12 @@ class _UserAccessRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
+          if (onResendEmail != null)
+            IconButton(
+              tooltip: 'Resend login email',
+              onPressed: onResendEmail,
+              icon: const Icon(Icons.mail_outline, size: 20, color: Color(0xFF245CEB)),
+            ),
           IconButton(
             tooltip: 'Set permissions',
             onPressed: onPermissions,
@@ -1752,6 +1913,12 @@ class _UserAccessRow extends StatelessWidget {
               color: isActive ? const Color(0xFFB42318) : const Color(0xFF16804A),
             ),
           ),
+          if (onDelete != null)
+            IconButton(
+              tooltip: 'Delete user account',
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFFB42318)),
+            ),
         ],
       ),
     );
@@ -3208,11 +3375,11 @@ class _InviteDialog extends StatefulWidget {
 class _InviteDialogState extends State<_InviteDialog> {
   final _form = GlobalKey<FormState>();
   final _email = TextEditingController();
-  final _name = TextEditingController();
   String _role = 'staff';
   String? _staffId;
   String? _error;
   bool _busy = false;
+
   @override
   void initState() {
     super.initState();
@@ -3222,7 +3389,6 @@ class _InviteDialogState extends State<_InviteDialog> {
   @override
   void dispose() {
     _email.dispose();
-    _name.dispose();
     super.dispose();
   }
 
@@ -3235,7 +3401,6 @@ class _InviteDialogState extends State<_InviteDialog> {
     try {
       await widget.repository.inviteUser(
         email: _email.text,
-        displayName: _name.text,
         role: _role,
         staffId: _role == 'staff' ? _staffId : null,
       );
@@ -3278,7 +3443,7 @@ class _InviteDialogState extends State<_InviteDialog> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'The user will be authorized to receive Email OTP sign-in codes via Google SMTP (support@mesrc.com.my).',
+            'Enter the email address. A login OTP email will be sent automatically, and users can set up their own profile name after signing in.',
             style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
           ),
           const SizedBox(height: 14),
@@ -3290,15 +3455,21 @@ class _InviteDialogState extends State<_InviteDialog> {
                 TextFormField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email'),
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'User Email Address',
+                    hintText: 'e.g. user@mesrc.com.my',
+                    prefixIcon: Icon(Icons.email_outlined, size: 20),
+                  ),
                   validator: (value) => value == null || !value.trim().contains('@') ? 'Enter a valid email address.' : null,
                 ),
-                const SizedBox(height: 10),
-                TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'User name'), validator: _required),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: _role,
-                  decoration: const InputDecoration(labelText: 'Role'),
+                  decoration: const InputDecoration(
+                    labelText: 'Role',
+                    prefixIcon: Icon(Icons.badge_outlined, size: 20),
+                  ),
                   items: [
                     if (!ceoExists) const DropdownMenuItem(value: 'ceo', child: Text('CEO')),
                     const DropdownMenuItem(value: 'staff', child: Text('Staff — own records only')),

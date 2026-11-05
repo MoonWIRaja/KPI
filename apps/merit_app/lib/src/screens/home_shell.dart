@@ -43,7 +43,7 @@ class _HomeShellState extends State<HomeShell> {
   bool get _isStaff => _profile?['role'] == 'staff';
   bool _hasPermission(String key) => _isAdmin || _permissions.contains(key);
 
-  String get _systemTitle {
+  String get systemTitle {
     final unitTrimmed = _scoreUnit.trim();
     if (unitTrimmed.isEmpty || unitTrimmed.toLowerCase() == 'merit') return 'Merit Tracker';
     final unitCap = '${unitTrimmed[0].toUpperCase()}${unitTrimmed.substring(1)}';
@@ -76,7 +76,6 @@ class _HomeShellState extends State<HomeShell> {
       _permissions = _isOwner ? const {} : await _repository.loadPermissions(user.id);
       await _loadData();
       autoCheckAuthenticatedIosPwa();
-      _checkFirstTimeNameSetup();
     } on MeritRepositoryException catch (error) {
       _loadError = error.message;
     } catch (_) {

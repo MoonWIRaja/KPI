@@ -50,16 +50,65 @@ class _HomeShellState extends State<HomeShell> {
     return '$unitCap Tracker';
   }
 
+  RealtimeChannel? _realtimeChannel;
+
   @override
   void initState() {
     super.initState();
     _repository = MeritRepository(Supabase.instance.client);
     _loadProfile();
+    _setupRealtimeSubscription();
+  }
+
+  void _setupRealtimeSubscription() {
+    try {
+      _realtimeChannel = Supabase.instance.client
+          .channel('public:system_live_sync')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            callback: (payload) {
+              if (mounted) {
+                // Silently reload data in real-time without blocking the user interface
+                _silentLiveSync();
+              }
+            },
+          )
+          .subscribe();
+    } catch (_) {}
+  }
+
+  Future<void> _silentLiveSync() async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+      final canReadStaff = _hasPermission('staff.read.all') || _hasPermission('merit.read.self');
+      final canReadEvents = _hasPermission('merit.read.all') || _hasPermission('merit.read.self');
+      final staff = canReadStaff ? await _repository.loadStaff() : <StaffMember>[];
+      final events = canReadEvents ? await _repository.loadEvents() : <MeritEvent>[];
+      final profiles = (_isAdmin || _hasPermission('users.manage')) ? await _repository.loadProfiles() : const <Map<String, dynamic>>[];
+      try {
+        final settings = await _repository.loadSettings();
+        _defaultScore = settings.defaultScoreTenths;
+        _organizationName = settings.organizationName;
+        _scoreUnit = settings.scoreUnit;
+      } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _staff = staff;
+          _events = events;
+          _profiles = profiles;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     _search.dispose();
+    if (_realtimeChannel != null) {
+      Supabase.instance.client.removeChannel(_realtimeChannel!);
+    }
     super.dispose();
   }
 

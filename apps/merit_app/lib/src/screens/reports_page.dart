@@ -380,7 +380,7 @@ class _ReportsPageState extends State<ReportsPage> {
           ? staffList.first.code.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_')
           : '${staffList.length}-staff';
       await FileSaver.instance.saveFile(
-        name: 'merit-report-$suffix-${_from.year}${_from.month.toString().padLeft(2, '0')}',
+        name: '${widget.scoreUnit.toLowerCase().replaceAll(' ', '_')}-report-$suffix-${_from.year}${_from.month.toString().padLeft(2, '0')}',
         bytes: Uint8List.fromList(bytes),
         fileExtension: 'pdf',
         mimeType: MimeType.custom,

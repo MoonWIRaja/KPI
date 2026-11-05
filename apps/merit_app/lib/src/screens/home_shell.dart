@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/merit_repository.dart';
@@ -501,6 +502,11 @@ class _HomeShellState extends State<HomeShell> {
 
   Widget _usersPage() {
     final width = MediaQuery.sizeOf(context).width;
+    // Only show system management accounts (owner, ceo, admin). Staff are managed in the Staff tab.
+    final users = _profiles.where((p) => p['role'] != 'staff').toList();
+    final currentUserId = _profile?['user_id'];
+    final currentUserEmail = _profile?['email'];
+
     return Padding(
       padding: EdgeInsets.fromLTRB(width < 700 ? 14 : 24, 14, width < 700 ? 14 : 24, 18),
       child: Surface3DCard(
@@ -509,30 +515,49 @@ class _HomeShellState extends State<HomeShell> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'User Accounts',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'System access accounts for Owner, CEO, and Admin.',
+                        style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
+                      ),
+                    ],
+                  ),
+                ),
                 FilledButton.icon(
                   onPressed: _openInvite,
-                  icon: const Icon(Icons.mail_outline, size: 18),
+                  icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
                   label: const Text('Invite user'),
                 ),
               ],
             ),
             const SizedBox(height: 14),
             Expanded(
-              child: _profiles.isEmpty
+              child: users.isEmpty
                   ? const Center(
                       child: _EmptyState(
                         icon: Icons.people_outline,
-                        title: 'No additional users',
-                        detail: 'Use Invite user to add accounts.',
+                        title: 'No management users yet',
+                        detail: 'Use Invite user to add CEO or Admin accounts.',
                       ),
                     )
                   : ListView.builder(
-                      itemCount: _profiles.length,
+                      itemCount: users.length,
                       itemBuilder: (context, index) {
-                        final profile = _profiles[index];
+                        final profile = users[index];
                         final isOwner = profile['role'] == 'owner';
+                        final isSelf = (currentUserId != null && profile['user_id'] == currentUserId) ||
+                            (currentUserEmail != null && profile['email'] == currentUserEmail);
+                        final canToggleOrDelete = !isOwner && !isSelf;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: Surface3DCard(
@@ -540,10 +565,12 @@ class _HomeShellState extends State<HomeShell> {
                             borderRadius: 14,
                             child: _UserAccessRow(
                               profile: profile,
+                              isSelf: isSelf,
                               onPermissions: isOwner ? null : () => _editUserPermissions(profile),
-                              onToggleActive: isOwner ? null : () => _toggleUserActive(profile),
-                              onDelete: isOwner ? null : () => _deleteUser(profile),
-                              onResendEmail: () => _resendLoginEmail(profile),
+                              onToggleActive: canToggleOrDelete ? () => _toggleUserActive(profile) : null,
+                              onDelete: canToggleOrDelete ? () => _deleteUser(profile) : null,
+                              onResendEmail: isSelf ? null : () => _resendLoginEmail(profile),
+                              onShareInvite: isOwner ? null : () => _shareUserInvite(profile),
                             ),
                           ),
                         );
@@ -717,20 +744,73 @@ class _HomeShellState extends State<HomeShell> {
       context: context,
       builder: (_) => _InviteDialog(repository: _repository, profiles: _profiles),
     );
-    if (invited != null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              invited == true
-                  ? 'Invitation sent. A login email with code was dispatched.'
-                  : 'User account created. (Email dispatch rate limited — user can request OTP on login page).',
-            ),
-          ),
-        );
-      }
+    if (invited == true) {
       await _refresh();
     }
+  }
+
+  Future<void> _shareUserInvite(Map<String, dynamic> profile) async {
+    final email = profile['email']?.toString() ?? '';
+    final role = profile['role']?.toString() ?? 'staff';
+    final roleLabel = _roleLabel(role);
+    final text = buildUserInvitationText(email: email, roleLabel: roleLabel);
+
+    await showAppModal<void>(
+      context: context,
+      builder: (_) => AppModalCard(
+        maxWidth: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.mark_email_read_outlined, color: Color(0xFF245CEB), size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Invitation Details — $roleLabel',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: SelectableText(
+                text,
+                style: const TextStyle(fontSize: 12.5, height: 1.5, color: Color(0xFF1E293B)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: text));
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Invitation text and link copied to clipboard!')),
+                  );
+                  Navigator.pop(context);
+                }
+              },
+              icon: const Icon(Icons.copy_rounded, size: 18),
+              label: const Text('Copy Invitation Text & Link'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -1290,6 +1370,7 @@ class _DashboardMeritCard extends StatelessWidget {
                                 latest: _latestFor(item, events),
                                 canAdjust: canAdjust,
                                 onAdjust: onAdjust,
+                                scoreUnit: scoreUnit,
                               );
                             },
                           )
@@ -1594,11 +1675,13 @@ class _DashboardStaffCard extends StatelessWidget {
     required this.latest,
     required this.canAdjust,
     required this.onAdjust,
+    this.scoreUnit = 'merit',
   });
   final StaffMember staff;
   final MeritEvent? latest;
   final bool canAdjust;
   final ValueChanged<StaffMember> onAdjust;
+  final String scoreUnit;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -1622,9 +1705,20 @@ class _DashboardStaffCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Text(
-                    formatMerit(staff.scoreTenths),
-                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF3FF),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '${formatMerit(staff.scoreTenths)} $scoreUnit',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF245CEB),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1755,17 +1849,21 @@ class _EventsCard extends StatelessWidget {
 class _UserAccessRow extends StatelessWidget {
   const _UserAccessRow({
     required this.profile,
+    this.isSelf = false,
     this.onPermissions,
     this.onToggleActive,
     this.onDelete,
     this.onResendEmail,
+    this.onShareInvite,
   });
 
   final Map<String, dynamic> profile;
+  final bool isSelf;
   final VoidCallback? onPermissions;
   final VoidCallback? onToggleActive;
   final VoidCallback? onDelete;
   final VoidCallback? onResendEmail;
+  final VoidCallback? onShareInvite;
 
   @override
   Widget build(BuildContext context) {
@@ -1799,9 +1897,30 @@ class _UserAccessRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      name,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF141C2E)),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            name,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF141C2E)),
+                          ),
+                        ),
+                        if (isSelf) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEEF3FF),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: const Color(0xFFCBD6E6)),
+                            ),
+                            child: const Text(
+                              'You',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF245CEB)),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -1842,6 +1961,13 @@ class _UserAccessRow extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              if (onShareInvite != null)
+                IconButton(
+                  tooltip: 'Share / Copy invitation link & message',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onShareInvite,
+                  icon: const Icon(Icons.share_outlined, size: 20, color: Color(0xFF245CEB)),
+                ),
               if (onResendEmail != null)
                 IconButton(
                   tooltip: 'Resend login email',
@@ -1897,9 +2023,28 @@ class _UserAccessRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF141C2E)),
+                Row(
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF141C2E)),
+                    ),
+                    if (isSelf) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEF3FF),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: const Color(0xFFCBD6E6)),
+                        ),
+                        child: const Text(
+                          'You (Current account)',
+                          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF245CEB)),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Row(
@@ -1944,6 +2089,12 @@ class _UserAccessRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
+          if (onShareInvite != null)
+            IconButton(
+              tooltip: 'Share / Copy invitation link & message',
+              onPressed: onShareInvite,
+              icon: const Icon(Icons.share_outlined, size: 20, color: Color(0xFF245CEB)),
+            ),
           if (onResendEmail != null)
             IconButton(
               tooltip: 'Resend login email',
@@ -3453,6 +3604,9 @@ class _InviteDialogState extends State<_InviteDialog> {
   String _role = 'ceo';
   String? _error;
   bool _busy = false;
+  bool _created = false;
+  String _invitedEmail = '';
+  String _invitedRole = '';
 
   @override
   void initState() {
@@ -3474,15 +3628,20 @@ class _InviteDialogState extends State<_InviteDialog> {
       _error = null;
     });
     try {
-      final success = await widget.repository.inviteUser(
+      await widget.repository.inviteUser(
         email: _email.text,
         role: _role,
+        sendOtpDirectly: false,
       );
-      if (mounted) Navigator.pop(context, success);
+      setState(() {
+        _created = true;
+        _invitedEmail = _email.text.trim();
+        _invitedRole = _role;
+      });
     } on MeritRepositoryException catch (error) {
       setState(() => _error = error.message);
     } catch (_) {
-      setState(() => _error = 'Invitation failed. Check SMTP configuration and try again.');
+      setState(() => _error = 'Invitation failed. Check connection and try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -3490,6 +3649,83 @@ class _InviteDialogState extends State<_InviteDialog> {
 
   @override
   Widget build(BuildContext context) {
+    if (_created) {
+      final roleTitle = _roleLabel(_invitedRole);
+      final inviteMsg = buildUserInvitationText(email: _invitedEmail, roleLabel: roleTitle);
+      return AppModalCard(
+        maxWidth: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Color(0xFF16804A), size: 28),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Invitation Created',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => Navigator.pop(context, true),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '$_invitedEmail is now authorized as $roleTitle. Share this invitation link so they can access the system:',
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: SelectableText(
+                inviteMsg,
+                style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF1E293B)),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Close'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 2,
+                  child: FilledButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: inviteMsg));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Invitation text and link copied!')),
+                        );
+                        Navigator.pop(context, true);
+                      }
+                    },
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    label: const Text('Copy Invitation'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
     final ceoExists = widget.profiles.any((item) => item['role'] == 'ceo');
     return AppModalCard(
       maxWidth: 460,
@@ -3514,7 +3750,7 @@ class _InviteDialogState extends State<_InviteDialog> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Invite a CEO or Admin. A login OTP code will be sent to their email automatically.',
+            'Invite a CEO or Admin to access the Merit Tracker system. An invitation link and instructions will be generated.',
             style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
           ),
           const SizedBox(height: 14),
@@ -3571,8 +3807,8 @@ class _InviteDialogState extends State<_InviteDialog> {
               Expanded(
                 child: FilledButton.icon(
                   onPressed: _busy ? null : _send,
-                  icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Sending invitation') : const Icon(Icons.send_outlined),
-                  label: Text(_busy ? 'Sending…' : 'Send invitation'),
+                  icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Creating invitation') : const Icon(Icons.send_outlined),
+                  label: Text(_busy ? 'Creating…' : 'Generate invitation'),
                 ),
               ),
             ],
@@ -3581,6 +3817,22 @@ class _InviteDialogState extends State<_InviteDialog> {
       ),
     );
   }
+}
+
+String buildUserInvitationText({required String email, required String roleLabel}) {
+  return '''Salam Sejahtera,
+
+Anda telah dijemput untuk menyertai sistem Merit Tracker (KPI) sebagai $roleLabel.
+
+Sila layari pautan di bawah untuk mengakses sistem di pelayar (browser):
+https://moonwiraja.github.io/KPI/
+
+Langkah Log Masuk:
+1. Klik pautan di atas untuk membuka sistem.
+2. Masukkan alamat emel anda ($email).
+3. Klik "Continue with email" dan masukkan kod 6-digit OTP yang dihantar ke emel anda.
+
+Terima kasih.''';
 }
 
 String? _required(String? value) => value == null || value.trim().isEmpty ? 'This field is required.' : null;

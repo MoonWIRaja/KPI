@@ -228,3 +228,4 @@ $$;
 
 revoke all on function public.invite_user_direct(text, text, text, uuid) from public, anon;
 grant execute on function public.invite_user_direct(text, text, text, uuid) to authenticated;
+

@@ -168,9 +168,9 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: const Color(0xFFDCE5F2)),
                     ),
-                    child: const SelectableText(
-                      'staff_code,full_name,department,starting_merit\nS001,Staff Name,Operations,5.0',
-                      style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                    child: SelectableText(
+                      'staff_code,full_name,department,starting_${widget.scoreUnit.toLowerCase().replaceAll(' ', '_')}\nS001,Staff Name,Operations,5.0',
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
                     ),
                   ),
                   const SizedBox(height: 14),

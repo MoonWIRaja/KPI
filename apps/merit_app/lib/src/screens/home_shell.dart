@@ -529,6 +529,7 @@ class _HomeShellState extends State<HomeShell> {
                       itemCount: _profiles.length,
                       itemBuilder: (context, index) {
                         final profile = _profiles[index];
+                        final isOwner = profile['role'] == 'owner';
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: Surface3DCard(
@@ -536,9 +537,9 @@ class _HomeShellState extends State<HomeShell> {
                             borderRadius: 14,
                             child: _UserAccessRow(
                               profile: profile,
-                              onPermissions: () => _editUserPermissions(profile),
-                              onToggleActive: () => _toggleUserActive(profile),
-                              onDelete: profile['role'] == 'owner' ? null : () => _deleteUser(profile),
+                              onPermissions: isOwner ? null : () => _editUserPermissions(profile),
+                              onToggleActive: isOwner ? null : () => _toggleUserActive(profile),
+                              onDelete: isOwner ? null : () => _deleteUser(profile),
                               onResendEmail: () => _resendLoginEmail(profile),
                             ),
                           ),
@@ -1729,15 +1730,15 @@ class _EventsCard extends StatelessWidget {
 class _UserAccessRow extends StatelessWidget {
   const _UserAccessRow({
     required this.profile,
-    required this.onPermissions,
-    required this.onToggleActive,
+    this.onPermissions,
+    this.onToggleActive,
     this.onDelete,
     this.onResendEmail,
   });
 
   final Map<String, dynamic> profile;
-  final VoidCallback onPermissions;
-  final VoidCallback onToggleActive;
+  final VoidCallback? onPermissions;
+  final VoidCallback? onToggleActive;
   final VoidCallback? onDelete;
   final VoidCallback? onResendEmail;
 
@@ -1749,7 +1750,9 @@ class _UserAccessRow extends StatelessWidget {
     final email = (profile['email'] as String? ?? '').trim();
     final isActive = profile['is_active'] == true;
     final role = profile['role'] as String? ?? 'staff';
+    final isOwner = role == 'owner';
     final permCount = (profile['user_permissions'] as List<dynamic>? ?? const []).length;
+    final permLabel = isOwner ? 'Full system access' : '$permCount permissions';
     final initial = name.isEmpty ? 'U' : name.characters.first.toUpperCase();
 
     if (isMobile) {
@@ -1806,8 +1809,12 @@ class _UserAccessRow extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '$permCount permissions',
-                style: const TextStyle(color: Color(0xFF667894), fontSize: 11.5),
+                permLabel,
+                style: TextStyle(
+                  color: isOwner ? const Color(0xFF16804A) : const Color(0xFF667894),
+                  fontSize: 11.5,
+                  fontWeight: isOwner ? FontWeight.w600 : FontWeight.normal,
+                ),
               ),
               const Spacer(),
               if (onResendEmail != null)
@@ -1817,22 +1824,24 @@ class _UserAccessRow extends StatelessWidget {
                   onPressed: onResendEmail,
                   icon: const Icon(Icons.mail_outline, size: 20, color: Color(0xFF245CEB)),
                 ),
-              IconButton(
-                tooltip: 'Set permissions',
-                visualDensity: VisualDensity.compact,
-                onPressed: onPermissions,
-                icon: const Icon(Icons.tune_outlined, size: 20),
-              ),
-              IconButton(
-                tooltip: isActive ? 'Deactivate account' : 'Activate account',
-                visualDensity: VisualDensity.compact,
-                onPressed: onToggleActive,
-                icon: Icon(
-                  isActive ? Icons.person_off_outlined : Icons.person_outline,
-                  size: 20,
-                  color: isActive ? const Color(0xFFB42318) : const Color(0xFF16804A),
+              if (onPermissions != null)
+                IconButton(
+                  tooltip: 'Set permissions',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onPermissions,
+                  icon: const Icon(Icons.tune_outlined, size: 20),
                 ),
-              ),
+              if (onToggleActive != null)
+                IconButton(
+                  tooltip: isActive ? 'Deactivate account' : 'Activate account',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onToggleActive,
+                  icon: Icon(
+                    isActive ? Icons.person_off_outlined : Icons.person_outline,
+                    size: 20,
+                    color: isActive ? const Color(0xFFB42318) : const Color(0xFF16804A),
+                  ),
+                ),
               if (onDelete != null)
                 IconButton(
                   tooltip: 'Delete user account',
@@ -1868,9 +1877,26 @@ class _UserAccessRow extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF141C2E)),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  '$email  •  $permCount permissions',
-                  style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
+                Row(
+                  children: [
+                    Text(
+                      email,
+                      style: const TextStyle(color: Color(0xFF667894), fontSize: 12),
+                    ),
+                    const Text('  •  ', style: TextStyle(color: Color(0xFFCBD6E6))),
+                    if (isOwner) ...[
+                      const Icon(Icons.verified_user_outlined, size: 14, color: Color(0xFF16804A)),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      permLabel,
+                      style: TextStyle(
+                        color: isOwner ? const Color(0xFF16804A) : const Color(0xFF667894),
+                        fontSize: 12,
+                        fontWeight: isOwner ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1899,20 +1925,22 @@ class _UserAccessRow extends StatelessWidget {
               onPressed: onResendEmail,
               icon: const Icon(Icons.mail_outline, size: 20, color: Color(0xFF245CEB)),
             ),
-          IconButton(
-            tooltip: 'Set permissions',
-            onPressed: onPermissions,
-            icon: const Icon(Icons.tune_outlined, size: 20),
-          ),
-          IconButton(
-            tooltip: isActive ? 'Deactivate account' : 'Activate account',
-            onPressed: onToggleActive,
-            icon: Icon(
-              isActive ? Icons.person_off_outlined : Icons.person_outline,
-              size: 20,
-              color: isActive ? const Color(0xFFB42318) : const Color(0xFF16804A),
+          if (onPermissions != null)
+            IconButton(
+              tooltip: 'Set permissions',
+              onPressed: onPermissions,
+              icon: const Icon(Icons.tune_outlined, size: 20),
             ),
-          ),
+          if (onToggleActive != null)
+            IconButton(
+              tooltip: isActive ? 'Deactivate account' : 'Activate account',
+              onPressed: onToggleActive,
+              icon: Icon(
+                isActive ? Icons.person_off_outlined : Icons.person_outline,
+                size: 20,
+                color: isActive ? const Color(0xFFB42318) : const Color(0xFF16804A),
+              ),
+            ),
           if (onDelete != null)
             IconButton(
               tooltip: 'Delete user account',

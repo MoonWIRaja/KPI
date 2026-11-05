@@ -3755,7 +3755,6 @@ class _InviteDialogState extends State<_InviteDialog> {
   bool _busy = false;
   bool _created = false;
   bool _emailSent = false;
-  String? _emailWarning;
   String _invitedEmail = '';
   String _invitedRole = '';
 
@@ -3786,7 +3785,6 @@ class _InviteDialogState extends State<_InviteDialog> {
       setState(() {
         _created = true;
         _emailSent = result.emailDispatched;
-        _emailWarning = result.emailErrorMessage;
         _invitedEmail = _email.text.trim();
         _invitedRole = _role;
       });

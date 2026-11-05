@@ -78,12 +78,10 @@ class MeritEvent {
 class InviteUserResult {
   final bool success;
   final bool emailDispatched;
-  final String? emailErrorMessage;
 
   const InviteUserResult({
     required this.success,
     required this.emailDispatched,
-    this.emailErrorMessage,
   });
 }
 
@@ -459,7 +457,6 @@ class MeritRepository {
     return InviteUserResult(
       success: true,
       emailDispatched: emailDispatched,
-      emailErrorMessage: null,
     );
   }
 

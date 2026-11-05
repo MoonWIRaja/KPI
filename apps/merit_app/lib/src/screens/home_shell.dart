@@ -108,25 +108,9 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   void _checkFirstTimeNameSetup() {
-    if (!mounted || _profile == null) return;
-    final name = (_profile!['display_name'] as String? ?? '').trim();
-    final email = (_profile!['email'] as String? ?? '').trim().toLowerCase();
-    final emailPrefix = email.contains('@') ? email.split('@').first.trim().toLowerCase() : '';
-    final role = _profile!['role'] as String? ?? '';
-
-    // Check if name is placeholder (empty, 'CEO', 'Admin', or matches email prefix)
-    final isPlaceholder = name.isEmpty ||
-        (role == 'ceo' && name.toLowerCase() == 'ceo') ||
-        (role == 'admin' && name.toLowerCase() == 'admin') ||
-        (emailPrefix.isNotEmpty && name.toLowerCase() == emailPrefix);
-
-    if (isPlaceholder) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _showFirstTimeNameSetupModal();
-        }
-      });
-    }
+    // Disabled automatic pop-up on refresh so users are not blocked or repeatedly prompted.
+    // Users can edit their display name anytime from Account & Security or Profile menu.
+    return;
   }
 
   Future<void> _showFirstTimeNameSetupModal() async {

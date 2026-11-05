@@ -43,6 +43,13 @@ class _HomeShellState extends State<HomeShell> {
   bool get _isStaff => _profile?['role'] == 'staff';
   bool _hasPermission(String key) => _isAdmin || _permissions.contains(key);
 
+  String get _systemTitle {
+    final unitTrimmed = _scoreUnit.trim();
+    if (unitTrimmed.isEmpty || unitTrimmed.toLowerCase() == 'merit') return 'Merit Tracker';
+    final unitCap = '${unitTrimmed[0].toUpperCase()}${unitTrimmed.substring(1)}';
+    return '$unitCap Tracker';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -176,9 +183,9 @@ class _HomeShellState extends State<HomeShell> {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    const Text(
-                      'Selamat datang ke sistem Merit Tracker! Sila masukkan nama penuh anda untuk melengkapkan profil akaun ini.',
-                      style: TextStyle(fontSize: 13, height: 1.4, color: Color(0xFF334155)),
+                    Text(
+                      'Selamat datang ke sistem $_systemTitle! Sila masukkan nama penuh anda untuk melengkapkan profil akaun ini.',
+                      style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFF334155)),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -350,7 +357,7 @@ class _HomeShellState extends State<HomeShell> {
         titleSpacing: wide ? 24 : 16,
         title: Row(
           children: [
-            _BrandMark(),
+            _BrandMark(scoreUnit: _scoreUnit),
             if (wide) ...[
               const SizedBox(width: 22),
               const Tooltip(
@@ -891,7 +898,7 @@ class _HomeShellState extends State<HomeShell> {
   Future<void> _openInvite() async {
     final invited = await showAppModal<bool>(
       context: context,
-      builder: (_) => _InviteDialog(repository: _repository, profiles: _profiles),
+      builder: (_) => _InviteDialog(repository: _repository, profiles: _profiles, scoreUnit: _scoreUnit),
     );
     if (invited == true) {
       await _refresh();
@@ -902,7 +909,7 @@ class _HomeShellState extends State<HomeShell> {
     final email = profile['email']?.toString() ?? '';
     final role = profile['role']?.toString() ?? 'staff';
     final roleLabel = _roleLabel(role);
-    final text = buildUserInvitationText(email: email, roleLabel: roleLabel);
+    final text = buildUserInvitationText(email: email, roleLabel: roleLabel, scoreUnit: _scoreUnit);
 
     await showAppModal<void>(
       context: context,
@@ -1456,8 +1463,20 @@ class _ProfileAccountDialogState extends State<_ProfileAccountDialog> {
 }
 
 class _BrandMark extends StatelessWidget {
+  const _BrandMark({this.scoreUnit = 'merit'});
+  final String scoreUnit;
+
   @override
-  Widget build(BuildContext context) => const MeritBrand(compact: true);
+  Widget build(BuildContext context) {
+    final unitTrimmed = scoreUnit.trim();
+    final unitCap = unitTrimmed.isEmpty
+        ? 'Merit'
+        : '${unitTrimmed[0].toUpperCase()}${unitTrimmed.substring(1)}';
+    final title = (unitTrimmed.toLowerCase() == 'merit' || unitTrimmed.isEmpty)
+        ? 'Merit Tracker'
+        : '$unitCap Tracker';
+    return MeritBrand(compact: true, title: title);
+  }
 }
 
 class _DashboardMeritCard extends StatelessWidget {
@@ -2293,19 +2312,22 @@ class _PermissionsDialog extends StatefulWidget {
 
 class _PermissionsDialogState extends State<_PermissionsDialog> {
   late final Set<String> _selected = {...widget.selected};
+  late final String _unitCap = widget.scoreUnit.trim().isEmpty
+      ? 'Score'
+      : '${widget.scoreUnit.trim()[0].toUpperCase()}${widget.scoreUnit.trim().substring(1)}';
   late final List<(String, String)> _permissions = [
     ('staff.read.all', 'View all staff records'),
     ('staff.create', 'Add staff'),
     ('staff.update', 'Edit staff'),
     ('staff.archive', 'Archive or restore staff'),
-    ('staff.delete', 'Delete staff without ${widget.scoreUnit} history'),
+    ('staff.delete', 'Delete staff without $_unitCap history'),
     ('staff.import', 'Import CSV'),
-    ('merit.read.all', 'View all ${widget.scoreUnit} activity'),
-    ('merit.adjust', 'Adjust ${widget.scoreUnit}'),
-    ('merit.correct', 'Correct ${widget.scoreUnit}'),
+    ('merit.read.all', 'View all $_unitCap activity'),
+    ('merit.adjust', 'Adjust $_unitCap'),
+    ('merit.correct', 'Correct $_unitCap'),
     ('reports.read', 'View reports'),
     ('reports.export', 'Export reports'),
-    ('settings.manage', 'Change ${widget.scoreUnit} settings'),
+    ('settings.manage', 'Change $_unitCap settings'),
     ('audit.read', 'View audit log'),
   ];
 
@@ -3178,6 +3200,10 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
     final isPositive = _direction > 0;
     final accentColor = isPositive ? const Color(0xFF16804A) : const Color(0xFFB42318);
 
+    final unitCap = widget.scoreUnit.trim().isEmpty
+        ? 'Score'
+        : '${widget.scoreUnit.trim()[0].toUpperCase()}${widget.scoreUnit.trim().substring(1)}';
+
     return AppModalCard(
       maxWidth: 500,
       child: Column(
@@ -3193,7 +3219,7 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
                     Text(widget.staff.name, style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 2),
                     Text(
-                      '${widget.staff.code}  •  Current ${widget.scoreUnit}: ${formatMerit(widget.staff.scoreTenths)}',
+                      '${widget.staff.code}  •  Current $unitCap: ${formatMerit(widget.staff.scoreTenths)}',
                       style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
                     ),
                   ],
@@ -3224,7 +3250,7 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Select ${widget.scoreUnit} (0.1 – 1.0)',
+            'Select $unitCap (0.1 – 1.0)',
             style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF34435D)),
           ),
           const SizedBox(height: 8),
@@ -3274,7 +3300,7 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Updated ${widget.scoreUnit} Score', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                Text('Updated $unitCap Score', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 Text(
                   '${formatMerit(widget.staff.scoreTenths)}  →  ${formatDelta(delta)}  →  ${formatMerit(after)}',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: accentColor),
@@ -3541,9 +3567,9 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                   const Tab(icon: Icon(Icons.badge_outlined, size: 18), text: 'Staff Details'),
                   Tab(
                     icon: const Icon(Icons.stars_outlined, size: 18),
-                    text: widget.scoreUnit.toLowerCase().contains('point')
-                        ? (widget.scoreUnit.isEmpty ? 'Points' : '${widget.scoreUnit[0].toUpperCase()}${widget.scoreUnit.substring(1)}')
-                        : '${widget.scoreUnit.isEmpty ? 'Score' : widget.scoreUnit[0].toUpperCase() + widget.scoreUnit.substring(1)} Points',
+                    text: widget.scoreUnit.trim().isEmpty
+                        ? 'Score'
+                        : '${widget.scoreUnit.trim()[0].toUpperCase()}${widget.scoreUnit.trim().substring(1)}',
                   ),
                 ],
               ),
@@ -3740,9 +3766,14 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
 }
 
 class _InviteDialog extends StatefulWidget {
-  const _InviteDialog({required this.repository, required this.profiles});
+  const _InviteDialog({
+    required this.repository,
+    required this.profiles,
+    this.scoreUnit = 'merit',
+  });
   final MeritRepository repository;
   final List<Map<String, dynamic>> profiles;
+  final String scoreUnit;
   @override
   State<_InviteDialog> createState() => _InviteDialogState();
 }
@@ -3801,7 +3832,11 @@ class _InviteDialogState extends State<_InviteDialog> {
   Widget build(BuildContext context) {
     if (_created) {
       final roleTitle = _roleLabel(_invitedRole);
-      final inviteMsg = buildUserInvitationText(email: _invitedEmail, roleLabel: roleTitle);
+      final inviteMsg = buildUserInvitationText(
+        email: _invitedEmail,
+        roleLabel: roleTitle,
+        scoreUnit: widget.scoreUnit,
+      );
       return AppModalCard(
         maxWidth: 480,
         child: Column(
@@ -3943,9 +3978,9 @@ class _InviteDialogState extends State<_InviteDialog> {
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Invite a CEO or Admin to access the Merit Tracker system. An invitation email will be sent via SMTP.',
-            style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
+          Text(
+            'Invite a CEO or Admin to access the ${(widget.scoreUnit.trim().isEmpty || widget.scoreUnit.trim().toLowerCase() == 'merit') ? 'Merit Tracker' : '${widget.scoreUnit.trim()[0].toUpperCase()}${widget.scoreUnit.trim().substring(1)} Tracker'} system. An invitation email will be sent via SMTP.',
+            style: const TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
           ),
           const SizedBox(height: 14),
           Form(
@@ -4013,10 +4048,19 @@ class _InviteDialogState extends State<_InviteDialog> {
   }
 }
 
-String buildUserInvitationText({required String email, required String roleLabel}) {
+String buildUserInvitationText({
+  required String email,
+  required String roleLabel,
+  String scoreUnit = 'merit',
+}) {
+  final unitTrimmed = scoreUnit.trim();
+  final systemName = (unitTrimmed.isEmpty || unitTrimmed.toLowerCase() == 'merit')
+      ? 'Merit Tracker'
+      : '${unitTrimmed[0].toUpperCase()}${unitTrimmed.substring(1)} Tracker';
+
   return '''Salam Sejahtera,
 
-Anda telah dijemput untuk menyertai sistem Merit Tracker (KPI) sebagai $roleLabel.
+Anda telah dijemput untuk menyertai sistem $systemName (KPI) sebagai $roleLabel.
 
 Sila layari pautan di bawah untuk mengakses sistem di pelayar (browser):
 https://moonwiraja.github.io/KPI/

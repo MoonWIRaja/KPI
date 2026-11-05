@@ -108,18 +108,20 @@ class _Surface3DCardState extends State<Surface3DCard> {
 }
 
 class MeritBrand extends StatelessWidget {
-  const MeritBrand({this.compact = false, super.key});
+  const MeritBrand({this.compact = false, this.title, super.key});
 
   final bool compact;
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
     final size = compact ? 36.0 : 42.0;
+    final displayTitle = title?.trim().isNotEmpty == true ? title!.trim() : 'Merit Tracker';
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Semantics(
-          label: 'Merit Tracker',
+          label: displayTitle,
           child: SizedBox(
             width: size,
             height: size,
@@ -128,7 +130,7 @@ class MeritBrand extends StatelessWidget {
         ),
         SizedBox(width: compact ? 10 : 12),
         Text(
-          'Merit Tracker',
+          displayTitle,
           style: TextStyle(
             fontSize: compact ? 17 : 19,
             fontWeight: FontWeight.w700,

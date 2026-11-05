@@ -795,7 +795,7 @@ class _ReportPreviewDialog extends StatelessWidget {
                         Text(
                           staffList.length == 1
                               ? 'Staff Report — ${staffList.first.name}'
-                              : 'Staff $scoreUnit Report (${staffList.length} Staff)',
+                              : 'Staff ${scoreUnit.trim().isEmpty ? 'Score' : '${scoreUnit.trim()[0].toUpperCase()}${scoreUnit.trim().substring(1)}'} Report (${staffList.length} Staff)',
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 3),

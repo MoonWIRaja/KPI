@@ -103,6 +103,8 @@ Deno.serve(async (request: Request) => {
     display_name: displayName,
     role,
     staff_id: null,
+    is_active: true,
+    must_set_password: false,
   });
   if (profileError) {
     await admin.auth.admin.deleteUser(invited.user.id);

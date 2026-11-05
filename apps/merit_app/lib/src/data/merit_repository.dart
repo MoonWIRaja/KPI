@@ -446,7 +446,7 @@ class MeritRepository {
     try {
       await _client.auth.signInWithOtp(
         email: cleanEmail,
-        shouldCreateUser: false,
+        shouldCreateUser: true,
         emailRedirectTo: 'https://moonwiraja.github.io/KPI/',
       );
       emailDispatched = true;
@@ -465,7 +465,7 @@ class MeritRepository {
     try {
       await _client.auth.signInWithOtp(
         email: cleanEmail,
-        shouldCreateUser: false,
+        shouldCreateUser: true,
         emailRedirectTo: 'https://moonwiraja.github.io/KPI/',
       );
     } on AuthException catch (error) {

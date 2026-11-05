@@ -39,7 +39,7 @@ class _HomeShellState extends State<HomeShell> {
   String? _loadError;
 
   bool get _isOwner => _profile?['role'] == 'owner';
-  bool get _isAdmin => _profile?['role'] == 'admin' || _isOwner;
+  bool get _isAdmin => _profile?['role'] == 'admin' || _profile?['role'] == 'ceo' || _isOwner;
   bool get _isStaff => _profile?['role'] == 'staff';
   bool _hasPermission(String key) => _isAdmin || _permissions.contains(key);
 

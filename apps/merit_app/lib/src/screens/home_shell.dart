@@ -717,10 +717,16 @@ class _HomeShellState extends State<HomeShell> {
       context: context,
       builder: (_) => _InviteDialog(repository: _repository, profiles: _profiles),
     );
-    if (invited == true) {
+    if (invited != null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invitation sent. A login email with code was dispatched.')),
+          SnackBar(
+            content: Text(
+              invited == true
+                  ? 'Invitation sent. A login email with code was dispatched.'
+                  : 'User account created. (Email dispatch rate limited — user can request OTP on login page).',
+            ),
+          ),
         );
       }
       await _refresh();
@@ -3468,11 +3474,11 @@ class _InviteDialogState extends State<_InviteDialog> {
       _error = null;
     });
     try {
-      await widget.repository.inviteUser(
+      final success = await widget.repository.inviteUser(
         email: _email.text,
         role: _role,
       );
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) Navigator.pop(context, success);
     } on MeritRepositoryException catch (error) {
       setState(() => _error = error.message);
     } catch (_) {

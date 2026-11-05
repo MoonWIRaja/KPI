@@ -439,6 +439,11 @@ class MeritRepository {
         emailRedirectTo: 'https://moonwiraja.github.io/KPI/',
       );
       return true;
+    } on AuthException catch (error) {
+      if (error.message.toLowerCase().contains('rate limit') || error.statusCode == '429') {
+        return false;
+      }
+      throw MeritRepositoryException('User created, but email dispatch failed: ${error.message}');
     } catch (_) {
       return false;
     }
@@ -453,8 +458,8 @@ class MeritRepository {
         emailRedirectTo: 'https://moonwiraja.github.io/KPI/',
       );
     } on AuthException catch (error) {
-      if (error.message.toLowerCase().contains('rate limit')) {
-        throw const MeritRepositoryException('A code was recently sent. Please wait a minute before resending.');
+      if (error.message.toLowerCase().contains('rate limit') || error.statusCode == '429') {
+        throw const MeritRepositoryException('Hourly email rate limit reached. Please wait a bit before resending.');
       }
       throw MeritRepositoryException(error.message);
     } catch (_) {

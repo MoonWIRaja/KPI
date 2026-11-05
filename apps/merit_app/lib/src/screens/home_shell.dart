@@ -95,7 +95,7 @@ class _HomeShellState extends State<HomeShell> {
         ? await _repository.defaultScoreTenths()
         : 50;
     _defaultScore = defaultScoreFallback;
-    final profiles = _isOwner ? await _repository.loadProfiles() : const <Map<String, dynamic>>[];
+    final profiles = (_isAdmin || _hasPermission('users.manage')) ? await _repository.loadProfiles() : const <Map<String, dynamic>>[];
     try {
       final settings = await _repository.loadSettings();
       _defaultScore = settings.defaultScoreTenths;

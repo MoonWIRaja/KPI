@@ -75,6 +75,18 @@ class MeritEvent {
   }
 }
 
+class InviteUserResult {
+  final bool success;
+  final bool emailDispatched;
+  final String? emailErrorMessage;
+
+  const InviteUserResult({
+    required this.success,
+    required this.emailDispatched,
+    this.emailErrorMessage,
+  });
+}
+
 class MeritRepository {
   MeritRepository(this._client);
 
@@ -378,7 +390,7 @@ class MeritRepository {
     }
   }
 
-  Future<bool> inviteUser({
+  Future<InviteUserResult> inviteUser({
     required String email,
     String? displayName,
     required String role,
@@ -422,17 +434,40 @@ class MeritRepository {
           throw MeritRepositoryException(details['error'] as String);
         }
         throw const MeritRepositoryException(
-          'Invitation failed. Please run migration 20261105010000_user_management_and_profile_setup.sql in Supabase SQL Editor.',
+          'Invitation failed. Please run migration 20261105030000_fix_invited_user_identities.sql in Supabase SQL Editor.',
         );
       } catch (_) {
         throw const MeritRepositoryException(
-          'Invitation service not ready: Please run migration 20261105010000_user_management_and_profile_setup.sql in Supabase SQL Editor.',
+          'Invitation service not ready: Please run migration 20261105030000_fix_invited_user_identities.sql in Supabase SQL Editor.',
         );
       }
     }
 
-    // 3. User authorized and created; return true to display copyable invitation
-    return true;
+    // 3. Dispatch the login invitation email via Supabase SMTP
+    var emailDispatched = false;
+    String? emailErr;
+    try {
+      await _client.auth.signInWithOtp(
+        email: cleanEmail,
+        shouldCreateUser: false,
+        emailRedirectTo: 'https://moonwiraja.github.io/KPI/',
+      );
+      emailDispatched = true;
+    } on AuthException catch (error) {
+      if (error.message.toLowerCase().contains('rate limit') || error.statusCode == '429') {
+        emailErr = 'Hourly email rate limit reached.';
+      } else {
+        emailErr = error.message;
+      }
+    } catch (e) {
+      emailErr = e.toString();
+    }
+
+    return InviteUserResult(
+      success: true,
+      emailDispatched: emailDispatched,
+      emailErrorMessage: emailErr,
+    );
   }
 
   Future<void> resendLoginEmail(String email) async {

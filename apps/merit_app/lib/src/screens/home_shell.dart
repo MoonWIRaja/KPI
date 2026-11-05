@@ -69,6 +69,7 @@ class _HomeShellState extends State<HomeShell> {
       _permissions = _isOwner ? const {} : await _repository.loadPermissions(user.id);
       await _loadData();
       autoCheckAuthenticatedIosPwa();
+      _checkFirstTimeNameSetup();
     } on MeritRepositoryException catch (error) {
       _loadError = error.message;
     } catch (_) {
@@ -99,6 +100,154 @@ class _HomeShellState extends State<HomeShell> {
     _profiles = profiles;
   }
 
+  void _checkFirstTimeNameSetup() {
+    if (!mounted || _profile == null) return;
+    final name = (_profile!['display_name'] as String? ?? '').trim();
+    final email = (_profile!['email'] as String? ?? '').trim().toLowerCase();
+    final emailPrefix = email.contains('@') ? email.split('@').first.trim().toLowerCase() : '';
+    final role = _profile!['role'] as String? ?? '';
+
+    // Check if name is placeholder (empty, 'CEO', 'Admin', or matches email prefix)
+    final isPlaceholder = name.isEmpty ||
+        (role == 'ceo' && name.toLowerCase() == 'ceo') ||
+        (role == 'admin' && name.toLowerCase() == 'admin') ||
+        (emailPrefix.isNotEmpty && name.toLowerCase() == emailPrefix);
+
+    if (isPlaceholder) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showFirstTimeNameSetupModal();
+        }
+      });
+    }
+  }
+
+  Future<void> _showFirstTimeNameSetupModal() async {
+    final nameController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    var busy = false;
+    String? error;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final role = _profile?['role'] as String? ?? '';
+            final roleLabel = role == 'ceo' ? 'CEO' : (role == 'admin' ? 'Admin' : 'Staff');
+
+            return AppModalCard(
+              maxWidth: 440,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.badge_rounded, color: Color(0xFF1D4ED8), size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Sediakan Profil Anda',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                'Akaun $roleLabel',
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF667894)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Selamat datang ke sistem Merit Tracker! Sila masukkan nama penuh anda untuk melengkapkan profil akaun ini.',
+                      style: TextStyle(fontSize: 13, height: 1.4, color: Color(0xFF334155)),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: nameController,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Penuh Anda',
+                        hintText: 'Contoh: Ahmad Danial bin Rosli',
+                        prefixIcon: Icon(Icons.person_outline, size: 20),
+                      ),
+                      validator: (val) {
+                        final trimmed = val?.trim() ?? '';
+                        if (trimmed.isEmpty) return 'Sila masukkan nama penuh anda.';
+                        if (trimmed.length < 2) return 'Nama terlalu pendek.';
+                        return null;
+                      },
+                    ),
+                    if (error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 12)),
+                      ),
+                    const SizedBox(height: 20),
+                    FilledButton(
+                      onPressed: busy
+                          ? null
+                          : () async {
+                              if (!formKey.currentState!.validate()) return;
+                              setModalState(() {
+                                busy = true;
+                                error = null;
+                              });
+                              try {
+                                final clean = nameController.text.trim();
+                                await _repository.updateMyDisplayName(clean);
+                                if (mounted) {
+                                  setState(() {
+                                    _profile?['display_name'] = clean;
+                                  });
+                                }
+                                if (dialogCtx.mounted) {
+                                  Navigator.pop(dialogCtx);
+                                }
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Profil dikemaskini sebagai $clean.')),
+                                  );
+                                }
+                              } catch (e) {
+                                setModalState(() {
+                                  busy = false;
+                                  error = 'Gagal menyimpan nama. Sila cuba lagi.';
+                                });
+                              }
+                            },
+                      child: busy
+                          ? const ThinkingOrbsLoader(size: 16, label: 'Menyimpan…')
+                          : const Text('Simpan & Teruskan'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _refresh() async {
     setState(() {
       _loading = true;
@@ -110,6 +259,7 @@ class _HomeShellState extends State<HomeShell> {
       _profile = await _repository.loadProfile(user.id);
       _permissions = _isOwner ? const {} : await _repository.loadPermissions(user.id);
       await _loadData();
+      _checkFirstTimeNameSetup();
     } catch (_) {
       _loadError = 'Data could not be loaded. Check your connection and try again.';
     } finally {
@@ -3604,6 +3754,8 @@ class _InviteDialogState extends State<_InviteDialog> {
   String? _error;
   bool _busy = false;
   bool _created = false;
+  bool _emailSent = false;
+  String? _emailWarning;
   String _invitedEmail = '';
   String _invitedRole = '';
 
@@ -3627,12 +3779,14 @@ class _InviteDialogState extends State<_InviteDialog> {
       _error = null;
     });
     try {
-      await widget.repository.inviteUser(
+      final result = await widget.repository.inviteUser(
         email: _email.text,
         role: _role,
       );
       setState(() {
         _created = true;
+        _emailSent = result.emailDispatched;
+        _emailWarning = result.emailErrorMessage;
         _invitedEmail = _email.text.trim();
         _invitedRole = _role;
       });
@@ -3662,7 +3816,7 @@ class _InviteDialogState extends State<_InviteDialog> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Invitation Created',
+                    _emailSent ? 'Invitation & Email Sent' : 'Invitation Created',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -3673,12 +3827,55 @@ class _InviteDialogState extends State<_InviteDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
+            if (_emailSent)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDFDF5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFA6F4C5)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.mark_email_read_outlined, color: Color(0xFF16804A), size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Emel jemputan telah berjaya dihantar ke $_invitedEmail melalui SMTP!',
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF0F5132)),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (_emailWarning != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Color(0xFFB45309), size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Akaun didaftarkan. Status emel: $_emailWarning. Sila salin mesej di bawah untuk dikongsi terus.',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 12),
             Text(
-              '$_invitedEmail is now authorized as $roleTitle. Share this invitation link so they can access the system:',
+              '$_invitedEmail kini disahkan sebagai $roleTitle. Kongsi maklumat log masuk ini jika diperlukan:',
               style: const TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -3748,7 +3945,7 @@ class _InviteDialogState extends State<_InviteDialog> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Invite a CEO or Admin to access the Merit Tracker system. An invitation link and instructions will be generated.',
+            'Invite a CEO or Admin to access the Merit Tracker system. An invitation email will be sent via SMTP.',
             style: TextStyle(fontSize: 12.5, color: Color(0xFF667894)),
           ),
           const SizedBox(height: 14),
@@ -3805,8 +4002,8 @@ class _InviteDialogState extends State<_InviteDialog> {
               Expanded(
                 child: FilledButton.icon(
                   onPressed: _busy ? null : _send,
-                  icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Creating invitation') : const Icon(Icons.send_outlined),
-                  label: Text(_busy ? 'Creating…' : 'Generate invitation'),
+                  icon: _busy ? const ThinkingOrbsLoader(size: 18, label: 'Sending…') : const Icon(Icons.send_outlined),
+                  label: Text(_busy ? 'Sending…' : 'Send invitation'),
                 ),
               ),
             ],

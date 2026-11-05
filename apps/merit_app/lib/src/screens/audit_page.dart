@@ -6,9 +6,10 @@ import '../widgets/merit_brand.dart';
 import '../widgets/thinking_orbs_loader.dart';
 
 class AuditPage extends StatefulWidget {
-  const AuditPage({required this.repository, required this.canReadSystemAudit, super.key});
+  const AuditPage({required this.repository, required this.canReadSystemAudit, this.scoreUnit = 'merit', super.key});
   final MeritRepository repository;
   final bool canReadSystemAudit;
+  final String scoreUnit;
 
   @override
   State<AuditPage> createState() => _AuditPageState();
@@ -67,10 +68,10 @@ class _AuditPageState extends State<AuditPage> {
               Align(
                 alignment: Alignment.centerRight,
                 child: SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'all', label: Text('All')),
-                    ButtonSegment(value: 'merit', label: Text('Merit')),
-                    ButtonSegment(value: 'system', label: Text('System')),
+                  segments: [
+                    const ButtonSegment(value: 'all', label: Text('All')),
+                    ButtonSegment(value: 'merit', label: Text(widget.scoreUnit.isEmpty ? 'Merit' : '${widget.scoreUnit[0].toUpperCase()}${widget.scoreUnit.substring(1)}')),
+                    const ButtonSegment(value: 'system', label: Text('System')),
                   ],
                   selected: {_filter},
                   onSelectionChanged: (s) => setState(() => _filter = s.first),

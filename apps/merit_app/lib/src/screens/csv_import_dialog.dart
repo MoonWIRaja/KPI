@@ -11,8 +11,9 @@ import '../widgets/app_modal.dart';
 import '../widgets/thinking_orbs_loader.dart';
 
 class CsvImportDialog extends StatefulWidget {
-  const CsvImportDialog({required this.repository, super.key});
+  const CsvImportDialog({required this.repository, this.scoreUnit = 'merit', super.key});
   final MeritRepository repository;
+  final String scoreUnit;
 
   @override
   State<CsvImportDialog> createState() => _CsvImportDialogState();
@@ -26,7 +27,8 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
   bool _committed = false;
 
   Future<void> _downloadTemplate() async {
-    const template = 'staff_code,full_name,department,starting_merit\r\n'
+    final unitKey = widget.scoreUnit.toLowerCase().replaceAll(' ', '_');
+    final template = 'staff_code,full_name,department,starting_$unitKey\r\n'
         'S001,Ahmad Bin Ali,Operations,5.0\r\n'
         'S002,Siti Aminah,Marketing,5.0\r\n'
         'S003,Tan Wei Ming,Sales,5.0\r\n';
@@ -73,9 +75,10 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
       final codeColumn = column(const ['staff_code', 'code']);
       final nameColumn = column(const ['full_name', 'name']);
       final departmentColumn = column(const ['department']);
-      final meritColumn = column(const ['starting_merit', 'merit', 'score']);
+      final unitKey = widget.scoreUnit.toLowerCase().replaceAll(' ', '_');
+      final meritColumn = column(['starting_$unitKey', unitKey, 'starting_merit', 'merit', 'starting_score', 'score', 'starting_point', 'point', 'points']);
       if (codeColumn < 0 || nameColumn < 0 || meritColumn < 0) {
-        throw const FormatException('Required headers: staff_code, full_name, starting_merit. department is optional.');
+        throw FormatException('Required headers: staff_code, full_name, starting_$unitKey. department is optional.');
       }
       if (decoded.length - 1 > 500) throw const FormatException('The import limit is 500 staff per file.');
 
@@ -92,7 +95,7 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
         final line = index + 1;
         if (code.isEmpty || code.length > 40) issues.add('Row $line: staff code is required (maximum 40 characters).');
         if (name.isEmpty || name.length > 160) issues.add('Row $line: name is required (maximum 160 characters).');
-        if (merit == null) issues.add('Row $line: merit must be a number with at most one decimal place.');
+        if (merit == null) issues.add('Row $line: ${widget.scoreUnit} must be a number with at most one decimal place.');
         if (code.isNotEmpty && !seen.add(code.toLowerCase())) issues.add('Row $line: duplicate staff code in file.');
         if (code.isNotEmpty && name.isNotEmpty && merit != null) {
           parsed.add({
@@ -197,7 +200,7 @@ class _CsvImportDialogState extends State<CsvImportDialog> {
                             contentPadding: EdgeInsets.zero,
                             title: Text('${row['staff_code']} • ${row['full_name']}'),
                             subtitle: Text(
-                              '${row['department'] ?? 'No department'}  ·  merit ${formatMerit(row['starting_score_tenths'] as int)}',
+                              '${row['department'] ?? 'No department'}  •  ${widget.scoreUnit} ${formatMerit(row['starting_score_tenths'] as int)}',
                             ),
                           ),
                         ),

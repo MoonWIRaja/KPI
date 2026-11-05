@@ -168,7 +168,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              const Text('MERIT MOVEMENT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF667894))),
+              Text('${widget.scoreUnit.toUpperCase()} MOVEMENT', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF667894))),
               const SizedBox(height: 8),
               SegmentedButton<String>(
                 segments: const [
@@ -239,6 +239,7 @@ class _ReportsPageState extends State<ReportsPage> {
         to: _to,
         canExport: widget.canExport,
         onExportPdf: () => _exportPdf(targetStaff: staffList),
+        scoreUnit: widget.scoreUnit,
       ),
     );
   }
@@ -268,7 +269,7 @@ class _ReportsPageState extends State<ReportsPage> {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      '${widget.organizationName.toUpperCase()} — STAFF MERIT REPORT',
+                      '${widget.organizationName.toUpperCase()} — STAFF ${widget.scoreUnit.toUpperCase()} REPORT',
                       style: pw.TextStyle(
                         fontSize: 14,
                         fontWeight: pw.FontWeight.bold,
@@ -331,7 +332,7 @@ class _ReportsPageState extends State<ReportsPage> {
                         borderRadius: pw.BorderRadius.circular(4),
                       ),
                       child: pw.Text(
-                        'Current Merit: ${formatMerit(staff.scoreTenths)}',
+                        'Current ${widget.scoreUnit}: ${formatMerit(staff.scoreTenths)}',
                         style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF1E4FD8)),
                       ),
                     ),
@@ -342,7 +343,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 pw.Padding(
                   padding: const pw.EdgeInsets.only(bottom: 12, left: 4),
                   child: pw.Text(
-                    'No merit changes recorded in this period.',
+                    'No ${widget.scoreUnit} changes recorded in this period.',
                     style: const pw.TextStyle(fontSize: 9, color: PdfColor.fromInt(0xFF667894)),
                   ),
                 )
@@ -760,6 +761,7 @@ class _ReportPreviewDialog extends StatelessWidget {
     required this.to,
     required this.canExport,
     required this.onExportPdf,
+    this.scoreUnit = 'merit',
   });
 
   final List<StaffMember> staffList;
@@ -768,6 +770,7 @@ class _ReportPreviewDialog extends StatelessWidget {
   final DateTime to;
   final bool canExport;
   final VoidCallback onExportPdf;
+  final String scoreUnit;
 
   @override
   Widget build(BuildContext context) {
@@ -792,7 +795,7 @@ class _ReportPreviewDialog extends StatelessWidget {
                         Text(
                           staffList.length == 1
                               ? 'Staff Report — ${staffList.first.name}'
-                              : 'Staff Merit Report (${staffList.length} Staff)',
+                              : 'Staff $scoreUnit Report (${staffList.length} Staff)',
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 3),
@@ -868,7 +871,7 @@ class _ReportPreviewDialog extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  'Current Merit: ${formatMerit(staff.scoreTenths)}',
+                                  'Current $scoreUnit: ${formatMerit(staff.scoreTenths)}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
                                     color: Color(0xFF245CEB),
@@ -880,11 +883,11 @@ class _ReportPreviewDialog extends StatelessWidget {
                           ),
                         ),
                         if (events.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(18),
+                          Padding(
+                            padding: const EdgeInsets.all(18),
                             child: Text(
-                              'No merit events recorded in this period.',
-                              style: TextStyle(color: Color(0xFF667894), fontSize: 13),
+                              'No $scoreUnit events recorded in this period.',
+                              style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
                             ),
                           )
                         else

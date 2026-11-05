@@ -127,7 +127,8 @@ class _HomeShellState extends State<HomeShell> {
   List<_NavItem> get _navItems {
     final items = <_NavItem>[];
     if (_isStaff && _hasPermission('merit.read.self')) {
-      items.add(const _NavItem('My Merit', Icons.person_outline, 'self', mobileLabel: 'Merit'));
+      final unitLabel = _scoreUnit.isEmpty ? 'Score' : '${_scoreUnit[0].toUpperCase()}${_scoreUnit.substring(1)}';
+      items.add(_NavItem('My $unitLabel', Icons.person_outline, 'self', mobileLabel: unitLabel));
       items.add(const _NavItem('My History', Icons.history, 'self-events', mobileLabel: 'History'));
     }
     if (_hasPermission('staff.read.all')) {
@@ -278,6 +279,7 @@ class _HomeShellState extends State<HomeShell> {
       'audit' => AuditPage(
           repository: _repository,
           canReadSystemAudit: _hasPermission('audit.read'),
+          scoreUnit: _scoreUnit,
         ),
       _ => const _EmptyState(
           icon: Icons.lock_outline,
@@ -463,7 +465,7 @@ class _HomeShellState extends State<HomeShell> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _SelfScoreCard(staff: own.single),
+                  _SelfScoreCard(staff: own.single, scoreUnit: _scoreUnit),
                   const SizedBox(height: 14),
                   Expanded(
                     child: SingleChildScrollView(
@@ -557,7 +559,11 @@ class _HomeShellState extends State<HomeShell> {
   Future<void> _openAddStaff() async {
     final created = await showAppModal<bool>(
       context: context,
-      builder: (_) => _AddStaffDialog(defaultScoreTenths: _defaultScore, repository: _repository),
+      builder: (_) => _AddStaffDialog(
+        defaultScoreTenths: _defaultScore,
+        repository: _repository,
+        scoreUnit: _scoreUnit,
+      ),
     );
     if (created == true) await _refresh();
   }
@@ -578,7 +584,13 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _openCsvImport() async {
-    final imported = await showAppModal<bool>(context: context, builder: (_) => CsvImportDialog(repository: _repository));
+    final imported = await showAppModal<bool>(
+      context: context,
+      builder: (_) => CsvImportDialog(
+        repository: _repository,
+        scoreUnit: _scoreUnit,
+      ),
+    );
     if (imported == true) await _refresh();
   }
 
@@ -588,7 +600,11 @@ class _HomeShellState extends State<HomeShell> {
         .toSet();
     final updated = await showAppModal<Set<String>>(
       context: context,
-      builder: (_) => _PermissionsDialog(profile: profile, selected: existing),
+      builder: (_) => _PermissionsDialog(
+        profile: profile,
+        selected: existing,
+        scoreUnit: _scoreUnit,
+      ),
     );
     if (updated == null) return;
     try {
@@ -633,7 +649,7 @@ class _HomeShellState extends State<HomeShell> {
     if (!_hasPermission('merit.adjust')) return;
     final change = await showAppModal<_AdjustmentInput>(
       context: context,
-      builder: (_) => _AdjustmentDialog(staff: staff),
+      builder: (_) => _AdjustmentDialog(staff: staff, scoreUnit: _scoreUnit),
     );
     if (change == null) return;
     try {
@@ -643,8 +659,9 @@ class _HomeShellState extends State<HomeShell> {
         reason: change.reason,
       );
       if (!mounted) return;
+      final unitLabel = _scoreUnit.isEmpty ? 'Score' : '${_scoreUnit[0].toUpperCase()}${_scoreUnit.substring(1)}';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Merit adjustment recorded.')),
+        SnackBar(content: Text('$unitLabel adjustment recorded.')),
       );
       await _refresh();
     } on MeritRepositoryException catch (error) {
@@ -1280,12 +1297,12 @@ class _DashboardMeritCard extends StatelessWidget {
                                 child: DataTable(
                                   showCheckboxColumn: false,
                                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F7FA)),
-                                  columns: const [
-                                    DataColumn(label: Text('STAFF CODE')),
-                                    DataColumn(label: Text('NAME')),
-                                    DataColumn(label: Text('DEPARTMENT')),
-                                    DataColumn(label: Text('MERIT')),
-                                    DataColumn(label: Text('LATEST CHANGE')),
+                                  columns: [
+                                    const DataColumn(label: Text('STAFF CODE')),
+                                    const DataColumn(label: Text('NAME')),
+                                    const DataColumn(label: Text('DEPARTMENT')),
+                                    DataColumn(label: Text(scoreUnit.toUpperCase())),
+                                    const DataColumn(label: Text('LATEST CHANGE')),
                                   ],
                                   rows: staff.map((item) {
                                     final latest = _latestFor(item, events);
@@ -1483,11 +1500,11 @@ class _StaffRosterCard extends StatelessWidget {
                                 child: DataTable(
                                   showCheckboxColumn: false,
                                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F7FA)),
-                                  columns: const [
-                                    DataColumn(label: Text('STAFF CODE')),
-                                    DataColumn(label: Text('FULL NAME')),
-                                    DataColumn(label: Text('DEPARTMENT')),
-                                    DataColumn(label: Text('MERIT')),
+                                  columns: [
+                                    const DataColumn(label: Text('STAFF CODE')),
+                                    const DataColumn(label: Text('FULL NAME')),
+                                    const DataColumn(label: Text('DEPARTMENT')),
+                                    DataColumn(label: Text(scoreUnit.toUpperCase())),
                                   ],
                                   rows: staff.map((item) {
                                     return DataRow(
@@ -1649,8 +1666,9 @@ class _DeltaPill extends StatelessWidget {
 }
 
 class _SelfScoreCard extends StatelessWidget {
-  const _SelfScoreCard({required this.staff});
+  const _SelfScoreCard({required this.staff, this.scoreUnit = 'merit'});
   final StaffMember staff;
+  final String scoreUnit;
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(20),
@@ -1662,9 +1680,9 @@ class _SelfScoreCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'CURRENT MERIT',
-              style: TextStyle(fontSize: 11, letterSpacing: .5, color: Color(0xFF667894), fontWeight: FontWeight.w700),
+            Text(
+              'CURRENT ${scoreUnit.toUpperCase()}',
+              style: const TextStyle(fontSize: 11, letterSpacing: .5, color: Color(0xFF667894), fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1689,10 +1707,10 @@ class _EventsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (events.isEmpty) {
-      return const _EmptyState(
+      return _EmptyState(
         icon: Icons.history,
         title: 'No activity yet',
-        detail: 'Merit records will appear here.',
+        detail: '$scoreUnit records will appear here.',
       );
     }
     return Column(
@@ -1955,28 +1973,33 @@ class _UserAccessRow extends StatelessWidget {
 }
 
 class _PermissionsDialog extends StatefulWidget {
-  const _PermissionsDialog({required this.profile, required this.selected});
+  const _PermissionsDialog({
+    required this.profile,
+    required this.selected,
+    this.scoreUnit = 'merit',
+  });
   final Map<String, dynamic> profile;
   final Set<String> selected;
+  final String scoreUnit;
   @override
   State<_PermissionsDialog> createState() => _PermissionsDialogState();
 }
 
 class _PermissionsDialogState extends State<_PermissionsDialog> {
   late final Set<String> _selected = {...widget.selected};
-  static const _permissions = <(String, String)>[
+  late final List<(String, String)> _permissions = [
     ('staff.read.all', 'View all staff records'),
     ('staff.create', 'Add staff'),
     ('staff.update', 'Edit staff'),
     ('staff.archive', 'Archive or restore staff'),
-    ('staff.delete', 'Delete staff without merit history'),
+    ('staff.delete', 'Delete staff without ${widget.scoreUnit} history'),
     ('staff.import', 'Import CSV'),
-    ('merit.read.all', 'View all merit activity'),
-    ('merit.adjust', 'Adjust merit'),
-    ('merit.correct', 'Correct merit'),
+    ('merit.read.all', 'View all ${widget.scoreUnit} activity'),
+    ('merit.adjust', 'Adjust ${widget.scoreUnit}'),
+    ('merit.correct', 'Correct ${widget.scoreUnit}'),
     ('reports.read', 'View reports'),
     ('reports.export', 'Export reports'),
-    ('settings.manage', 'Change merit settings'),
+    ('settings.manage', 'Change ${widget.scoreUnit} settings'),
     ('audit.read', 'View audit log'),
   ];
 
@@ -2178,7 +2201,8 @@ class _SettingsPageState extends State<_SettingsPage> {
     if (defaultValue == null ||
         (_floor.text.trim().isNotEmpty && floorValue == null) ||
         (_ceiling.text.trim().isNotEmpty && ceilingValue == null)) {
-      setState(() => _error = 'Enter a valid merit score with at most one decimal place.');
+      final unitLabel = _unit.text.trim().isEmpty ? 'score' : _unit.text.trim();
+      setState(() => _error = 'Enter a valid $unitLabel with at most one decimal place.');
       return;
     }
     setState(() {
@@ -2280,6 +2304,8 @@ class _SettingsPageState extends State<_SettingsPage> {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isMobile = width < 700;
+    final unitTrimmed = _unit.text.trim().isEmpty ? 'score' : _unit.text.trim();
+    final unitCap = unitTrimmed.isEmpty ? 'Score' : '${unitTrimmed[0].toUpperCase()}${unitTrimmed.substring(1)}';
 
     return Padding(
       padding: EdgeInsets.fromLTRB(isMobile ? 14 : 24, 14, isMobile ? 14 : 24, 18),
@@ -2296,8 +2322,8 @@ class _SettingsPageState extends State<_SettingsPage> {
                   children: [
                     _buildSectionHeader(
                       icon: Icons.tune_rounded,
-                      title: 'Merit Scoring Configuration',
-                      subtitle: 'Set initial default merit score and boundary limits for all staff.',
+                      title: '$unitCap Scoring Configuration',
+                      subtitle: 'Set initial default $unitTrimmed and boundary limits for all staff.',
                     ),
                     const SizedBox(height: 14),
                     _SettingsGroup(
@@ -2339,7 +2365,7 @@ class _SettingsPageState extends State<_SettingsPage> {
                     _buildSectionHeader(
                       icon: Icons.business_rounded,
                       title: 'Organization & System Units',
-                      subtitle: 'Customize organization display name and merit point unit label.',
+                      subtitle: 'Customize organization display name and $unitTrimmed unit label.',
                     ),
                     const SizedBox(height: 14),
                     _SettingsGroup(
@@ -2372,7 +2398,7 @@ class _SettingsPageState extends State<_SettingsPage> {
                     _buildSectionHeader(
                       icon: Icons.verified_user_outlined,
                       title: 'Evaluation Policy & Reports Cycle',
-                      subtitle: 'Operational policies governing monthly staff merit evaluations and audit logging.',
+                      subtitle: 'Operational policies governing monthly staff $unitTrimmed evaluations and audit logging.',
                     ),
                     const SizedBox(height: 14),
                     _SettingsGroup(
@@ -2423,7 +2449,7 @@ class _SettingsPageState extends State<_SettingsPage> {
                             runSpacing: 10,
                             children: [
                               _buildMetricCard('Active Staff', '${widget.staff.length}', Icons.groups_outlined, const Color(0xFF245CEB)),
-                              _buildMetricCard('Merit Records', '${widget.events.length}', Icons.history_rounded, const Color(0xFF16804A)),
+                              _buildMetricCard('$unitCap Records', '${widget.events.length}', Icons.history_rounded, const Color(0xFF16804A)),
                               _buildMetricCard('User Accounts', '${widget.profiles.length}', Icons.manage_accounts_outlined, const Color(0xFF7C3AED)),
                               _buildMetricCard('Database', 'Connected', Icons.cloud_done_rounded, const Color(0xFF0284C7)),
                             ],
@@ -2676,9 +2702,14 @@ String _roleLabel(String role) => switch (role) {
     };
 
 class _AddStaffDialog extends StatefulWidget {
-  const _AddStaffDialog({required this.defaultScoreTenths, required this.repository});
+  const _AddStaffDialog({
+    required this.defaultScoreTenths,
+    required this.repository,
+    this.scoreUnit = 'merit',
+  });
   final int defaultScoreTenths;
   final MeritRepository repository;
+  final String scoreUnit;
   @override
   State<_AddStaffDialog> createState() => _AddStaffDialogState();
 }
@@ -2727,7 +2758,7 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
     } on MeritRepositoryException catch (error) {
       setState(() => _error = error.message);
     } catch (_) {
-      setState(() => _error = 'Please check the merit value and try again.');
+      setState(() => _error = 'Please check the ${widget.scoreUnit} value and try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -2771,8 +2802,8 @@ class _AddStaffDialogState extends State<_AddStaffDialog> {
                     controller: _score,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                     decoration: InputDecoration(
-                      labelText: 'Starting merit score (default ${formatMerit(widget.defaultScoreTenths)})',
-                      suffixText: 'merit',
+                      labelText: 'Starting ${widget.scoreUnit} score (default ${formatMerit(widget.defaultScoreTenths)})',
+                      suffixText: widget.scoreUnit,
                     ),
                     validator: (value) =>
                         parseScoreTenths(value ?? '') == null ? 'Enter a valid score (e.g. 5.0).' : null,
@@ -2815,8 +2846,9 @@ class _AdjustmentInput {
 }
 
 class _AdjustmentDialog extends StatefulWidget {
-  const _AdjustmentDialog({required this.staff});
+  const _AdjustmentDialog({required this.staff, this.scoreUnit = 'merit'});
   final StaffMember staff;
+  final String scoreUnit;
   @override
   State<_AdjustmentDialog> createState() => _AdjustmentDialogState();
 }
@@ -2855,7 +2887,7 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
                     Text(widget.staff.name, style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 2),
                     Text(
-                      '${widget.staff.code}  •  Current Merit: ${formatMerit(widget.staff.scoreTenths)}',
+                      '${widget.staff.code}  •  Current ${widget.scoreUnit}: ${formatMerit(widget.staff.scoreTenths)}',
                       style: const TextStyle(color: Color(0xFF667894), fontSize: 13),
                     ),
                   ],
@@ -2885,9 +2917,9 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
             onSelectionChanged: (selection) => setState(() => _direction = selection.first),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Select points (0.1 – 1.0)',
-            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF34435D)),
+          Text(
+            'Select ${widget.scoreUnit} (0.1 – 1.0)',
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF34435D)),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -2920,9 +2952,9 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
             maxLines: 4,
             maxLength: 500,
             autofocus: true,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Reason (required)',
-              hintText: 'State the reason for this merit adjustment…',
+              hintText: 'State the reason for this ${widget.scoreUnit} adjustment…',
               alignLabelWithHint: true,
             ),
           ),
@@ -2936,7 +2968,7 @@ class _AdjustmentDialogState extends State<_AdjustmentDialog> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Updated Merit Score', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                Text('Updated ${widget.scoreUnit} Score', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 Text(
                   '${formatMerit(widget.staff.scoreTenths)}  →  ${formatDelta(delta)}  →  ${formatMerit(after)}',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: accentColor),
@@ -3028,7 +3060,7 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
       context: context,
       builder: (_) => _ConfirmCardDialog(
         title: 'Delete ${widget.staff.name}?',
-        message: 'This will permanently remove ${widget.staff.name} and all associated merit history from the system. This action cannot be undone.',
+        message: 'This will permanently remove ${widget.staff.name} and all associated ${widget.scoreUnit} history from the system. This action cannot be undone.',
         confirmLabel: 'Delete permanently',
         destructive: true,
       ),
@@ -3090,16 +3122,16 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
         changed = true;
       }
 
-      // 2. Merit score correction
+      // 2. Score correction
       final newScoreTenths = parseScoreTenths(_score.text.trim());
       final scoreChanged = newScoreTenths != null && newScoreTenths != widget.staff.scoreTenths;
 
       if (scoreChanged) {
         if (!widget.canCorrectMerit) {
-          throw const MeritRepositoryException('You do not have permission to correct merit score.');
+          throw MeritRepositoryException('You do not have permission to correct ${widget.scoreUnit} score.');
         }
         if (_reason.text.trim().isEmpty) {
-          throw const MeritRepositoryException('A reason is required when correcting merit score.');
+          throw MeritRepositoryException('A reason is required when correcting ${widget.scoreUnit} score.');
         }
         await widget.repository.correctMerit(
           staffId: widget.staff.id,
@@ -3199,9 +3231,14 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                 labelColor: const Color(0xFF245CEB),
                 unselectedLabelColor: const Color(0xFF64748B),
                 labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                tabs: const [
-                  Tab(icon: Icon(Icons.badge_outlined, size: 18), text: 'Staff Details'),
-                  Tab(icon: Icon(Icons.stars_outlined, size: 18), text: 'Merit Points'),
+                tabs: [
+                  const Tab(icon: Icon(Icons.badge_outlined, size: 18), text: 'Staff Details'),
+                  Tab(
+                    icon: const Icon(Icons.stars_outlined, size: 18),
+                    text: widget.scoreUnit.toLowerCase().contains('point')
+                        ? (widget.scoreUnit.isEmpty ? 'Points' : '${widget.scoreUnit[0].toUpperCase()}${widget.scoreUnit.substring(1)}')
+                        : '${widget.scoreUnit.isEmpty ? 'Score' : widget.scoreUnit[0].toUpperCase() + widget.scoreUnit.substring(1)} Points',
+                  ),
                 ],
               ),
             ),
@@ -3274,7 +3311,10 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('CURRENT MERIT SCORE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5)),
+                                  Text(
+                                    'CURRENT ${widget.scoreUnit.toUpperCase()} SCORE',
+                                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+                                  ),
                                   Text(
                                     formatMerit(widget.staff.scoreTenths),
                                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
@@ -3296,7 +3336,7 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                               onPressed: !widget.canCorrectMerit || _busy ? null : () {
                                 final current = widget.staff.scoreTenths;
                                 _score.text = formatMerit(current - 5);
-                                if (_reason.text.isEmpty) _reason.text = 'Deduction of 0.5 merit';
+                                if (_reason.text.isEmpty) _reason.text = 'Deduction of 0.5 ${widget.scoreUnit}';
                               },
                             ),
                             ActionChip(
@@ -3306,7 +3346,7 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                               onPressed: !widget.canCorrectMerit || _busy ? null : () {
                                 final current = widget.staff.scoreTenths;
                                 _score.text = formatMerit(current - 1);
-                                if (_reason.text.isEmpty) _reason.text = 'Deduction of 0.1 merit';
+                                if (_reason.text.isEmpty) _reason.text = 'Deduction of 0.1 ${widget.scoreUnit}';
                               },
                             ),
                             ActionChip(
@@ -3316,7 +3356,7 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                               onPressed: !widget.canCorrectMerit || _busy ? null : () {
                                 final current = widget.staff.scoreTenths;
                                 _score.text = formatMerit(current + 1);
-                                if (_reason.text.isEmpty) _reason.text = 'Addition of 0.1 merit';
+                                if (_reason.text.isEmpty) _reason.text = 'Addition of 0.1 ${widget.scoreUnit}';
                               },
                             ),
                             ActionChip(
@@ -3326,7 +3366,7 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                               onPressed: !widget.canCorrectMerit || _busy ? null : () {
                                 final current = widget.staff.scoreTenths;
                                 _score.text = formatMerit(current + 5);
-                                if (_reason.text.isEmpty) _reason.text = 'Addition of 0.5 merit';
+                                if (_reason.text.isEmpty) _reason.text = 'Addition of 0.5 ${widget.scoreUnit}';
                               },
                             ),
                           ],
@@ -3336,10 +3376,10 @@ class _StaffUnifiedDialogState extends State<_StaffUnifiedDialog> with SingleTic
                           controller: _score,
                           enabled: widget.canCorrectMerit && !_busy,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Corrected score',
                             isDense: true,
-                            suffixText: 'merit',
+                            suffixText: widget.scoreUnit,
                           ),
                         ),
                         const SizedBox(height: 10),
